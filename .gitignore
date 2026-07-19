@@ -1,0 +1,50 @@
+# Windows
+nul
+Thumbs.db
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# Dependency directories
+node_modules/
+ui/node_modules/
+out/
+.vscode-test/
+
+# Build artifacts
+*.vsix
+ui/dist/
+src-tauri/target/
+src-tauri/bin/
+src-tauri/gen/
+
+# CodeBridge Runtime / Temp
+temp_scripts/
+*.tmp
+*.log
+*.bak
+.xml.bak
+.*.bak
+untitled_backup*.xml
+
+# Project specific
+backup/
+
+# Environments
+.env*
+ui/.env*
+src-tauri/.env*
+
+# Rust specific
+# Cargo.lock # 建議保留以確保編譯一致性，若想完全純淨可開啟此行
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~.swo
+*.swn
+*~.swn

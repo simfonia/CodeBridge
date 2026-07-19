@@ -1,0 +1,477 @@
+/* CodeBridge 基本樣式 */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    overflow: hidden;
+}
+
+.codebridge-editor {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+#blocklyArea {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+#blocklyDiv {
+    flex: 1;
+    min-height: 0;
+    background: #fff;
+}
+
+#toolbar {
+    min-height: 40px;
+    height: auto;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 4px 10px;
+    gap: 8px;
+    user-select: none;
+    box-sizing: border-box;
+    z-index: 10;
+    position: relative;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.toolbar-flex-spacer {
+    flex: 1;
+    min-width: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#file-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8f8f8;
+    padding: 4px 12px;
+    border-radius: 15px;
+    border: 1px solid #eee;
+    font-size: 11px;
+    color: #666;
+    max-width: 250px;
+    overflow: hidden;
+    margin: 0 4px;
+    flex-shrink: 1;
+}
+
+#current-filename {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.toolbar-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+    position: relative;
+}
+
+.toolbar-btn img {
+    width: 24px;
+    height: 24px;
+}
+
+.toolbar-btn:hover {
+    background: #f0f0f0;
+}
+
+/* 所有 toolbar-btn（run/stop 除外）hover 時 img 變 #FE2F89 色 */
+.toolbar-btn:not(#btn-run):not(#btn-stop):hover img {
+    filter: brightness(0) saturate(100%) invert(24%) sepia(89%) saturate(6543%) hue-rotate(317deg) brightness(98%) contrast(93%);
+}
+
+/* close-icon hover 變色 */
+.toolbar-btn:hover .close-icon {
+    color: #FE2F89;
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: #e0e0e0;
+    margin: 0 3px;
+}
+
+.serial-select {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+#panel-resizer {
+    width: 6px;
+    background: transparent;
+    cursor: col-resize;
+    z-index: 100;
+    transition: background 0.2s;
+    margin-left: -3px;
+    margin-right: -3px;
+}
+
+#panel-resizer:hover, #panel-resizer.is-dragging {
+    background: #FE2F89;
+}
+
+#codeArea {
+    width: 400px;
+    background: #fff;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #ddd;
+    transition: width 0.3s ease, opacity 0.3s ease;
+    overflow: visible;
+    position: relative;
+    flex-shrink: 0;
+}
+
+#codeArea.collapsed {
+    width: 0 !important;
+    border-left: none;
+}
+
+#codeArea.collapsed #codeHeader,
+#codeArea.collapsed #codeContent {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#code-toggle {
+    position: absolute;
+    left: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 48px;
+    background: #f3f3f3;
+    border: 1px solid #ddd;
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 101;
+    color: #FE2F89;
+    font-size: 10px;
+}
+
+#codeArea.collapsed #code-toggle {
+    left: -16px;
+}
+
+#codeHeader {
+    height: 40px;
+    padding: 0 12px;
+    background: #f3f3f3;
+    color: #666;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+#codeContent {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    counter-reset: line;
+    background: #fff;
+}
+
+.hljs {
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+#resizer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+}
+
+body.resizing-panel #resizer-overlay {
+    display: block;
+}
+
+body.resizing-panel #codeArea {
+    transition: none !important;
+}
+
+body.resizing-panel {
+    cursor: col-resize;
+    user-select: none;
+}
+
+#terminalArea {
+    height: 200px;
+    background: #1e1e1e;
+    border-top: 1px solid #3c3c3c;
+    display: flex;
+    flex-direction: column;
+}
+
+#terminalArea.collapsed {
+    height: 0;
+    overflow: hidden;
+}
+
+#terminalHeader {
+    height: 32px;
+    background: #2d2d30;
+    border-bottom: 1px solid #3c3c3c;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+#terminalContent {
+    flex: 1;
+    padding: 8px;
+    overflow: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    color: #d4d4d4;
+}
+
+.terminal-tool-btn {
+    width: 24px;
+    height: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.terminal-tool-btn:hover {
+    background: #3c3c3c;
+}
+
+/* === 雙風格切換開關 (Dropdown 選單用) === */
+.theme-toggle-menuitem {
+    cursor: pointer;
+}
+
+.theme-toggle-menuitem:hover {
+    background: #f0f0f0;
+}
+
+.theme-text-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.theme-toggle-menuitem .theme-text-label {
+    margin: 0 4px;
+}
+
+.theme-toggle-menuitem:hover .theme-text-label {
+    color: #FE2F89;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 18px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #FE2F89;
+}
+
+input:checked + .slider:before {
+    transform: translateX(16px);
+}
+
+.slider.round {
+    border-radius: 18px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* 下拉選單樣式 */
+.toolbar-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: #fff;
+    min-width: 180px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border-radius: 4px;
+    z-index: 1000;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+}
+
+/* 隱形橋樑：防止滑鼠移動到選單內容時因為間隙導致消失 */
+.dropdown-content::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    background: transparent;
+}
+
+.toolbar-dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+}
+
+.dropdown-item:hover {
+    background: #f0f0f0;
+}
+
+.dropdown-separator {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 4px 0;
+}
+
+/* 模態視窗 */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 300px;
+}
+
+.btn-primary {
+    background: #FE2F89;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}

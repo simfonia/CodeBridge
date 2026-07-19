@@ -1,0 +1,11 @@
+{
+  "modules": [
+    {
+      "id": "arduino_base",
+      "name": "Arduino Base",
+      "description": "Basic Arduino blocks for CodeBridge",
+      "path": "arduino_base",
+      "enabled": true
+    }
+  ]
+}

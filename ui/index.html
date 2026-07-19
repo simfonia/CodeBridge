@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBridge: Visual Arduino Programming</title>
+    <!-- Highlight.js 語法高亮 (本地化) -->
+    <link rel="stylesheet" href="/src/vs.min.css">
+    <script src="src/highlight.min.js"></script>
+    <script src="src/arduino.min.js"></script>
+    
+    <!-- 樣式表 (Vite 會處理) -->
+    <link rel="stylesheet" href="/src/style.css">
+</head>
+<body class="codebridge-editor">
+    <div id="resizer-overlay"></div>
+    <div id="container">
+        <div id="blocklyArea">
+            <div id="toolbar">
+                <!-- 左側群組：平台與檔案 -->
+                <div class="toolbar-group">
+                    <div id="file-breadcrumb">
+                        <img src="src/icons/load_project_24dp_1F1F1F.png" style="width: 14px; opacity: 0.5;">
+                        <span id="current-filename">%{BKY_TLB_FILE_NEW}</span>
+                    </div>
+                    <div class="toolbar-btn" id="btn-examples" title="%{BKY_TLB_EXAMPLES}">
+                        <img src="src/icons/examples_24dp_1F1F1F.png">
+                    </div>
+                    <div class="toolbar-separator"></div>
+                    <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
+                        <img src="src/icons/pen-new-square-outline.png">
+                    </div>
+                    <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
+                        <img src="src/icons/open-file.png">
+                    </div>
+                    <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
+                        <img src="src/icons/save.png">
+                    </div>
+                    <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
+                        <img src="src/icons/save-as.png">
+                    </div>
+                    <div class="toolbar-separator"></div>
+                    <div class="toolbar-dropdown">
+                        <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
+                            <img src="src/icons/settings_24dp_1F1F1F.png">
+                        </div>
+                        <div class="dropdown-content">
+                            <div class="dropdown-item" id="btn-diagnose">
+                                <img src="src/icons/module-puzzle-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span>%{BKY_TLB_DIAGNOSE}</span>
+                            </div>
+                            <div class="dropdown-separator"></div>
+                            <!-- 雙風格切換開關 (移入選單) -->
+                            <div class="dropdown-item theme-toggle-menuitem" id="btn-theme-toggle" title="%{BKY_TLB_THEME_TOGGLE}">
+                                <img src="src/icons/lego-duotone.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span class="theme-text-label" id="themeTextLeft">Engineer</span>
+                                <label class="switch" style="pointer-events: none;">
+                                    <input type="checkbox" id="themeToggle">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="theme-text-label" id="themeTextRight">Angel</span>
+                            </div>
+                            <div class="dropdown-separator"></div>
+                            <!-- 中英文語系切換開關 -->
+                            <div class="dropdown-item theme-toggle-menuitem" id="btn-lang-toggle" title="%{BKY_TLB_LANG_TOGGLE}">
+                                <img src="src/icons/i18n.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span class="theme-text-label" id="langTextLeft">中文</span>
+                                <label class="switch" style="pointer-events: none;">
+                                    <input type="checkbox" id="langToggle">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="theme-text-label" id="langTextRight">EN</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="toolbar-flex-spacer"></div>
+
+                <!-- 右側群組：Serial 與 執行 -->
+                <div class="toolbar-group">
+                    <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
+                        <img src="src/icons/connect_serial_24dp_1F1F1F.png">
+                    </div>
+                    <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}">
+                        <option value="">%{BKY_TLB_NO_PORT}</option>
+                    </select>
+                    <div class="toolbar-separator"></div>
+                    <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
+                        <img src="src/icons/run_blocks_24dp_75FB4C.png">
+                    </div>
+                    <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP_PROGRAM}">
+                        <img src="src/icons/stop_24dp_EA3323.png">
+                    </div>
+                    <div class="toolbar-btn" id="btn-terminal" title="%{BKY_TLB_TERMINAL}">
+                        <img src="src/icons/terminal_24dp_1F1F1F.png">
+                    </div>
+                </div>
+            </div>
+    <!-- Toolbox XML (隱藏) -->
+    <xml id="toolbox-xml" style="display: none;">
+        <category name="Arduino 基本" colour="180">
+            <block type="arduino_pin_mode">
+                <value name="PIN">
+                    <shadow type="arduino_pin_shadow">
+                        <field name="PIN">13</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_digital_write">
+                <value name="PIN">
+                    <shadow type="arduino_pin_shadow">
+                        <field name="PIN">13</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_digital_read">
+                <value name="PIN">
+                    <shadow type="arduino_pin_shadow">
+                        <field name="PIN">13</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_analog_write">
+                <value name="PIN">
+                    <shadow type="arduino_pin_shadow">
+                        <field name="PIN">9</field>
+                    </shadow>
+                </value>
+                <value name="VALUE">
+                    <shadow type="math_number">
+                        <field name="NUM">128</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_analog_read">
+                <value name="PIN">
+                    <shadow type="arduino_pin_shadow">
+                        <field name="PIN">A0</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_delay">
+                <value name="TIME">
+                    <shadow type="math_number">
+                        <field name="NUM">1000</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_serial_print">
+                <value name="VALUE">
+                    <shadow type="text">
+                        <field name="TEXT">Hello</field>
+                    </shadow>
+                </value>
+            </block>
+        </category>
+        <category name="控制流程" colour="210">
+            <block type="controls_if"></block>
+            <block type="controls_repeat_ext">
+                <value name="TIMES">
+                    <shadow type="math_number">
+                        <field name="NUM">10</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="controls_whileUntil">
+                <value name="BOOL">
+                    <block type="logic_boolean">
+                        <field name="BOOL">TRUE</field>
+                    </block>
+                </value>
+            </block>
+        </category>
+        <category name="邏輯" colour="210">
+            <block type="logic_compare"></block>
+            <block type="logic_operation"></block>
+            <block type="logic_boolean"></block>
+        </category>
+        <category name="數學" colour="230">
+            <block type="math_number"></block>
+            <block type="math_arithmetic"></block>
+        </category>
+    </xml>
+    
+    <div id="blocklyDiv"></div>
+    <!-- 整合式終端機面板 -->
+            <div id="terminalArea" class="collapsed">
+                <div id="terminalHeader">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <img src="src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
+                        <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="terminal-tool-btn" id="btn-pause-terminal" title="%{BKY_TLB_PAUSE_SCROLL}">
+                            <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                        </button>
+                        <button class="terminal-tool-btn" id="btn-clear-terminal" title="%{BKY_TLB_CLEAR_CONSOLE}">
+                            <img src="src/icons/brush-3-ai-line_ff007c.png" style="width: 16px; height: 16px;">
+                        </button>
+                        <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
+                            <span style="font-size: 16px; font-weight: bold;">×</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="terminalContent"></div>
+            </div>
+        </div>
+        <div id="panel-resizer" title="%{BKY_TLB_DRAG_RESIZE}"></div>
+        <div id="codeArea">
+            <div id="code-toggle" title="%{BKY_TLB_TOGGLE_CODE}">
+                <span class="arrow">▶</span>
+            </div>
+            <div id="codeHeader">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="toolbar-btn" id="btn-close-code" title="%{BKY_TLB_CLOSE_PANEL}" style="margin-right: 4px;">
+                        <span class="close-icon">×</span>
+                    </div>
+                    <span>%{BKY_TLB_ARDUINO_PREVIEW}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
+                        <img src="src/icons/copy-duotone.png" style="width: 18px; height: 18px;">
+                    </div>
+                    <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
+                    <span style="font-size: 10px;">%{BKY_TLB_INDENT}</span>
+                    <select id="indent-selector" class="indent-select">
+                        <option value="2">%{BKY_TLB_INDENT_2}</option>
+                        <option value="4" selected>%{BKY_TLB_INDENT_4}</option>
+                    </select>
+                </div>
+            </div>
+            <div id="codeContent"></div>
+        </div>
+    </div>
+
+    <!-- Blockly 核心 -->
+    <script src="blockly/core/blockly.js"></script>
+    <script src="blockly/core/python_compressed.js"></script>
+
+    <!-- 插件 -->
+    <script src="blockly/plugins/field-colour.js"></script>
+    <script src="blockly/plugins/field-multilineinput.js"></script>
+    <script src="blockly/plugins/scroll-options.js"></script>
+    <script src="blockly/plugins/workspace-minimap.js"></script>
+    <script src="blockly/plugins/blockly-modal.js"></script>
+
+    <!-- Arduino 積木 -->
+    <script src="src/lib/blockly/blocks.js"></script>
+    <script src="src/lib/blockly/generators.js"></script>
+
+    <!-- i18n 語系模組 -->
+    <script src="src/i18n.js"></script>
+
+    <!-- 主程式核心邏輯 -->
+    <script src="src/main.js"></script>
+</body>
+</html>
