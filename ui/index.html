@@ -97,89 +97,254 @@
                     </div>
                 </div>
             </div>
-    <!-- Toolbox XML (隱藏) -->
+    <!-- Toolbox XML (隱藏) - 對齊 piBlockly 結構，使用 %{BKY_...} 佔位符 -->
     <xml id="toolbox-xml" style="display: none;">
-        <category name="Arduino 基本" colour="180">
-            <block type="arduino_pin_mode">
-                <value name="PIN">
-                    <shadow type="arduino_pin_shadow">
-                        <field name="PIN">13</field>
-                    </shadow>
-                </value>
-            </block>
-            <block type="arduino_digital_write">
-                <value name="PIN">
-                    <shadow type="arduino_pin_shadow">
-                        <field name="PIN">13</field>
-                    </shadow>
-                </value>
-            </block>
-            <block type="arduino_digital_read">
-                <value name="PIN">
-                    <shadow type="arduino_pin_shadow">
-                        <field name="PIN">13</field>
-                    </shadow>
-                </value>
-            </block>
-            <block type="arduino_analog_write">
-                <value name="PIN">
-                    <shadow type="arduino_pin_shadow">
-                        <field name="PIN">9</field>
-                    </shadow>
-                </value>
-                <value name="VALUE">
+        <!-- Arduino 主分類 -->
+        <category name="%{BKY_ARDUINO_CATEGORY}" colour="#016c8d">
+            <!-- 結構 -->
+            <category name="%{BKY_ARDUINO_STRUCTURE_CATEGORY}" colour="#585858">
+                <block type="initializes_setup"></block>
+                <block type="initializes_loop"></block>
+            </category>
+            <!-- I/O -->
+            <category name="%{BKY_ARDUINO_IO_CATEGORY}" colour="#016c8d">
+                <block type="arduino_pin_mode">
+                    <value name="PIN">
+                        <shadow type="arduino_pin_shadow">
+                            <field name="PIN"></field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_digital_read">
+                    <value name="PIN">
+                        <shadow type="arduino_pin_shadow">
+                            <field name="PIN"></field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_digital_write">
+                    <value name="PIN">
+                        <shadow type="arduino_pin_shadow">
+                            <field name="PIN"></field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_analog_read">
+                    <value name="PIN">
+                        <shadow type="arduino_pin_shadow">
+                            <field name="PIN">A0</field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_analog_write">
+                    <value name="PIN">
+                        <shadow type="arduino_pin_shadow">
+                            <field name="PIN">~</field>
+                        </shadow>
+                    </value>
+                    <value name="VALUE">
+                        <shadow type="math_number">
+                            <field name="NUM">0</field>
+                        </shadow>
+                    </value>
+                </block>
+            </category>
+            <!-- 時間 -->
+            <category name="%{BKY_ARDUINO_TIME_CATEGORY}" colour="#1f039b">
+                <block type="arduino_delay">
+                    <value name="TIME">
+                        <shadow type="math_number">
+                            <field name="NUM">1000</field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_delay_microseconds">
+                    <value name="TIME">
+                        <shadow type="math_number">
+                            <field name="NUM">1000</field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_millis"></block>
+                <block type="arduino_micros"></block>
+            </category>
+            <!-- 序列埠 -->
+            <category name="%{BKY_ARDUINO_SERIAL_CATEGORY}" colour="#359AFF">
+                <block type="arduino_serial_begin"></block>
+                <block type="arduino_serial_print">
+                    <value name="VALUE">
+                        <shadow type="text">
+                            <field name="TEXT">Hello, World!</field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_serial_println">
+                    <value name="VALUE">
+                        <shadow type="text">
+                            <field name="TEXT">Hello, World!</field>
+                        </shadow>
+                    </value>
+                </block>
+                <block type="arduino_serial_available"></block>
+                <block type="arduino_serial_read"></block>
+            </category>
+        </category>
+        <!-- Coding -->
+        <category name="%{BKY_CODING_CATEGORY}" colour="#585858">
+            <block type="coding_comment"></block>
+            <block type="coding_include"></block>
+            <block type="coding_raw_statement"></block>
+            <block type="coding_raw_input"></block>
+            <block type="coding_raw_definition"></block>
+            <block type="coding_raw_wrapper"></block>
+        </category>
+        <sep></sep>
+        <!-- 邏輯 -->
+        <category name="%{BKY_LOGIC_CATEGORY}" colour="#b198de">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+            <block type="logic_operation"></block>
+            <block type="logic_negate"></block>
+            <block type="logic_boolean"></block>
+        </category>
+        <!-- 迴圈 -->
+        <category name="%{BKY_LOOPS_CATEGORY}" colour="#7fcd81">
+            <block type="controls_while"></block>
+            <block type="controls_for">
+                <value name="FROM">
                     <shadow type="math_number">
-                        <field name="NUM">128</field>
+                        <field name="NUM">1</field>
                     </shadow>
                 </value>
-            </block>
-            <block type="arduino_analog_read">
-                <value name="PIN">
-                    <shadow type="arduino_pin_shadow">
-                        <field name="PIN">A0</field>
-                    </shadow>
-                </value>
-            </block>
-            <block type="arduino_delay">
-                <value name="TIME">
+                <value name="TO">
                     <shadow type="math_number">
-                        <field name="NUM">1000</field>
+                        <field name="NUM">10</field>
+                    </shadow>
+                </value>
+                <value name="BY">
+                    <shadow type="math_number">
+                        <field name="NUM">1</field>
                     </shadow>
                 </value>
             </block>
-            <block type="arduino_serial_print">
-                <value name="VALUE">
-                    <shadow type="text">
-                        <field name="TEXT">Hello</field>
+            <block type="controls_flow_statements"></block>
+        </category>
+        <!-- 數學 -->
+        <category name="%{BKY_MATH_CATEGORY}" colour="#5C68A6">
+            <block type="math_number"></block>
+            <block type="math_arithmetic"></block>
+            <block type="math_single"></block>
+            <block type="arduino_constrain">
+                <value name="LOW">
+                    <shadow type="math_number">
+                        <field name="NUM">0</field>
+                    </shadow>
+                </value>
+                <value name="HIGH">
+                    <shadow type="math_number">
+                        <field name="NUM">255</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_map">
+                <value name="FROMLOW">
+                    <shadow type="math_number">
+                        <field name="NUM">0</field>
+                    </shadow>
+                </value>
+                <value name="FROMHIGH">
+                    <shadow type="math_number">
+                        <field name="NUM">1023</field>
+                    </shadow>
+                </value>
+                <value name="TOLOW">
+                    <shadow type="math_number">
+                        <field name="NUM">0</field>
+                    </shadow>
+                </value>
+                <value name="TOHIGH">
+                    <shadow type="math_number">
+                        <field name="NUM">255</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_math_random_seed">
+                <value name="SEED">
+                    <shadow type="arduino_analog_read">
+                        <value name="PIN">
+                            <shadow type="arduino_pin_shadow">
+                                <field name="PIN">A0</field>
+                            </shadow>
+                        </value>
+                    </shadow>
+                </value>
+            </block>
+            <block type="arduino_math_random_int">
+                <value name="MIN">
+                    <shadow type="math_number">
+                        <field name="NUM">0</field>
+                    </shadow>
+                </value>
+                <value name="MAX">
+                    <shadow type="math_number">
+                        <field name="NUM">100</field>
                     </shadow>
                 </value>
             </block>
         </category>
-        <category name="控制流程" colour="210">
-            <block type="controls_if"></block>
-            <block type="controls_repeat_ext">
-                <value name="TIMES">
+        <!-- 文字 -->
+        <category name="%{BKY_TEXT_CATEGORY}" colour="#6a8871">
+            <block type="text"></block>
+            <block type="text_join"></block>
+            <block type="text_append">
+                <value name="TEXT">
+                    <shadow type="text"></shadow>
+                </value>
+            </block>
+            <block type="text_length"></block>
+        </category>
+        <sep></sep>
+        <!-- 變數 -->
+        <category name="%{BKY_VARIABLES_CATEGORY}" colour="#ef9a9a" custom="VARIABLE"></category>
+        <!-- 陣列 -->
+        <category name="%{BKY_ARRAY_CATEGORY}" colour="#d1972b">
+            <block type="array_declare_global">
+                <value name="SIZE">
                     <shadow type="math_number">
                         <field name="NUM">10</field>
                     </shadow>
                 </value>
             </block>
-            <block type="controls_whileUntil">
-                <value name="BOOL">
-                    <block type="logic_boolean">
-                        <field name="BOOL">TRUE</field>
-                    </block>
+            <block type="array_declare_local">
+                <value name="SIZE">
+                    <shadow type="math_number">
+                        <field name="NUM">10</field>
+                    </shadow>
                 </value>
             </block>
+            <block type="array_get">
+                <value name="INDEX">
+                    <shadow type="math_number">
+                        <field name="NUM">0</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="array_set">
+                <value name="INDEX">
+                    <shadow type="math_number">
+                        <field name="NUM">0</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="array_length"></block>
         </category>
-        <category name="邏輯" colour="210">
-            <block type="logic_compare"></block>
-            <block type="logic_operation"></block>
-            <block type="logic_boolean"></block>
-        </category>
-        <category name="數學" colour="230">
-            <block type="math_number"></block>
-            <block type="math_arithmetic"></block>
+        <!-- 函式 -->
+        <category name="%{BKY_FUNCTIONS_CATEGORY}" colour="#d22f73">
+            <block type="custom_functions_defnoreturn"></block>
+            <block type="custom_functions_defreturn"></block>
+            <block type="custom_functions_return"></block>
+            <block type="custom_functions_callnoreturn_manual"></block>
+            <block type="custom_functions_callreturn_manual"></block>
         </category>
     </xml>
     
@@ -245,7 +410,7 @@
     <script src="blockly/plugins/workspace-minimap.js"></script>
     <script src="blockly/plugins/blockly-modal.js"></script>
 
-    <!-- Arduino 積木 -->
+    <!-- Arduino 積木 (新模組化版本) -->
     <script src="src/lib/blockly/blocks.js"></script>
     <script src="src/lib/blockly/generators.js"></script>
 

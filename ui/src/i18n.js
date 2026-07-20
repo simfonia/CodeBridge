@@ -2,6 +2,21 @@
 /// 將翻譯註冊到 Blockly.Msg，使 %{BKY_...} 能被正確解析
 
 const zhHant = {
+    // 工具箱分類名稱
+    ARDUINO_CATEGORY: 'Arduino',
+    ARDUINO_STRUCTURE_CATEGORY: '結構',
+    ARDUINO_IO_CATEGORY: '輸入/輸出',
+    ARDUINO_TIME_CATEGORY: '時間',
+    ARDUINO_SERIAL_CATEGORY: '序列埠',
+    CODING_CATEGORY: '程式碼',
+    LOGIC_CATEGORY: '邏輯',
+    LOOPS_CATEGORY: '迴圈',
+    MATH_CATEGORY: '數學',
+    TEXT_CATEGORY: '文字',
+    VARIABLES_CATEGORY: '變數',
+    ARRAY_CATEGORY: '陣列',
+    FUNCTIONS_CATEGORY: '函式',
+
     // 工具列
     TLB_FILE_NEW: '未命名專案',
     TLB_NEW: '新專案',
@@ -39,6 +54,22 @@ const zhHant = {
 };
 
 const en = {
+    // Toolbox category names
+    ARDUINO_CATEGORY: 'Arduino',
+    ARDUINO_STRUCTURE_CATEGORY: 'Structure',
+    ARDUINO_IO_CATEGORY: 'I/O',
+    ARDUINO_TIME_CATEGORY: 'Time',
+    ARDUINO_SERIAL_CATEGORY: 'Serial',
+    CODING_CATEGORY: 'Coding',
+    LOGIC_CATEGORY: 'Logic',
+    LOOPS_CATEGORY: 'Loops',
+    MATH_CATEGORY: 'Math',
+    TEXT_CATEGORY: 'Text',
+    VARIABLES_CATEGORY: 'Variables',
+    ARRAY_CATEGORY: 'Array',
+    FUNCTIONS_CATEGORY: 'Functions',
+
+    // Toolbar
     TLB_FILE_NEW: 'Untitled Project',
     TLB_NEW: 'New',
     TLB_OPEN: 'Open',
@@ -73,8 +104,14 @@ const en = {
     MSG_CLOSE: 'Close'
 };
 
-// 偵測瀏覽器語系 (預設 zh-Hant)
+// 偵測語系 (優先使用 localStorage 儲存的設定，其次瀏覽器語系)
 function detectLocale() {
+    // 先檢查 localStorage 是否有儲存的設定
+    const saved = localStorage.getItem('codebridgeLang');
+    if (saved === 'zh-hant' || saved === 'en') {
+        return saved;
+    }
+    // 無儲存設定時使用瀏覽器語系
     const lang = navigator.language || navigator.userLanguage || 'zh-TW';
     if (lang.startsWith('zh')) {
         return 'zh-hant';
