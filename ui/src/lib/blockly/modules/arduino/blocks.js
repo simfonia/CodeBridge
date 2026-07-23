@@ -1,6 +1,5 @@
-/// CodeBridge Arduino 積木定義
-/// 對齊 piBlockly 結構與顏色
-/// 使用 %{BKY_...} 佔位符支援雙風格切換
+/// CodeBridge Arduino 模組 - 積木定義
+/// 影子積木 + 結構 + I/O + 時間 + 序列通訊
 
 // ============================================================
 // 影子積木 - 腳位輸入
@@ -27,7 +26,7 @@ Blockly.Blocks['arduino_pin_shadow'] = {
 };
 
 // ============================================================
-// Setup 積木
+// Setup
 // ============================================================
 Blockly.Blocks['initializes_setup'] = {
     init: function() {
@@ -50,7 +49,7 @@ Blockly.Blocks['initializes_setup'] = {
 };
 
 // ============================================================
-// Loop 積木
+// Loop
 // ============================================================
 Blockly.Blocks['initializes_loop'] = {
     init: function() {
@@ -73,7 +72,7 @@ Blockly.Blocks['initializes_loop'] = {
 };
 
 // ============================================================
-// pinMode 積木
+// pinMode
 // ============================================================
 Blockly.Blocks['arduino_pin_mode'] = {
     init: function() {
@@ -106,7 +105,7 @@ Blockly.Blocks['arduino_pin_mode'] = {
 };
 
 // ============================================================
-// digitalWrite 積木
+// digitalWrite
 // ============================================================
 Blockly.Blocks['arduino_digital_write'] = {
     init: function() {
@@ -138,7 +137,7 @@ Blockly.Blocks['arduino_digital_write'] = {
 };
 
 // ============================================================
-// digitalRead 積木
+// digitalRead
 // ============================================================
 Blockly.Blocks['arduino_digital_read'] = {
     init: function() {
@@ -161,7 +160,7 @@ Blockly.Blocks['arduino_digital_read'] = {
 };
 
 // ============================================================
-// analogWrite 積木
+// analogWrite
 // ============================================================
 Blockly.Blocks['arduino_analog_write'] = {
     init: function() {
@@ -190,7 +189,7 @@ Blockly.Blocks['arduino_analog_write'] = {
 };
 
 // ============================================================
-// analogRead 積木
+// analogRead
 // ============================================================
 Blockly.Blocks['arduino_analog_read'] = {
     init: function() {
@@ -213,7 +212,7 @@ Blockly.Blocks['arduino_analog_read'] = {
 };
 
 // ============================================================
-// delay 積木
+// delay
 // ============================================================
 Blockly.Blocks['arduino_delay'] = {
     init: function() {
@@ -237,7 +236,7 @@ Blockly.Blocks['arduino_delay'] = {
 };
 
 // ============================================================
-// delayMicroseconds 積木
+// delayMicroseconds
 // ============================================================
 Blockly.Blocks['arduino_delay_microseconds'] = {
     init: function() {
@@ -261,7 +260,7 @@ Blockly.Blocks['arduino_delay_microseconds'] = {
 };
 
 // ============================================================
-// millis 積木
+// millis
 // ============================================================
 Blockly.Blocks['arduino_millis'] = {
     init: function() {
@@ -277,7 +276,7 @@ Blockly.Blocks['arduino_millis'] = {
 };
 
 // ============================================================
-// micros 積木
+// micros
 // ============================================================
 Blockly.Blocks['arduino_micros'] = {
     init: function() {
@@ -293,7 +292,7 @@ Blockly.Blocks['arduino_micros'] = {
 };
 
 // ============================================================
-// Serial.begin 積木
+// Serial.begin（含常用鮑率下拉選單）
 // ============================================================
 Blockly.Blocks['arduino_serial_begin'] = {
     init: function() {
@@ -302,9 +301,21 @@ Blockly.Blocks['arduino_serial_begin'] = {
             message0: '%{BKY_ARDUINO_SERIAL_BEGIN}',
             args0: [
                 {
-                    type: 'input_value',
+                    type: 'field_dropdown',
                     name: 'BAUD',
-                    check: 'Number'
+                    options: [
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_9600}', '9600'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_300}', '300'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_1200}', '1200'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_2400}', '2400'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_4800}', '4800'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_14400}', '14400'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_19200}', '19200'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_28800}', '28800'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_38400}', '38400'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_57600}', '57600'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_115200}', '115200']
+                    ]
                 }
             ],
             previousStatement: true,
@@ -317,7 +328,7 @@ Blockly.Blocks['arduino_serial_begin'] = {
 };
 
 // ============================================================
-// Serial.print 積木
+// Serial.print
 // ============================================================
 Blockly.Blocks['arduino_serial_print'] = {
     init: function() {
@@ -341,7 +352,7 @@ Blockly.Blocks['arduino_serial_print'] = {
 };
 
 // ============================================================
-// Serial.println 積木
+// Serial.println
 // ============================================================
 Blockly.Blocks['arduino_serial_println'] = {
     init: function() {
@@ -365,7 +376,7 @@ Blockly.Blocks['arduino_serial_println'] = {
 };
 
 // ============================================================
-// Serial.available 積木
+// Serial.available
 // ============================================================
 Blockly.Blocks['arduino_serial_available'] = {
     init: function() {
@@ -381,7 +392,7 @@ Blockly.Blocks['arduino_serial_available'] = {
 };
 
 // ============================================================
-// Serial.read 積木
+// Serial.read
 // ============================================================
 Blockly.Blocks['arduino_serial_read'] = {
     init: function() {
@@ -397,7 +408,7 @@ Blockly.Blocks['arduino_serial_read'] = {
 };
 
 // ============================================================
-// Serial.println() (no args) 積木
+// Serial.println() (no args)
 // ============================================================
 Blockly.Blocks['arduino_serial_print_newline'] = {
     init: function() {
@@ -412,8 +423,3 @@ Blockly.Blocks['arduino_serial_print_newline'] = {
         });
     }
 };
-
-// 註冊積木
-function registerArduinoBlocks() {
-    console.log('[CodeBridge] Arduino blocks registered (v2)');
-}

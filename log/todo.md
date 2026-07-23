@@ -5,36 +5,39 @@
 ### 2026-07-20：piBlockly 積木移植 - 架構重構與 Phase 1
 - [x] 分析 piBlockly 模組載入機制與架構
 - [x] 確立 Locale + Style Overlay 雙風格方案
-- [x] 建立新目錄結構：blocks/, generators/, messages/, theme/, toolbox/, modules/
-- [x] 完成訊息系統：zh-hant.ts, en.ts, style/engineer.ts, style/index.ts
-- [x] 完成核心積木移植：pin.ts, core.ts, serial.ts（使用 %{BKY_...} 佔位符）
-- [x] 完成產生器移植：pin.ts, core.ts, serial.ts
+- [x] 完成訊息系統、積木定義、產生器移植
 - [x] 建立主題、工具箱、模組載入系統
-- [x] 更新 main.ts 初始化流程
-- [x] 備份舊檔案到 backup/
+
+### 2026-07-22：模組化重構（方案 A）
+- [x] blocks.js 拆分為 modules/arduino/ 結構
+- [x] generators.js 拆分為 modules/arduino/
+- [x] i18n 三層架構：UI 翻譯（lib/i18n/）vs 積木訊息（modules/*/）
+- [x] 建立 loader.js + style/engineer.js
+- [x] 建立 modules/common/ 存放暫置分類名稱
 
 ## 待辦任務
 
-### Phase 2：基礎程式邏輯移植
-- [ ] 邏輯積木（if/else, compare, operation, boolean）
-- [ ] 迴圈積木（for, while, repeat）
-- [ ] 數學積木（constrain, map, random）
-- [ ] 變數積木
-- [ ] 文字積木
+### 積木移植（下一優先）
+- [ ] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
+- [ ] 移植迴圈積木（for, while, repeat）→ `modules/loops/`
+- [ ] 移植數學積木（constrain, map, random）→ `modules/math/`
+- [ ] 移植變數積木 → `modules/variables/`
+- [ ] 移植文字積木 → `modules/text/`
+- [ ] 移植陣列積木 → `modules/array/`
+- [ ] 移植函式積木 → `modules/functions/`
+- [ ] 移植 Coding 積木 → `modules/coding/`
 
-### Phase 3：感測器與致動器移植
-- [ ] 超音波 HC-SR04
-- [ ] DHT 溫濕度感測器
-- [ ] 伺服馬達
-- [ ] 步進馬達
-- [ ] 其他硬體模組
+### 注意事項
+> **⚠️ 移植上述模組時，務必同步清理 `modules/common/zh-hant.js` 與 `modules/common/en.js`**
+>
+> 例如移植 logic 模組時：
+> 1. 從 `modules/common/zh-hant.js` 移除 `LOGIC_CATEGORY`
+> 2. 從 `modules/common/en.js` 移除 `LOGIC_CATEGORY`
+> 3. 加入 `modules/logic/zh-hant.js` + `en.js` 定義該分類
+> 4. 更新 `index.html` 載入順序
 
-### UI 整合
+### 後續任務
+- [ ] 感測器與致動器模組移植（超音波、DHT、伺服馬達等）
 - [ ] 設定選單語系/風格切換連接到 setBlockStyle()
 - [ ] 整合 UI i18n 與積木訊息系統
-
-### 測試與驗證
-- [ ] 驗證積木顯示正確性
-- [ ] 驗證產生器輸出正確性
-- [ ] 驗證風格切換（Angel / Engineer）正確性
-- [ ] 驗證語系切換（zh-hant / en）正確性
+- [ ] 驗證積木顯示、產生器輸出、風格切換正確性

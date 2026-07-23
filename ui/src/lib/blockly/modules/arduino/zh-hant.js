@@ -1,0 +1,82 @@
+/// CodeBridge Arduino 模組 - 繁體中文訊息
+/// 包含：顏色、分類名稱、積木文字、下拉選項、tooltips
+
+var ARDUINO_ZH = {
+  // 顏色
+  ARDUINO_STRUCTURE_HUE: '#585858',
+  ARDUINO_CONTROL_HUE: '#016c8d',
+  ARDUINO_DIGITAL_IO_HUE: '#0f960a',
+  ARDUINO_ANALOG_IO_HUE: '#FF9800',
+  ARDUINO_TIME_HUE: '#1f039b',
+  ARDUINO_SERIAL_HUE: '#359AFF',
+
+  // 分類名稱（僅 Arduino 模組自有分類）
+  ARDUINO_CATEGORY: 'Arduino',
+  ARDUINO_STRUCTURE_CATEGORY: '結構',
+  ARDUINO_IO_CATEGORY: '輸入/輸出',
+  ARDUINO_TIME_CATEGORY: '時間',
+  ARDUINO_SERIAL_CATEGORY: '序列埠',
+
+  // 影子積木
+  ARDUINO_PIN_LABEL: '腳位',
+
+  // 核心積木
+  ARDUINO_PIN_MODE: '設定腳位 %1 為 %2',
+  ARDUINO_DIGITAL_WRITE: '數位寫入腳位 %1 狀態 %2',
+  ARDUINO_DIGITAL_READ: '數位讀取腳位 %1',
+  ARDUINO_ANALOG_WRITE: '類比寫入腳位 %1 值 %2',
+  ARDUINO_ANALOG_READ: '類比讀取腳位 %1',
+  ARDUINO_DELAY: '延遲 %1 毫秒',
+  ARDUINO_DELAY_MICROSECONDS: '延遲 %1 微秒',
+  ARDUINO_MILLIS: '取得開機毫秒數',
+  ARDUINO_MICROS: '取得開機微秒數',
+
+  // 下拉選項
+  ARDUINO_PIN_MODE_OUTPUT: '輸出',
+  ARDUINO_PIN_MODE_INPUT: '輸入',
+  ARDUINO_PIN_MODE_INPUT_PULLUP: '輸入拉高',
+  ARDUINO_DIGITAL_HIGH: '高',
+  ARDUINO_DIGITAL_LOW: '低',
+
+  // tooltips
+  ARDUINO_PIN_MODE_TOOLTIP: '設定指定腳位為輸入或輸出模式。',
+  ARDUINO_DIGITAL_WRITE_TOOLTIP: '設定指定腳位為高電位 (HIGH) 或低電位 (LOW)。',
+  ARDUINO_DIGITAL_READ_TOOLTIP: '讀取指定腳位的數位狀態（HIGH 或 LOW）。',
+  ARDUINO_ANALOG_WRITE_TOOLTIP: '在指定腳位上輸出 PWM 類比數值（0-255）。',
+  ARDUINO_ANALOG_READ_TOOLTIP: '讀取指定類比腳位的電壓值（0-1023）。',
+  ARDUINO_DELAY_TOOLTIP: '暫停程式執行指定的毫秒數。1000 毫秒 = 1 秒。',
+  ARDUINO_DELAY_MICROSECONDS_TOOLTIP: '暫停程式執行指定的微秒數。1000 微秒 = 1 毫秒。',
+  ARDUINO_MILLIS_TOOLTIP: '回傳 Arduino 開發板啟動以來的毫秒數。',
+  ARDUINO_MICROS_TOOLTIP: '回傳 Arduino 開發板啟動以來的微秒數。',
+
+  // 序列通訊
+  ARDUINO_SERIAL_BEGIN: '序列埠初始化 鮑率 %1',
+  ARDUINO_SERIAL_BAUD_300: '300',
+  ARDUINO_SERIAL_BAUD_1200: '1200',
+  ARDUINO_SERIAL_BAUD_2400: '2400',
+  ARDUINO_SERIAL_BAUD_4800: '4800',
+  ARDUINO_SERIAL_BAUD_9600: '9600',
+  ARDUINO_SERIAL_BAUD_14400: '14400',
+  ARDUINO_SERIAL_BAUD_19200: '19200',
+  ARDUINO_SERIAL_BAUD_28800: '28800',
+  ARDUINO_SERIAL_BAUD_38400: '38400',
+  ARDUINO_SERIAL_BAUD_57600: '57600',
+  ARDUINO_SERIAL_BAUD_115200: '115200',
+  ARDUINO_SERIAL_PRINT: '序列輸出 %1',
+  ARDUINO_SERIAL_PRINTLN: '序列輸出換行 %1',
+  ARDUINO_SERIAL_AVAILABLE: '序列埠可讀取位元組數',
+  ARDUINO_SERIAL_READ: '序列埠讀取一個位元組',
+  ARDUINO_SERIAL_PRINT_NEWLINE: '序列輸出空一行',
+
+  ARDUINO_SERIAL_BEGIN_TOOLTIP: '初始化序列通訊並設定傳輸速率（鮑率）。常見值：9600。',
+  ARDUINO_SERIAL_PRINT_TOOLTIP: '透過序列埠輸出資料（不換行）。',
+  ARDUINO_SERIAL_PRINTLN_TOOLTIP: '透過序列埠輸出資料並換行。',
+  ARDUINO_SERIAL_AVAILABLE_TOOLTIP: '取得序列埠緩衝區中可讀取的位元組數。',
+  ARDUINO_SERIAL_READ_TOOLTIP: '讀取序列埠的第一個可用的位元組（-1 表示無資料）。',
+
+  // 結構
+  INITIALIZES_SETUP_APPENDTEXT: 'void setup()',
+  INITIALIZES_LOOP_APPENDTEXT: 'void loop()',
+  INITIALIZES_SETUP_TOOLTIP: 'Arduino 的 setup() 函式。此處的程式碼只在開發板啟動時執行一次。',
+  INITIALIZES_LOOP_TOOLTIP: 'Arduino 的 loop() 函式。此處的程式碼會不斷重複執行。',
+};

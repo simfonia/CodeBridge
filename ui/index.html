@@ -410,12 +410,34 @@
     <script src="blockly/plugins/workspace-minimap.js"></script>
     <script src="blockly/plugins/blockly-modal.js"></script>
 
-    <!-- Arduino 積木 (新模組化版本) -->
-    <script src="src/lib/blockly/blocks.js"></script>
-    <script src="src/lib/blockly/generators.js"></script>
+    <!-- ====== 積木模組載入 ====== -->
 
-    <!-- i18n 語系模組 -->
+    <!-- Arduino 模組：i18n → blocks → generators -->
+    <script src="src/lib/blockly/modules/arduino/zh-hant.js"></script>
+    <script src="src/lib/blockly/modules/arduino/en.js"></script>
+    <script src="src/lib/blockly/modules/arduino/blocks.js"></script>
+    <script src="src/lib/blockly/modules/arduino/generators.js"></script>
+
+    <!-- 共用分類名稱（尚未有專屬模組的分類） -->
+    <script src="src/lib/blockly/modules/common/zh-hant.js"></script>
+    <script src="src/lib/blockly/modules/common/en.js"></script>
+
+    <!-- Engineer 風格覆寫（跨模組） -->
+    <script src="src/lib/blockly/style/engineer.js"></script>
+
+    <!-- 模組載入器（根據語系註冊 i18n 到 Blockly.Msg） -->
+    <script src="src/lib/blockly/loader.js"></script>
+
+    <!-- ====== UI i18n ====== -->
+
+    <!-- UI 翻譯資料 -->
+    <script src="src/lib/i18n/zh-hant.js"></script>
+    <script src="src/lib/i18n/en.js"></script>
+
+    <!-- i18n 膠水層（語系偵測、DOM 替換） -->
     <script src="src/i18n.js"></script>
+
+    <!-- ====== 主程式 ====== -->
 
     <!-- 主程式核心邏輯 -->
     <script src="src/main.js"></script>
