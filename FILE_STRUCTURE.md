@@ -29,6 +29,8 @@ CodeBridge/
 │   │   ├── style.css    # 全域樣式
 │   │   └── lib/
 │   │       ├── blockly/         # Blockly 相關
+│   │       │   ├── generators/  # Generator 核心（對齊 piBlockly 架構）
+│   │       │   │   └── _core.js # Blockly.Arduino generator 核心（init/finish/scrub_）
 │   │       │   ├── modules/     # 積木模組（以 toolbox 分類為單位）
 │   │       │   │   ├── arduino/ # Arduino 模組（結構 + I/O + 時間 + 序列）
 │   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（顏色、分類、積木文字、tooltips）
@@ -49,6 +51,7 @@ CodeBridge/
 │   │       └── modules/          # 積木模組管理
 │   │           └── core_manifest.json # 模組載入清單
 │   └── public/
+│       ├── favicon.ico      # 網站圖示（複製自 src-tauri/icons/icon.ico）
 │       └── blockly/         # Blockly 靜態資源
 │
 ├── resources/           # 應用資源

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeBridge: Visual Arduino Programming</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Highlight.js 語法高亮 (本地化) -->
     <link rel="stylesheet" href="/src/vs.min.css">
     <script src="src/highlight.min.js"></script>
@@ -387,12 +388,6 @@
                     <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
                         <img src="src/icons/copy-duotone.png" style="width: 18px; height: 18px;">
                     </div>
-                    <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
-                    <span style="font-size: 10px;">%{BKY_TLB_INDENT}</span>
-                    <select id="indent-selector" class="indent-select">
-                        <option value="2">%{BKY_TLB_INDENT_2}</option>
-                        <option value="4" selected>%{BKY_TLB_INDENT_4}</option>
-                    </select>
                 </div>
             </div>
             <div id="codeContent"></div>
@@ -411,6 +406,9 @@
     <script src="blockly/plugins/blockly-modal.js"></script>
 
     <!-- ====== 積木模組載入 ====== -->
+
+    <!-- Arduino Generator 核心（必須在 generators 之前載入） -->
+    <script src="src/lib/blockly/generators/_core.js"></script>
 
     <!-- Arduino 模組：i18n → blocks → generators -->
     <script src="src/lib/blockly/modules/arduino/zh-hant.js"></script>

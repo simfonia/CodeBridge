@@ -3,6 +3,7 @@
 
 var ENGINEER_STYLE = {
   // Arduino 核心
+  ARDUINO_PIN_LABEL: 'pin',
   ARDUINO_PIN_MODE: 'pinMode(%1, %2)',
   ARDUINO_DIGITAL_WRITE: 'digitalWrite(%1, %2)',
   ARDUINO_DIGITAL_READ: 'digitalRead(%1)',

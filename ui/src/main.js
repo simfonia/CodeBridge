@@ -1,5 +1,11 @@
 /// CodeBridge 主程式
-/// 職責：Blockly 初始化、程式碼生成、UI 功能
+/// 職責：Blockly 初始化、程式碼生成、UI 功能、程式碼定位、孤兒積木檢測
+
+// ============================================================
+// 全域狀態
+// ============================================================
+var blockToRangeMap = new Map(); // blockId → {start, end}
+var lineDoms = [];               // 程式碼行 DOM 陣列
 
 // ============================================================
 // Blockly 初始化
@@ -33,23 +39,98 @@ function initBlockly() {
 }
 
 // ============================================================
+// 啟動時注入預設 setup + loop 積木
+// ============================================================
+function injectDefaultBlocks(workspace) {
+    Blockly.Events.disable();
+    try {
+        var defaultXml = '<xml>' +
+            '<block type="initializes_setup" x="20" y="20">' +
+              '<next>' +
+                '<block type="initializes_loop" x="20" y="100"></block>' +
+              '</next>' +
+            '</block>' +
+            '</xml>';
+        var dom = Blockly.utils.xml.textToDom(defaultXml);
+        Blockly.Xml.domToWorkspace(dom, workspace);
+    } finally {
+        Blockly.Events.enable();
+    }
+}
+
+// ============================================================
+// 程式碼渲染（含 ID 標記解析）
+// ============================================================
+function renderCode(code) {
+    const codeContent = document.getElementById('codeContent');
+    if (!codeContent) return;
+
+    var lines = code.split('\n');
+    // 移除最後空行
+    if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+
+    codeContent.innerHTML = '';
+    blockToRangeMap.clear();
+    lineDoms = [];
+
+    lines.forEach(function(line, index) {
+        // 從 Blockly.Arduino 讀取 ID 標記常數（避免硬編碼）
+        var idMarker = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER) ? Blockly.Arduino.ID_MARKER : '// __BLOCKLY_ID:';
+        var idMarkerEnd = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER_END) ? Blockly.Arduino.ID_MARKER_END : '__';
+        // 收集所有 ID 標記
+        var ids = [];
+        var idRegex = new RegExp(idMarker + '([^\\s]+)' + idMarkerEnd, 'g');
+        var idMatch;
+        while ((idMatch = idRegex.exec(line)) !== null) {
+            ids.push(idMatch[1]);
+        }
+        // 移除所有 ID 標記（換行前的那個，保留註解前的程式碼）
+        var cleanLine = line.replace(new RegExp(' ' + idMarker + '[^\\s]+' + idMarkerEnd, 'g'), '');
+
+        // 建立行容器
+        var lineDiv = document.createElement('div');
+        lineDiv.className = 'code-line';
+        lineDiv.setAttribute('data-line-index', index);
+        lineDoms.push(lineDiv);
+
+        // 語法高亮
+        if (cleanLine.length > 0) {
+            var highlighted = hljs.highlight(cleanLine, { language: 'arduino' }).value;
+            lineDiv.innerHTML = highlighted;
+        } else {
+            lineDiv.innerHTML = '&nbsp;';
+        }
+
+        // 更新範圍映射表
+        ids.forEach(function(id) {
+            if (!blockToRangeMap.has(id)) {
+                blockToRangeMap.set(id, { start: index, end: index });
+            } else {
+                blockToRangeMap.get(id).end = index;
+            }
+        });
+
+        codeContent.appendChild(lineDiv);
+    });
+
+    // 同步目前的選取狀態
+    var selectedBlock = Blockly.getSelected ? Blockly.getSelected() : null;
+    if (selectedBlock) {
+        syncSelection(selectedBlock.id);
+    }
+}
+
+// ============================================================
 // 程式碼生成
 // ============================================================
 function updateCode(workspace) {
-    let code = '';
+    var code = '';
     if (typeof Blockly.Arduino !== 'undefined' && Blockly.Arduino.workspaceToCode) {
         code = Blockly.Arduino.workspaceToCode(workspace);
     } else {
         code = generateArduinoCode(workspace);
     }
-    
-    const codeContent = document.getElementById('codeContent');
-    if (codeContent) {
-        codeContent.textContent = code;
-        if (typeof hljs !== 'undefined') {
-            codeContent.innerHTML = hljs.highlight(code, { language: 'arduino' }).value;
-        }
-    }
+    renderCode(code);
 }
 
 function generateArduinoCode(workspace) {
@@ -64,6 +145,106 @@ function generateArduinoCode(workspace) {
         }
     }
     return code;
+}
+
+// ============================================================
+// 程式碼定位：遞迴尋找可定位的父積木
+// ============================================================
+function findLocatableBlock(block) {
+    if (!block) return null;
+    // 如果是 value 積木（有 output），遞迴往上找父積木
+    if (block.outputConnection) {
+        var parent = block.getParent();
+        if (parent) return findLocatableBlock(parent);
+    }
+    return block;
+}
+
+function syncSelection(blockId) {
+    // 移除所有現有高亮
+    document.querySelectorAll('.highlight-line').forEach(function(el) {
+        el.classList.remove('highlight-line');
+    });
+
+    if (!blockId) return;
+
+    // 遞迴尋找可定位的父積木
+    var ws = Blockly.getMainWorkspace();
+    if (!ws) return;
+    var block = ws.getBlockById(blockId);
+    if (!block) return;
+    var locatableBlock = findLocatableBlock(block);
+    if (!locatableBlock) return;
+
+    var range = blockToRangeMap.get(locatableBlock.id);
+    if (range && lineDoms.length > 0) {
+        // 高亮範圍內的所有行
+        for (var i = range.start; i <= range.end; i++) {
+            if (lineDoms[i]) lineDoms[i].classList.add('highlight-line');
+        }
+
+        // 捲動到起始行
+        var startLine = lineDoms[range.start];
+        if (startLine) {
+            startLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+}
+
+// ============================================================
+// 孤兒積木檢測
+// ============================================================
+var scopeDefiningRootBlocks = [
+    'initializes_setup',
+    'initializes_loop',
+    'coding_include',
+    'coding_comment',
+    'coding_raw_definition',
+    'array_declare_global',
+    'custom_functions_defreturn',
+    'custom_functions_defnoreturn'
+];
+
+function updateOrphanBlocks(event) {
+    var ws = Blockly.getMainWorkspace();
+    if (!ws) return;
+
+    // 如果正在拖曳，稍後再處理
+    if (ws.isDragging()) return;
+
+    // 忽略 UI 事件或 disabled 狀態變更
+    if (event.isUiEvent || (event.type === 'change' && event.element === 'disabled')) return;
+
+    Blockly.Events.setGroup(true);
+    try {
+        var allBlocks = ws.getAllBlocks(true);
+
+        // 先全部啟用
+        allBlocks.forEach(function(block) {
+            if (typeof block.setDisabledReason === 'function') {
+                block.setDisabledReason(false, 'orphan');
+            } else {
+                block.setEnabled(true);
+            }
+        });
+
+        // 檢查 top blocks 是否為允許的根層級類型
+        var topBlocks = ws.getTopBlocks(true);
+        topBlocks.forEach(function(topBlock) {
+            if (scopeDefiningRootBlocks.indexOf(topBlock.type) === -1) {
+                // 不是允許的根層級積木，設為 disabled
+                topBlock.getDescendants(false).forEach(function(desc) {
+                    if (typeof desc.setDisabledReason === 'function') {
+                        desc.setDisabledReason(true, 'orphan');
+                    } else {
+                        desc.setEnabled(false);
+                    }
+                });
+            }
+        });
+    } finally {
+        Blockly.Events.setGroup(false);
+    }
 }
 
 // ============================================================
@@ -98,6 +279,13 @@ function initLangToggle() {
         const newLang = isEn ? 'en' : 'zh-hant';
         updateLabels(isEn);
         localStorage.setItem('codebridgeLang', newLang);
+        // 儲存當前工作區 XML 到 sessionStorage，避免 reload 後遺失
+        var ws = Blockly.getMainWorkspace();
+        if (ws) {
+            var xmlDom = Blockly.Xml.workspaceToDom(ws);
+            var xmlText = Blockly.Xml.domToText(xmlDom);
+            sessionStorage.setItem('codebridgeWorkspaceXml', xmlText);
+        }
         console.log('Language switched to:', newLang);
         location.reload();
     });
@@ -166,7 +354,6 @@ function initThemeToggle() {
 function initCodeToggle() {
     const codeToggle = document.getElementById('code-toggle');
     const codeArea = document.getElementById('codeArea');
-    const blocklyDiv = document.getElementById('blocklyDiv');
     if (!codeToggle || !codeArea) return;
     
     codeToggle.addEventListener('click', function() {
@@ -252,13 +439,41 @@ document.addEventListener('DOMContentLoaded', function() {
     // 3. Blockly 工作區
     const workspace = initBlockly();
     
-    // 4. 程式碼更新監聽
-    workspace.addChangeListener(function() {
+    // 4. 注入積木（優先使用 sessionStorage 中的暫存資料，否則注入預設）
+    var savedXml = sessionStorage.getItem('codebridgeWorkspaceXml');
+    if (savedXml) {
+        sessionStorage.removeItem('codebridgeWorkspaceXml');
+        Blockly.Events.disable();
+        try {
+            var dom = Blockly.utils.xml.textToDom(savedXml);
+            Blockly.Xml.domToWorkspace(dom, workspace);
+        } finally {
+            Blockly.Events.enable();
+        }
+    } else {
+        injectDefaultBlocks(workspace);
+    }
+    
+    // 5. 程式碼更新監聽
+    workspace.addChangeListener(function(event) {
+        if (event && event.isUiEvent) return;
         updateCode(workspace);
     });
+    
+    // 6. 孤兒積木檢測
+    workspace.addChangeListener(updateOrphanBlocks);
+    
+    // 7. 程式碼定位監聽
+    workspace.addChangeListener(function(event) {
+        if (event.type === Blockly.Events.SELECTED) {
+            syncSelection(event.newElementId);
+        }
+    });
+    
+    // 8. 初始程式碼生成
     updateCode(workspace);
     
-    // 5. UI 功能
+    // 9. UI 功能
     initLangToggle();
     initThemeToggle();
     initCodeToggle();

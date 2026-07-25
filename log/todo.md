@@ -15,9 +15,26 @@
 - [x] 建立 loader.js + style/engineer.js
 - [x] 建立 modules/common/ 存放暫置分類名稱
 
+### 2026-07-24：補上 setup()/loop() Angel 風格文字
+- [x] 確認風格切換 localStorage 保留機制正常（main.js 第 124/141 行）
+- [x] zh-hant.js: `INITIALIZES_SETUP_APPENDTEXT` → '初始化設定 (void setup)'
+- [x] zh-hant.js: `INITIALIZES_LOOP_APPENDTEXT` → '重複執行 (void loop)'
+- [x] en.js: `INITIALIZES_SETUP_APPENDTEXT` → 'Setup (void setup)'
+- [x] en.js: `INITIALIZES_LOOP_APPENDTEXT` → 'Loop (void loop)'
+- [x] engineer.js 無需修改，保留 void setup() / void loop()
+
 ## 待辦任務
 
+### 2026-07-25：程式碼預覽修復 + 預設積木 + 風格切換 + 孤兒積木 + 程式碼定位
+- [x] 建立 `_core.js`（Blockly.Arduino generator 核心）
+- [x] 修改 `generators.js`（setup/loop 對齊 piBlockly 程式碼籃子）
+- [x] 修改 `index.html`（載入 _core.js）
+- [x] 修改 `main.js`（預設積木、renderCode、syncSelection、孤兒積木）
+- [x] 修改 `loader.js`（setBlockStyle 工作區重新載入）
+- [x] 修改 `style.css`（高亮行樣式）
+
 ### 積木移植（下一優先）
+- [ ] 移植 Coding 積木 → `modules/coding/`
 - [ ] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
 - [ ] 移植迴圈積木（for, while, repeat）→ `modules/loops/`
 - [ ] 移植數學積木（constrain, map, random）→ `modules/math/`
@@ -25,7 +42,6 @@
 - [ ] 移植文字積木 → `modules/text/`
 - [ ] 移植陣列積木 → `modules/array/`
 - [ ] 移植函式積木 → `modules/functions/`
-- [ ] 移植 Coding 積木 → `modules/coding/`
 
 ### 注意事項
 > **⚠️ 移植上述模組時，務必同步清理 `modules/common/zh-hant.js` 與 `modules/common/en.js`**

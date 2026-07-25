@@ -21,11 +21,11 @@ var ARDUINO_ZH = {
   ARDUINO_PIN_LABEL: '腳位',
 
   // 核心積木
-  ARDUINO_PIN_MODE: '設定腳位 %1 為 %2',
-  ARDUINO_DIGITAL_WRITE: '數位寫入腳位 %1 狀態 %2',
-  ARDUINO_DIGITAL_READ: '數位讀取腳位 %1',
-  ARDUINO_ANALOG_WRITE: '類比寫入腳位 %1 值 %2',
-  ARDUINO_ANALOG_READ: '類比讀取腳位 %1',
+  ARDUINO_PIN_MODE: '設定 %1 為 %2',
+  ARDUINO_DIGITAL_WRITE: '數位寫出 %1 狀態 %2',
+  ARDUINO_DIGITAL_READ: '數位讀入 %1',
+  ARDUINO_ANALOG_WRITE: '類比寫出 %1 = %2',
+  ARDUINO_ANALOG_READ: '類比讀入 %1',
   ARDUINO_DELAY: '延遲 %1 毫秒',
   ARDUINO_DELAY_MICROSECONDS: '延遲 %1 微秒',
   ARDUINO_MILLIS: '取得開機毫秒數',
@@ -75,8 +75,8 @@ var ARDUINO_ZH = {
   ARDUINO_SERIAL_READ_TOOLTIP: '讀取序列埠的第一個可用的位元組（-1 表示無資料）。',
 
   // 結構
-  INITIALIZES_SETUP_APPENDTEXT: 'void setup()',
-  INITIALIZES_LOOP_APPENDTEXT: 'void loop()',
+  INITIALIZES_SETUP_APPENDTEXT: '初始化設定 (void setup)',
+  INITIALIZES_LOOP_APPENDTEXT: '重複執行 (void loop)',
   INITIALIZES_SETUP_TOOLTIP: 'Arduino 的 setup() 函式。此處的程式碼只在開發板啟動時執行一次。',
   INITIALIZES_LOOP_TOOLTIP: 'Arduino 的 loop() 函式。此處的程式碼會不斷重複執行。',
 };

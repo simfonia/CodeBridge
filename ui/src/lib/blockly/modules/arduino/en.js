@@ -21,11 +21,11 @@ var ARDUINO_EN = {
   ARDUINO_PIN_LABEL: 'pin',
 
   // Core blocks
-  ARDUINO_PIN_MODE: 'set pin %1 to %2',
-  ARDUINO_DIGITAL_WRITE: 'digital write pin %1 state %2',
-  ARDUINO_DIGITAL_READ: 'digital read pin %1',
-  ARDUINO_ANALOG_WRITE: 'analog write pin %1 value %2',
-  ARDUINO_ANALOG_READ: 'analog read pin %1',
+  ARDUINO_PIN_MODE: 'set %1 to %2',
+  ARDUINO_DIGITAL_WRITE: 'digital output %1 state %2',
+  ARDUINO_DIGITAL_READ: 'digital input %1',
+  ARDUINO_ANALOG_WRITE: 'analog output %1 = %2',
+  ARDUINO_ANALOG_READ: 'analog input %1',
   ARDUINO_DELAY: 'delay %1 ms',
   ARDUINO_DELAY_MICROSECONDS: 'delay %1 us',
   ARDUINO_MILLIS: 'get millis',
@@ -75,8 +75,8 @@ var ARDUINO_EN = {
   ARDUINO_SERIAL_READ_TOOLTIP: 'Read the first available byte from the serial port (-1 if no data).',
 
   // Structure
-  INITIALIZES_SETUP_APPENDTEXT: 'void setup()',
-  INITIALIZES_LOOP_APPENDTEXT: 'void loop()',
+  INITIALIZES_SETUP_APPENDTEXT: 'Setup (void setup)',
+  INITIALIZES_LOOP_APPENDTEXT: 'Loop (void loop)',
   INITIALIZES_SETUP_TOOLTIP: 'The Arduino setup() function. Code here runs once when the board starts.',
   INITIALIZES_LOOP_TOOLTIP: 'The Arduino loop() function. Code here runs repeatedly.',
 };

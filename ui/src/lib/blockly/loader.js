@@ -91,11 +91,27 @@
       applyEngineerStyle();
     }
 
-    // 更新工作區
+    // 更新工作區：儲存 XML → 清除 → 重新載入（讓積木用新的 Msg 重新渲染）
     var ws = Blockly.getMainWorkspace();
     if (ws) {
-      ws.refreshToolboxSelection_();
-      Blockly.Events.fire(new Blockly.Events.Ui(null, 'themeChange'));
+      // 儲存當前工作區狀態
+      var currentXml = Blockly.Xml.workspaceToDom(ws);
+
+      // 更新 toolbox 分類名稱
+      var toolboxXml = document.getElementById('toolbox-xml');
+      if (toolboxXml) {
+        var newToolbox = toolboxXml.cloneNode(true);
+        ws.updateToolbox(newToolbox);
+      }
+
+      // 清除並重新載入工作區
+      Blockly.Events.disable();
+      try {
+        ws.clear();
+        Blockly.Xml.domToWorkspace(currentXml, ws);
+      } finally {
+        Blockly.Events.enable();
+      }
     }
   };
 

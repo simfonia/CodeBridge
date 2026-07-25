@@ -40,5 +40,15 @@ export default defineConfig({
   },
   plugins: [
     copyCodeBridgeAssets()
-  ]
+  ],
+  // 排除傳統 script 載入的 blockly 模組檔案，避免 Vite 嘗試解析為 ES module
+  optimizeDeps: {
+    exclude: ['src/lib/blockly']
+  },
+  server: {
+    watch: {
+      // 不要監視 dist 目錄
+      ignored: ['!**/dist/**']
+    }
+  }
 });

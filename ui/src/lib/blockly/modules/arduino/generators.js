@@ -7,16 +7,18 @@ if (typeof Blockly.Arduino !== 'undefined') {
     return [pin, Blockly.Arduino.ORDER_ATOMIC];
   };
 
-  // Setup
+  // Setup - 將內容放入 setups_ 籃子，記錄 block ID 供 finish() 定位
   Blockly.Arduino.forBlock['initializes_setup'] = function(block) {
-    const content = Blockly.Arduino.statementToCode(block, 'CONTENT');
-    return 'void setup() {\n' + content + '}\n';
+    var statements_content = Blockly.Arduino.statementToCode(block, 'CONTENT');
+    Blockly.Arduino.setups_['user_code'] = statements_content;
+    Blockly.Arduino.setupsBlockId_ = block.id;
+    return '';
   };
 
-  // Loop
+  // Loop - 回傳內容給 finish() 組裝進 void loop()，記錄 block ID 供 finish() 定位
   Blockly.Arduino.forBlock['initializes_loop'] = function(block) {
-    const content = Blockly.Arduino.statementToCode(block, 'CONTENT');
-    return 'void loop() {\n' + content + '}\n';
+    Blockly.Arduino.loopBlockId_ = block.id;
+    return Blockly.Arduino.statementToCode(block, 'CONTENT');
   };
 
   // pinMode

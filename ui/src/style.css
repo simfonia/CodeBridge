@@ -475,3 +475,19 @@ input:checked + .slider:before {
     border-radius: 4px;
     cursor: pointer;
 }
+
+/* ============================================================
+   程式碼預覽行樣式
+   ============================================================ */
+.code-line {
+    padding: 0 8px;
+    white-space: pre;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    min-height: 1.5em;
+    transition: background-color 0.2s;
+}
+
+.code-line.highlight-line {
+    background-color: #fff59d;
+    border-left: 3px solid #f9a825;
+}

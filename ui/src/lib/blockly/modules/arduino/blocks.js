@@ -167,6 +167,7 @@ Blockly.Blocks['arduino_analog_write'] = {
         this.jsonInit({
             type: 'arduino_analog_write',
             message0: '%{BKY_ARDUINO_ANALOG_WRITE}',
+            inputsInline: true,
             args0: [
                 {
                     type: 'input_value',
