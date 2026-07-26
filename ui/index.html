@@ -15,6 +15,15 @@
 </head>
 <body class="codebridge-editor">
     <div id="resizer-overlay"></div>
+    <!-- 作弊答案浮動視窗（全域浮動，不隸屬於任何容器） -->
+    <div id="cheatOverlay" class="cheat-overlay" style="display: none;">
+        <div class="cheat-header" id="cheatHeader">
+            <span>%{BKY_PRACTICE_ANSWER_TITLE}</span>
+            <button class="cheat-close-btn" id="btn-cheat-close">×</button>
+        </div>
+        <div class="cheat-content" id="cheatContent"></div>
+    </div>
+
     <div id="container">
         <div id="blocklyArea">
             <div id="toolbar">
@@ -29,7 +38,7 @@
                     </div>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
-                        <img src="src/icons/pen-new-square-outline.png">
+                        <img src="src/icons/doc-new.png">
                     </div>
                     <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
                         <img src="src/icons/open-file.png">
@@ -385,12 +394,50 @@
                     <span>%{BKY_TLB_ARDUINO_PREVIEW}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="toolbar-btn" id="btn-practice" title="%{BKY_PRACTICE_ENTER}" style="width: 24px; height: 24px;">
+                        <img src="src/icons/pen-new-square-outline.png" style="width: 18px; height: 18px;">
+                    </div>
                     <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
                         <img src="src/icons/copy-duotone.png" style="width: 18px; height: 18px;">
                     </div>
                 </div>
             </div>
             <div id="codeContent"></div>
+            <!-- 練習模式容器（預設隱藏，與 codeContent 為兄弟元素） -->
+            <div id="practiceContainer" style="display: none;">
+                <div class="practice-header">
+                    <span class="practice-title">%{BKY_PRACTICE_TITLE}</span>
+                    <div class="practice-controls">
+                        <div class="toolbar-btn" id="btn-cheat" title="%{BKY_PRACTICE_CHEAT}" style="width: 24px; height: 24px; display: none;">
+                            <img src="src/icons/eye-closed-circle.png" style="width: 18px; height: 18px;">
+                        </div>
+                        <button id="btn-exit-practice" class="practice-btn" style="display: none;">
+                            %{BKY_PRACTICE_EXIT}
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="practice-content">
+                    <div class="practice-hint">
+                        %{BKY_PRACTICE_HINT}
+                    </div>
+                    
+                    <div class="practice-editor-wrapper">
+                        <div class="practice-line-numbers" id="practiceLineNumbers">1</div>
+                        <textarea id="practiceTextarea" 
+                                  class="practice-textarea" 
+                                  placeholder="%{BKY_PRACTICE_PLACEHOLDER}"
+                                  spellcheck="false"
+                                  autocomplete="off"
+                                  wrap="off"></textarea>
+                    </div>
+                    
+                    <div id="hintPopup" class="hint-popup" style="display: none;">
+                        <div class="hint-title">%{BKY_PRACTICE_HINT_TITLE}</div>
+                        <div id="hintContent" class="hint-content"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -434,6 +481,11 @@
 
     <!-- i18n 膠水層（語系偵測、DOM 替換） -->
     <script src="src/i18n.js"></script>
+
+    <!-- ====== 練習模式 ====== -->
+
+    <!-- 練習模式核心（比對引擎 + 提示系統） -->
+    <script src="src/lib/practice/practice-mode.js"></script>
 
     <!-- ====== 主程式 ====== -->
 

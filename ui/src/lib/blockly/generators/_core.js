@@ -72,6 +72,9 @@ Blockly.Arduino.init = function(workspace) {
   Blockly.Arduino.setupsBlockId_ = null;
   Blockly.Arduino.loopBlockId_ = null;
 
+  // 初始化縮排設定（使用 Blockly 標準 INDENT）
+  Blockly.Arduino.INDENT = '  ';  // 兩個空格，可依需求調整為 '\t' 或 '    '
+
   if (!Blockly.Arduino.variableDB_) {
     Blockly.Arduino.variableDB_ = new Blockly.Names(Blockly.Arduino.RESERVED_WORDS_);
   } else {
@@ -101,17 +104,17 @@ Blockly.Arduino.finish = function(code) {
   var setupFunc = '';
   var setups = Object.values(Blockly.Arduino.setups_);
   if (Blockly.Arduino.setupsBlockId_ || setups.length > 0) {
-    var setupCode = setups.length > 0 ? setups.join('\n  ') : '';
+    var setupCode = setups.length > 0 ? Blockly.Arduino.prefixLines(setups.join('\n'), Blockly.Arduino.INDENT) : '';
     var setupId = Blockly.Arduino.setupsBlockId_ ? ' ' + Blockly.Arduino.ID_MARKER + Blockly.Arduino.setupsBlockId_ + Blockly.Arduino.ID_MARKER_END : '';
-    setupFunc = 'void setup() {' + setupId + '\n  ' + setupCode + '\n}\n';
+    setupFunc = 'void setup() {' + setupId + '\n' + setupCode + '\n}\n';
   }
 
   // 8. Loop function - 只有當有內容或有設定 loop 積木存在時才輸出
   var loopFunc = '';
   if (Blockly.Arduino.loopBlockId_ || (code && code.trim())) {
     var loopId = Blockly.Arduino.loopBlockId_ ? ' ' + Blockly.Arduino.ID_MARKER + Blockly.Arduino.loopBlockId_ + Blockly.Arduino.ID_MARKER_END : '';
-    var loopContent = code ? code.replace(/\n/g, '\n  ') : '';
-    loopFunc = 'void loop() {' + loopId + '\n  ' + loopContent + '\n}\n';
+    var loopContent = code ? Blockly.Arduino.prefixLines(code, Blockly.Arduino.INDENT) : '';
+    loopFunc = 'void loop() {' + loopId + '\n' + loopContent + '\n}\n';
   }
 
   // 組裝最終程式碼

@@ -9,7 +9,8 @@ if (typeof Blockly.Arduino !== 'undefined') {
 
   // Setup - 將內容放入 setups_ 籃子，記錄 block ID 供 finish() 定位
   Blockly.Arduino.forBlock['initializes_setup'] = function(block) {
-    var statements_content = Blockly.Arduino.statementToCode(block, 'CONTENT');
+    var contentBlock = block.getInputTargetBlock('CONTENT');
+    var statements_content = contentBlock ? Blockly.Arduino.blockToCode(contentBlock) : '';
     Blockly.Arduino.setups_['user_code'] = statements_content;
     Blockly.Arduino.setupsBlockId_ = block.id;
     return '';
@@ -18,7 +19,8 @@ if (typeof Blockly.Arduino !== 'undefined') {
   // Loop - 回傳內容給 finish() 組裝進 void loop()，記錄 block ID 供 finish() 定位
   Blockly.Arduino.forBlock['initializes_loop'] = function(block) {
     Blockly.Arduino.loopBlockId_ = block.id;
-    return Blockly.Arduino.statementToCode(block, 'CONTENT');
+    var contentBlock = block.getInputTargetBlock('CONTENT');
+    return contentBlock ? Blockly.Arduino.blockToCode(contentBlock) : '';
   };
 
   // pinMode

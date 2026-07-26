@@ -30,8 +30,8 @@ function initI18n() {
     return messages;
 }
 
-// 替換 DOM 中的 %{BKY_...} 佔位符
-function replaceBkyPlaceholders(messages) {
+// 替換 DOM 文字節點中的 %{BKY_...} 佔位符
+function replaceBkyTextNodes(messages) {
     const walker = document.createTreeWalker(
         document.body,
         NodeFilter.SHOW_TEXT,
@@ -73,12 +73,29 @@ function replaceBkyTitles(messages) {
     }
 }
 
+// 替換 placeholder 屬性中的 %{BKY_...} 佔位符
+function replaceBkyAttrPlaceholders(messages) {
+    const elements = document.querySelectorAll('[placeholder*="%{BKY_"]');
+    for (const el of elements) {
+        const placeholder = el.getAttribute('placeholder');
+        if (placeholder) {
+            el.setAttribute('placeholder', placeholder.replace(
+                /%\{BKY_([A-Z_0-9]+)\}/g,
+                function(match, key) {
+                    return messages[key] !== undefined ? messages[key] : match;
+                }
+            ));
+        }
+    }
+}
+
 // 公開初始化函式
 window.CodeBridgeI18n = {
     init: function() {
         const messages = initI18n();
-        replaceBkyPlaceholders(messages);
+        replaceBkyTextNodes(messages);
         replaceBkyTitles(messages);
+        replaceBkyAttrPlaceholders(messages);
         console.log('CodeBridge i18n initialized:', Blockly.Msg.LANG);
         return messages;
     }

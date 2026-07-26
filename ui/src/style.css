@@ -173,7 +173,8 @@ body {
 }
 
 #codeArea.collapsed #codeHeader,
-#codeArea.collapsed #codeContent {
+#codeArea.collapsed #codeContent,
+#codeArea.collapsed #practiceContainer {
     opacity: 0;
     pointer-events: none;
 }
@@ -490,4 +491,268 @@ input:checked + .slider:before {
 .code-line.highlight-line {
     background-color: #fff59d;
     border-left: 3px solid #f9a825;
+}
+
+/* ============================================================
+   練習模式樣式
+   ============================================================ */
+
+/* 練習模式容器 */
+#practiceContainer {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    background: #1e1e1e;
+    overflow: hidden;
+}
+
+.practice-header {
+    padding: 8px 12px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #404040;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.practice-title {
+    color: #FE2F89;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.practice-btn {
+    background: #404040;
+    color: #fff;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.practice-btn:hover {
+    background: #505050;
+}
+
+/* 練習區域 */
+.practice-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.practice-hint {
+    padding: 8px 12px;
+    background: #252525;
+    color: #aaa;
+    font-size: 11px;
+    border-bottom: 1px solid #333;
+}
+
+/* 編輯器包裝（行號 + textarea） */
+.practice-editor-wrapper {
+    display: flex;
+    height: calc(100% - 36px);
+    position: relative;
+}
+
+/* 行號欄（與 textarea 完全對齊） */
+.practice-line-numbers {
+    width: 40px;
+    background: #252525;
+    color: #666;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 12px 8px 12px 4px; /* top/right/bottom/left 對齊 textarea */
+    text-align: right;
+    user-select: none;
+    overflow: hidden;
+    border-right: 1px solid #333;
+}
+
+.practice-line-num {
+    height: 22.4px; /* 14px * 1.6 = 22.4px，與 textarea 行高完全一致 */
+    padding: 0;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.practice-textarea {
+    flex: 1;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+    padding: 12px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    tab-size: 4;
+}
+
+/* 提示 Popup */
+.hint-popup {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: rgba(45, 45, 45, 0.95);
+    border: 1px solid #FE2F89;
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+.hint-title {
+    color: #FE2F89;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.hint-content {
+    color: #aaa;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.hint-context {
+    color: #888;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.hint-current-line {
+    color: #d4d4d4;
+    font-weight: bold;
+    padding: 4px 0;
+    border-bottom: 1px solid #404040;
+    margin-bottom: 4px;
+}
+
+.hint-next-label {
+    color: #888;
+    font-size: 11px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+.hint-line {
+    color: #666;
+    padding: 2px 0;
+}
+
+.hint-complete {
+    color: #4CAF50;
+    font-size: 14px;
+    text-align: center;
+    padding: 8px;
+}
+
+/* 比對結果樣式（行號欄背景） */
+.practice-line-num.practice-line-correct {
+    background-color: rgba(76, 175, 80, 0.2);
+}
+
+.practice-line-num.practice-line-warning {
+    background-color: rgba(255, 152, 0, 0.2);
+}
+
+.practice-line-num.practice-line-wrong {
+    background-color: rgba(244, 67, 54, 0.2);
+}
+
+.practice-line-num.practice-line-extra {
+    background-color: rgba(255, 235, 59, 0.15);
+}
+
+/* ============================================================
+   作弊答案浮動視窗
+   ============================================================ */
+
+/* 眼睛圖示 hover 切換（使用 JS 切換 src，CSS 只處理 filter） */
+#btn-cheat {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+    z-index: 60;
+}
+
+#btn-cheat img {
+    filter: brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(85%) contrast(85%);
+    transition: filter 0.2s;
+}
+
+#btn-cheat:hover img,
+#btn-cheat.active img {
+    filter: brightness(0) saturate(100%) invert(24%) sepia(89%) saturate(6543%) hue-rotate(317deg) brightness(98%) contrast(93%);
+}
+
+/* 作弊浮動視窗（可拖曳，全域浮動） */
+.cheat-overlay {
+    position: fixed;
+    width: 320px;
+    height: 240px;
+    min-width: 200px;
+    min-height: 150px;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid #404040;
+    border-radius: 6px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    /* 預設位置：右上角 */
+    top: 50px;
+    right: 10px;
+    left: auto;
+    bottom: auto;
+}
+
+.cheat-header {
+    padding: 6px 10px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #404040;
+    color: #FE2F89;
+    font-weight: bold;
+    font-size: 12px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+}
+
+.cheat-close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.cheat-close-btn:hover {
+    color: #FE2F89;
+}
+
+.cheat-content {
+    flex: 1;
+    padding: 8px;
+    overflow: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #d4d4d4;
+    white-space: pre;
 }

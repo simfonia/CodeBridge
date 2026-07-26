@@ -29,6 +29,17 @@ var UI_EN = {
     TLB_THEME_TOGGLE: 'Toggle Block Style (Engineer/Angel)',
     TLB_LANG_TOGGLE: 'Switch Language (中文/English)',
     
+    // Practice Mode
+    PRACTICE_ENTER: '✍️ Practice',
+    PRACTICE_EXIT: '❌ Exit Practice',
+    PRACTICE_TITLE: '✍️ Code Writing Practice',
+    PRACTICE_HINT: '💡 F2 Hint | Enter Check | Esc Exit',
+    PRACTICE_PLACEHOLDER: 'Write your code here...',
+    PRACTICE_HINT_TITLE: '💡 Hint',
+    PRACTICE_CHEAT: 'View Full Answer',
+    PRACTICE_ANSWER_TITLE: '📄 Full Answer',
+    PRACTICE_COMPLETE: '🎉 Complete! All code is correct!',
+    
     // Messages
     MSG_SAVE: 'Save',
     MSG_DONT_SAVE: 'Don\'t Save',

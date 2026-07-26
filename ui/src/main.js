@@ -473,7 +473,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // 8. 初始程式碼生成
     updateCode(workspace);
     
-    // 9. UI 功能
+    // 9. 練習模式初始化
+    if (typeof initPracticeMode === 'function') {
+        initPracticeMode(workspace);
+    }
+    
+    // 10. UI 功能
     initLangToggle();
     initThemeToggle();
     initCodeToggle();

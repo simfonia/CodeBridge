@@ -29,6 +29,17 @@ var UI_ZH_HANT = {
     TLB_THEME_TOGGLE: '切換積木風格',
     TLB_LANG_TOGGLE: '切換語系 (中文/English)',
     
+    // 練習模式
+    PRACTICE_ENTER: '✍️ 練習',
+    PRACTICE_EXIT: '❌ 退出練習',
+    PRACTICE_TITLE: '✍️ 程式碼撰寫練習',
+    PRACTICE_HINT: '💡 按 F2 顯示提示 | Enter 檢查 | Esc 退出',
+    PRACTICE_PLACEHOLDER: '在這裡手寫程式碼...',
+    PRACTICE_HINT_TITLE: '💡 提示',
+    PRACTICE_CHEAT: '查看完整答案',
+    PRACTICE_ANSWER_TITLE: '📄 完整答案',
+    PRACTICE_COMPLETE: '🎉 完成！你已經正確寫完所有程式碼！',
+    
     // 訊息
     MSG_SAVE: '儲存',
     MSG_DONT_SAVE: '不儲存',

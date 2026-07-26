@@ -43,8 +43,10 @@ CodeBridge/
 │   │       │   ├── style/        # 跨模組風格
 │   │       │   │   └── engineer.js # Engineer 風格覆寫（C++ 語法）
 │   │       │   └── loader.js     # 模組載入器（語系選擇 + 風格切換）
+│   │       ├── practice/         # 練習模式（程式碼撰寫導航員）
+│   │       │   └── practice-mode.js # 練習模式核心（比對引擎 + 提示系統）
 │   │       ├── i18n/             # UI 翻譯（獨立於積木訊息）
-│   │       │   ├── zh-hant.js    # 繁體中文 UI 文字（TLB_xxx, MSG_xxx）
+│   │       │   ├── zh-hant.js    # 繁體中文 UI 文字（TLB_xxx, MSG_xxx, PRACTICE_xxx）
 │   │       │   └── en.js         # 英文 UI 文字
 │   │       ├── components/       # Svelte 元件
 │   │       ├── stores/           # 狀態管理

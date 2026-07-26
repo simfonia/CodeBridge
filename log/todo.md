@@ -23,7 +23,6 @@
 - [x] en.js: `INITIALIZES_LOOP_APPENDTEXT` → 'Loop (void loop)'
 - [x] engineer.js 無需修改，保留 void setup() / void loop()
 
-## 待辦任務
 
 ### 2026-07-25：程式碼預覽修復 + 預設積木 + 風格切換 + 孤兒積木 + 程式碼定位
 - [x] 建立 `_core.js`（Blockly.Arduino generator 核心）
@@ -33,6 +32,7 @@
 - [x] 修改 `loader.js`（setBlockStyle 工作區重新載入）
 - [x] 修改 `style.css`（高亮行樣式）
 
+## 待辦任務
 ### 積木移植（下一優先）
 - [ ] 移植 Coding 積木 → `modules/coding/`
 - [ ] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
@@ -52,8 +52,55 @@
 > 3. 加入 `modules/logic/zh-hant.js` + `en.js` 定義該分類
 > 4. 更新 `index.html` 載入順序
 
+#### 縮排處理規範（2026-07-26 更新）
+> **✅ 已統一使用 Blockly INDENT 功能，未來移植無需額外處理縮排**
+
+**自動處理（無需擔心）：**
+- setup() 和 loop() 內的程式碼：已透過 `finish()` 統一縮排
+- 一般陳述式積木（如 pinMode、digitalWrite）：返回單行 + `\n`，不涉及縮排
+
+**遵循 Blockly 標準模式：**
+- **容器型積木**（if/else、for、while、自定義函式）：
+  - 使用 `statementToCode(block, 'INPUT_NAME')` 取得子積木程式碼
+  - Blockly 會自動加入縮排，**不要**手動處理
+  ```javascript
+  var statements = Blockly.Arduino.statementToCode(block, 'DO');  // ✅ 正確
+  ```
+
+- **數值/字串積木**：
+  - 使用 `valueToCode(block, 'INPUT_NAME', ORDER)` 取得表達式
+  - 返回陣列 `[code, order]`
+  ```javascript
+  var value = Blockly.Arduino.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_ATOMIC);
+  return ['digitalRead(' + value + ')', Blockly.Arduino.ORDER_ATOMIC];  // ✅ 正確
+  ```
+
+**關鍵區別：**
+| 方法 | 用途 | 縮排處理 |
+|-----|------|---------|
+| `statementToCode()` | 容器積木的陳述式輸入 | ✅ 自動加入縮排 |
+| `blockToCode()` | 取得單一積木的原始程式碼 | ❌ 不含縮排 |
+| `valueToCode()` | 取得表達式/數值 | ❌ 不含縮排 |
+
+**移植檢查清單：**
+1. ✅ 是否為 setup/loop 內容？→ 會自動縮排（已統一處理）
+2. ✅ 是否為容器型積木（if/for/while/函式）？→ 使用 `statementToCode()`
+3. ✅ 是否為數值/字串積木？→ 使用 `valueToCode()`
+4. ❌ **不需要**在產生器中手動處理縮排（除非有特殊需求）
+
+**參考實作：**
+- `modules/arduino/generators.js` 第 11-22 行（setup/loop 使用 `blockToCode`）
+- `modules/arduino/generators.js` 第 25-110 行（一般積木使用 `valueToCode`）
+
+### 2026-07-26：程式碼撰寫導航員 - 實作 Phase 1~3
+- [x] 審核並更新 pilot.md 為 v1.1
+- [x] 建立 `ui/src/lib/practice/practice-mode.js`（比對引擎 + 提示系統）
+- [x] 修改 `index.html`（加入練習模式 UI + script 載入）
+- [x] 修改 `style.css`（加入練習模式樣式）
+- [x] 修改 `main.js`（加入 initPracticeMode 呼叫）
+- [x] 修改 `i18n/zh-hant.js` + `en.js`（加入 PRACTICE_xxx key）
+- [x] 更新 `FILE_STRUCTURE.md`
+
 ### 後續任務
-- [ ] 感測器與致動器模組移植（超音波、DHT、伺服馬達等）
-- [ ] 設定選單語系/風格切換連接到 setBlockStyle()
-- [ ] 整合 UI i18n 與積木訊息系統
-- [ ] 驗證積木顯示、產生器輸出、風格切換正確性
+- [ ] 從網路匯入感測器與致動器模組（對齊#piBlockly匯入的#pbm）
+- [ ] 程式碼撰寫導航員 Phase 4：測試與優化
