@@ -33,12 +33,18 @@
       if (typeof ARDUINO_ZH !== 'undefined') {
         registerMessages(ARDUINO_ZH, true);
       }
+      if (typeof CODING_ZH !== 'undefined') {
+        registerMessages(CODING_ZH, true);
+      }
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
       }
     } else {
       if (typeof ARDUINO_EN !== 'undefined') {
         registerMessages(ARDUINO_EN, true);
+      }
+      if (typeof CODING_EN !== 'undefined') {
+        registerMessages(CODING_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);
@@ -74,12 +80,18 @@
       if (typeof ARDUINO_ZH !== 'undefined') {
         registerMessages(ARDUINO_ZH, true);
       }
+      if (typeof CODING_ZH !== 'undefined') {
+        registerMessages(CODING_ZH, true);
+      }
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
       }
     } else {
       if (typeof ARDUINO_EN !== 'undefined') {
         registerMessages(ARDUINO_EN, true);
+      }
+      if (typeof CODING_EN !== 'undefined') {
+        registerMessages(CODING_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);

@@ -34,7 +34,7 @@
 
 ## 待辦任務
 ### 積木移植（下一優先）
-- [ ] 移植 Coding 積木 → `modules/coding/`
+- [x] 移植 Coding 積木 → `modules/coding/`
 - [ ] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
 - [ ] 移植迴圈積木（for, while, repeat）→ `modules/loops/`
 - [ ] 移植數學積木（constrain, map, random）→ `modules/math/`
@@ -101,6 +101,23 @@
 - [x] 修改 `i18n/zh-hant.js` + `en.js`（加入 PRACTICE_xxx key）
 - [x] 更新 `FILE_STRUCTURE.md`
 
+### 2026-07-27：程式碼撰寫導航員 - 除錯與優化
+- [x] 修正 F2 提示行號錯位問題（註解行處理）
+- [x] 加入括號間距寬容處理（`setup( )` → `setup()`）
+- [x] 加入 token 空白標準化（逗號、運算子、關鍵字）
+- [x] 作弊窗改為可拖曳全域浮動視窗
+- [x] 作弊窗內容改為保留縮排的原始程式碼
+- [x] 作弊按鈕 tooltip 狀態切換
+- [x] 移除程式碼預覽面板左上角重複的關閉按鈕
+- [x] 進入練習模式時鎖定工作區（多層防護：readOnly + setEnabled + 灰色遮罩）
+- [x] 行號 tooltip 顯示警告訊息
+- [x] 修正 F2 提示邏輯（使用比對結果計算 currentLineIndex）
+
 ### 後續任務
 - [ ] 從網路匯入感測器與致動器模組（對齊#piBlockly匯入的#pbm）
-- [ ] 程式碼撰寫導航員 Phase 4：測試與優化
+
+### 2026-07-26：啟用 Blockly 工作區註解
+- [x] 診斷右鍵工作區缺少 'Add comment' 選項
+- [x] 在  的  中加入  和 
+- [ ] 驗證工作區註解功能在瀏覽器中正常運作
+- [ ] 考慮工作區註解的保存/載入 (XML 序列化)

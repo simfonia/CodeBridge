@@ -185,8 +185,8 @@ Blockly.Arduino.scopeDefiningRootBlocks = [
   'initializes_setup',
   'initializes_loop',
   'coding_include',
-  'coding_comment',
   'coding_raw_definition',
+  'coding_raw_wrapper',
   'array_declare_global',
   'custom_functions_defreturn',
   'custom_functions_defnoreturn'

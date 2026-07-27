@@ -3,7 +3,6 @@
 /// 未來移植對應模組時，請將分類名稱搬入該模組
 
 var COMMON_ZH = {
-  CODING_CATEGORY: '程式碼',
   LOGIC_CATEGORY: '邏輯',
   LOOPS_CATEGORY: '迴圈',
   MATH_CATEGORY: '數學',

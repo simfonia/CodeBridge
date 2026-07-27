@@ -37,7 +37,9 @@ var UI_EN = {
     PRACTICE_PLACEHOLDER: 'Write your code here...',
     PRACTICE_HINT_TITLE: '💡 Hint',
     PRACTICE_CHEAT: 'View Full Answer',
+    PRACTICE_CHEAT_CLOSE: 'Close Full Answer',
     PRACTICE_ANSWER_TITLE: '📄 Full Answer',
+    PRACTICE_READONLY_HINT: 'Exit practice mode to edit blocks',
     PRACTICE_COMPLETE: '🎉 Complete! All code is correct!',
     
     // Messages

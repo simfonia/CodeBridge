@@ -37,7 +37,9 @@ var UI_ZH_HANT = {
     PRACTICE_PLACEHOLDER: '在這裡手寫程式碼...',
     PRACTICE_HINT_TITLE: '💡 提示',
     PRACTICE_CHEAT: '查看完整答案',
+    PRACTICE_CHEAT_CLOSE: '關閉完整答案',
     PRACTICE_ANSWER_TITLE: '📄 完整答案',
+    PRACTICE_READONLY_HINT: '請先退出練習模式才能編輯積木',
     PRACTICE_COMPLETE: '🎉 完成！你已經正確寫完所有程式碼！',
     
     // 訊息

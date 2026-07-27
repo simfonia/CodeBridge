@@ -24,10 +24,19 @@ function initBlockly() {
         toolbox = '<xml><category name="Arduino" colour="#016c8d"></category></xml>';
     }
     
+    // Blockly v12+：必須手動註冊工作區註解的右鍵選單
+    // 否則右鍵工作區空白處不會出現 "Add comment" 選項
+    if (typeof Blockly.ContextMenuItems !== 'undefined' &&
+        typeof Blockly.ContextMenuItems.registerCommentOptions === 'function') {
+        Blockly.ContextMenuItems.registerCommentOptions();
+    }
+
     const workspace = Blockly.inject(blocklyDiv, {
         toolbox: toolbox,
         scrollbars: true,
         trashcan: true,
+        comments: true,
+        workspaceComments: true,
         grid: {
             spacing: 20,
             colour: '#eee',
@@ -194,16 +203,6 @@ function syncSelection(blockId) {
 // ============================================================
 // 孤兒積木檢測
 // ============================================================
-var scopeDefiningRootBlocks = [
-    'initializes_setup',
-    'initializes_loop',
-    'coding_include',
-    'coding_comment',
-    'coding_raw_definition',
-    'array_declare_global',
-    'custom_functions_defreturn',
-    'custom_functions_defnoreturn'
-];
 
 function updateOrphanBlocks(event) {
     var ws = Blockly.getMainWorkspace();
@@ -229,6 +228,8 @@ function updateOrphanBlocks(event) {
         });
 
         // 檢查 top blocks 是否為允許的根層級類型
+        // 使用 Blockly.Arduino.scopeDefiningRootBlocks（定義在 _core.js）
+        var scopeDefiningRootBlocks = Blockly.Arduino.scopeDefiningRootBlocks || [];
         var topBlocks = ws.getTopBlocks(true);
         topBlocks.forEach(function(topBlock) {
             if (scopeDefiningRootBlocks.indexOf(topBlock.type) === -1) {

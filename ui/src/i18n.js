@@ -14,9 +14,11 @@ function detectLocale() {
 }
 
 // 初始化 i18n：註冊 UI 翻譯到 Blockly.Msg
+var currentMessages = null;
 function initI18n() {
     const locale = detectLocale();
     const messages = locale === 'zh-hant' ? UI_ZH_HANT : UI_EN;
+    currentMessages = messages;
     
     if (typeof Blockly !== 'undefined' && Blockly.Msg) {
         for (const key in messages) {
@@ -28,6 +30,16 @@ function initI18n() {
     }
     
     return messages;
+}
+
+// 取得 i18n 文字（給 runtime 使用）
+function getI18n(key, defaultValue) {
+    if (currentMessages) {
+        if (currentMessages[key] !== undefined) {
+            return currentMessages[key];
+        }
+    }
+    return defaultValue || key;
 }
 
 // 替換 DOM 文字節點中的 %{BKY_...} 佔位符

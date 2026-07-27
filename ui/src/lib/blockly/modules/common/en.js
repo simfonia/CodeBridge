@@ -3,7 +3,6 @@
 /// Move to respective module when ported
 
 var COMMON_EN = {
-  CODING_CATEGORY: 'Coding',
   LOGIC_CATEGORY: 'Logic',
   LOOPS_CATEGORY: 'Loops',
   MATH_CATEGORY: 'Math',

@@ -36,6 +36,47 @@ function normalizeCode(code) {
             line = line.replace(/\/\/.*$/g, '');
             // 3. 壓縮空白（保留 C++ 大小寫）
             line = line.replace(/\s+/g, ' ').trim();
+            // 4. 寬容處理：token 空白標準化
+            // 4a. 保護複合運算子（暫時取代為佔位符）
+            line = line.replace(/==/g, ' __EQ__ ');
+            line = line.replace(/!=/g, ' __NE__ ');
+            line = line.replace(/<=/g, ' __LE__ ');
+            line = line.replace(/>=/g, ' __GE__ ');
+            line = line.replace(/&&/g, ' __AND__ ');
+            line = line.replace(/\|\|/g, ' __OR__ ');
+            line = line.replace(/\+\+/g, ' __INC__ ');
+            line = line.replace(/--/g, ' __DEC__ ');
+            line = line.replace(/\+=/g, ' __ADD_ASSIGN__ ');
+            line = line.replace(/-=/g, ' __SUB_ASSIGN__ ');
+            line = line.replace(/\*=/g, ' __MUL_ASSIGN__ ');
+            line = line.replace(/\/=/g, ' __DIV_ASSIGN__ ');
+            line = line.replace(/%=/g, ' __MOD_ASSIGN__ ');
+            // 4b. 括號間距
+            line = line.replace(/\(\s+/g, '(');
+            line = line.replace(/\s+\)/g, ')');
+            line = line.replace(/(\S)\{/g, '$1 {');
+            // 4c. 逗號後統一空格
+            line = line.replace(/,\s*/g, ', ');
+            // 4d. 單一運算子前後統一空格
+            line = line.replace(/\s*([=+\-*\/%<>!&|^])\s*/g, ' $1 ');
+            // 4e. 關鍵字後加空格：if(, while(, for( 等
+            line = line.replace(/\b(if|while|for|switch|catch)\s*\(/g, '$1 (');
+            // 4f. 還原複合運算子
+            line = line.replace(/__EQ__/g, '==');
+            line = line.replace(/__NE__/g, '!=');
+            line = line.replace(/__LE__/g, '<=');
+            line = line.replace(/__GE__/g, '>=');
+            line = line.replace(/__AND__/g, '&&');
+            line = line.replace(/__OR__/g, '||');
+            line = line.replace(/__INC__/g, '++');
+            line = line.replace(/__DEC__/g, '--');
+            line = line.replace(/__ADD_ASSIGN__/g, '+=');
+            line = line.replace(/__SUB_ASSIGN__/g, '-=');
+            line = line.replace(/__MUL_ASSIGN__/g, '*=');
+            line = line.replace(/__DIV_ASSIGN__/g, '/=');
+            line = line.replace(/__MOD_ASSIGN__/g, '%=');
+            // 4g. 二次壓縮（避免產生多餘空白）
+            line = line.replace(/\s+/g, ' ').trim();
             return line;
         })
         .filter(function(line) { return line.length > 0; }); // 移除空行
@@ -149,14 +190,18 @@ function applyLineStyles() {
         var lineNum = (i + 1).toString();
         var marker = '';
         var cssClass = '';
+        var resultMessage = '';
+        
+        // 判斷此行是否參與比對（與 normalizeCode 邏輯一致）
+        var rawLine = lines[i];
+        var normalizedLine = rawLine.replace(/\/\/.*$/g, '').replace(/\s+/g, ' ').trim();
+        var isSkippedLine = (normalizedLine.length === 0);
         
         // 找到對應的比對結果
         if (resultIndex < results.length) {
             var result = results[resultIndex];
-            // 跳過空行（不參與比對）
-            var trimmedLine = lines[i].trim();
-            if (trimmedLine.length === 0) {
-                // 空行，不標記
+            if (isSkippedLine) {
+                // 註解行、空行：不參與比對，不標記
             } else {
                 if (result.status === 'correct') {
                     marker = '✅';
@@ -164,6 +209,7 @@ function applyLineStyles() {
                 } else if (result.status === 'warning') {
                     marker = '⚠️';
                     cssClass = 'practice-line-warning';
+                    resultMessage = result.message || '';
                 } else if (result.status === 'wrong') {
                     marker = '❌';
                     cssClass = 'practice-line-wrong';
@@ -175,7 +221,12 @@ function applyLineStyles() {
             }
         }
         
-        lineNumberHtml += '<div class="practice-line-num ' + cssClass + '">' + lineNum + ' ' + marker + '</div>';
+        // 建立帶 tooltip 的行號（warning 狀態顯示訊息）
+        var titleAttr = '';
+        if (cssClass === 'practice-line-warning' && resultMessage) {
+            titleAttr = ' title="' + escapeHtml(resultMessage) + '"';
+        }
+        lineNumberHtml += '<div class="practice-line-num ' + cssClass + '"' + titleAttr + '>' + lineNum + ' ' + marker + '</div>';
     }
     
     if (lineNumbers) {
@@ -193,10 +244,19 @@ function applyLineStyles() {
  */
 function showHint(cursorPosition) {
     var studentCode = practiceMode.studentTextarea.value.substring(0, cursorPosition);
-    var normalizedStudent = normalizeCode(studentCode);
-    var currentLineIndex = normalizedStudent.length;
+    var results = checkStudentProgress(studentCode);
     
-    // 取得游標之後的標準答案（接下來 3 行）
+    // 計算已正確完成的行數（從結果陣列中找出第一個非 correct 的索引）
+    var currentLineIndex = 0;
+    for (var i = 0; i < results.length; i++) {
+        if (results[i].status === 'correct') {
+            currentLineIndex = i + 1;
+        } else {
+            break;
+        }
+    }
+    
+    // 取得接下來要寫的標準答案（3 行）
     var hintLines = practiceMode.normalizedStandard.slice(
         currentLineIndex, 
         currentLineIndex + 3
@@ -301,21 +361,23 @@ function toggleCheat() {
     if (isVisible) {
         cheatOverlay.style.display = 'none';
         btnCheat.classList.remove('active');
-        // 恢復閉眼圖示
+        // 恢復閉眼圖示 + tooltip
         var img = btnCheat.querySelector('img');
         if (img) img.src = 'src/icons/eye-closed-circle.png';
+        btnCheat.setAttribute('title', getI18n('PRACTICE_CHEAT', '查看完整答案'));
     } else {
-        // 填入正規化後的標準答案（無註解、無空白行、無 ID 標記）
+        // 填入原始標準答案（保留縮排，僅清除 Blockly ID 標記）
         var cheatContent = document.getElementById('cheatContent');
-        if (cheatContent && practiceMode.normalizedStandard.length > 0) {
-            var cleanCode = practiceMode.normalizedStandard.join('\n');
+        if (cheatContent && practiceMode.standardCode) {
+            var cleanCode = cleanBlocklyIds(practiceMode.standardCode);
             cheatContent.textContent = cleanCode;
         }
         cheatOverlay.style.display = 'flex';
         btnCheat.classList.add('active');
-        // 切換開眼圖示
+        // 切換開眼圖示 + tooltip
         var img = btnCheat.querySelector('img');
         if (img) img.src = 'src/icons/eye-circle.png';
+        btnCheat.setAttribute('title', getI18n('PRACTICE_CHEAT_CLOSE', '關閉完整答案'));
     }
 }
 
@@ -399,6 +461,7 @@ function bindCheatClose() {
                 btnCheat.classList.remove('active');
                 var img = btnCheat.querySelector('img');
                 if (img) img.src = 'src/icons/eye-closed-circle.png';
+                btnCheat.setAttribute('title', getI18n('PRACTICE_CHEAT', '查看完整答案'));
             }
         });
     }
@@ -442,6 +505,28 @@ function enterPracticeMode() {
     practiceMode.standardCode = code;
     practiceMode.normalizedStandard = normalizeCode(code);
     practiceMode.results = [];
+    
+    // 2.5. 鎖定工作區（唯讀）- 多層防護
+    if (ws.options) {
+        ws.options.readOnly = true;
+    }
+    if (ws.setEnabled) {
+        ws.setEnabled(false);
+    }
+    // 在 Blockly div 上覆蓋灰色遮罩（最保險）
+    var blocklyDiv = document.getElementById('blocklyDiv');
+    if (blocklyDiv && !document.getElementById('blocklyReadOnlyOverlay')) {
+        var overlay = document.createElement('div');
+        overlay.id = 'blocklyReadOnlyOverlay';
+        overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:999;background:rgba(0,0,0,0.3);';
+        blocklyDiv.style.position = 'relative';
+        blocklyDiv.appendChild(overlay);
+    }
+    // 在 blocklyDiv 本身加上 cursor 與 title（因為 overlay 是 pointer-events:none）
+    if (blocklyDiv) {
+        blocklyDiv.style.cursor = 'not-allowed';
+        blocklyDiv.title = getI18n('PRACTICE_READONLY_HINT', '請先退出練習模式才能編輯積木');
+    }
     
     // 3. 隱藏程式碼預覽，顯示練習容器
     var codeContent = document.getElementById('codeContent');
@@ -489,6 +574,24 @@ function exitPracticeMode() {
     practiceMode.normalizedStandard = [];
     practiceMode.results = [];
     practiceMode.studentTextarea = null;
+    
+    // 1.5. 恢復工作區（可編輯）
+    if (practiceMode.workspace) {
+        if (practiceMode.workspace.options) {
+            practiceMode.workspace.options.readOnly = false;
+        }
+        if (practiceMode.workspace.setEnabled) {
+            practiceMode.workspace.setEnabled(true);
+        }
+        // 移除遮罩並恢復 blocklyDiv 樣式
+        var overlay = document.getElementById('blocklyReadOnlyOverlay');
+        if (overlay) overlay.remove();
+        var blocklyDiv = document.getElementById('blocklyDiv');
+        if (blocklyDiv) {
+            blocklyDiv.style.cursor = '';
+            blocklyDiv.title = '';
+        }
+    }
     
     // 2. 顯示程式碼預覽，隱藏練習容器
     var codeContent = document.getElementById('codeContent');
