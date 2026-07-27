@@ -121,3 +121,20 @@
 - [x] 在  的  中加入  和 
 - [ ] 驗證工作區註解功能在瀏覽器中正常運作
 - [ ] 考慮工作區註解的保存/載入 (XML 序列化)
+
+### 2026-07-27：移植 Loops 模組 (Engineer 風格對齊 piBlockly)
+- [x] 建立 `modules/loops/zh-hant.js`（Angel 風格基底訊息）
+- [x] 建立 `modules/loops/en.js`（Angel 風格基底訊息）
+- [x] 建立 `modules/loops/blocks.js`（3 個自訂積木：controls_while, controls_for, controls_flow_statements）
+- [x] 建立 `modules/loops/generators.js`（3 個 Arduino 產生器）
+- [x] 從 `modules/common/zh-hant.js` 移除 `LOOPS_CATEGORY`
+- [x] 從 `modules/common/en.js` 移除 `LOOPS_CATEGORY`
+- [x] 更新 `style/engineer.js`（3 個 loops key 對齊 piBlockly Engineer 風格）
+- [x] 更新 `index.html`（加入 loops 模組 script 標籤）
+- [x] 更新 `loader.js`（加入 LOOPS_ZH/LOOPS_EN 註冊）
+- [x] 更新 `FILE_STRUCTURE.md`（加入 loops/ 目錄說明）
+- [ ] 待驗證：toolbox 分類名稱正確顯示
+- [ ] 待驗證：所有 3 個積木可拖入工作區
+- [ ] 待驗證：程式碼生成正確 (while, for, break/continue)
+- [ ] 待驗證：風格切換後分類名稱與積木文字正常
+- [ ] 待驗證：孤兒積木檢測正常

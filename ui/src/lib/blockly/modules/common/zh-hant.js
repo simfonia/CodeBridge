@@ -3,7 +3,6 @@
 /// 未來移植對應模組時，請將分類名稱搬入該模組
 
 var COMMON_ZH = {
-  LOOPS_CATEGORY: '迴圈',
   MATH_CATEGORY: '數學',
   TEXT_CATEGORY: '文字',
   VARIABLES_CATEGORY: '變數',

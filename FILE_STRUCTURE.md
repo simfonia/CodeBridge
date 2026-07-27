@@ -46,6 +46,11 @@ CodeBridge/
 │   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息
 │   │       │   │   │   ├── en.js        # 英文訊息
 │   │       │   │   │   └── generators.js# 程式碼產生器（blocks 為 Blockly 內建）
+│   │       │   │   ├── loops/   # Loops 模組（while, for, break/continue）
+│   │       │   │   │   ├── zh-hant.js   # 繕體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
+│   │       │   │   │   ├── blocks.js    # 積木定義（controls_while, controls_for, controls_flow_statements）
+│   │       │   │   │   └── generators.js# 程式碼產生器
 │   │       │   │   └── common/  # 共用分類名稱（暫放，未來移植後搬入專屬模組）
 │   │       │   │       ├── zh-hant.js   # 繁體中文分類名稱
 │   │       │   │       └── en.js        # 英文分類名稱
@@ -73,6 +78,7 @@ CodeBridge/
 │   ├── plan/            # 計畫文件
 │   │   ├── BlockStyles.md   # 雙風格積木實作計畫
 │   │   ├── codingBlock.md   # Coding 模組移植計畫
+│   │   ├── LoopsBlock.md    # Loops 模組移植計畫
 │   │   └── ... (其他計畫)
 │   ├── work/            # 工作日誌
 │   └── mappings/        # 知識庫

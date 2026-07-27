@@ -3,7 +3,6 @@
 /// Move to respective module when ported
 
 var COMMON_EN = {
-  LOOPS_CATEGORY: 'Loops',
   MATH_CATEGORY: 'Math',
   TEXT_CATEGORY: 'Text',
   VARIABLES_CATEGORY: 'Variables',

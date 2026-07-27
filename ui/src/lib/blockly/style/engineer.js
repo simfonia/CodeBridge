@@ -40,10 +40,10 @@ var ENGINEER_STYLE = {
   LOGIC_BOOLEAN_FALSE: 'false',
   LOGIC_NEGATE_LABEL: '!%1',
 
-  // 迴圈（未來模組）
-  CONTROLS_FOR_MESSAGE: 'for(%1 = %2; %1 <= %3; %1 += %4)',
-  CONTROLS_WHILE_MESSAGE: 'while(%1)',
-  CONTROLS_FLOW_STATEMENTS_MESSAGE: 'break',
+  // 迴圈（對齊 piBlockly Engineer 風格）
+  CONTROLS_FOR_MESSAGE: 'for (int %1 = %2; %3 %4 %5; %6 %7 %8) {',
+  CONTROLS_WHILE_MESSAGE: 'while (%1) {',
+  CONTROLS_FLOW_STATEMENTS_MESSAGE: '%1',
 
   // 數學（未來模組）
   ARDUINO_CONSTRAIN: 'constrain(%1, %2, %3)',
