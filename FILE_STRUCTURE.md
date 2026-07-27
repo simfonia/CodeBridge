@@ -42,6 +42,10 @@ CodeBridge/
 │   │       │   │   │   ├── en.js        # 英文訊息
 │   │       │   │   │   ├── blocks.js    # 積木定義
 │   │       │   │   │   └── generators.js# 程式碼產生器
+│   │       │   │   ├── logic/   # Logic 模組（if/else, compare, operation, boolean）
+│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息
+│   │       │   │   │   ├── en.js        # 英文訊息
+│   │       │   │   │   └── generators.js# 程式碼產生器（blocks 為 Blockly 內建）
 │   │       │   │   └── common/  # 共用分類名稱（暫放，未來移植後搬入專屬模組）
 │   │       │   │       ├── zh-hant.js   # 繁體中文分類名稱
 │   │       │   │       └── en.js        # 英文分類名稱

@@ -35,7 +35,7 @@
 ## 待辦任務
 ### 積木移植（下一優先）
 - [x] 移植 Coding 積木 → `modules/coding/`
-- [ ] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
+- [x] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
 - [ ] 移植迴圈積木（for, while, repeat）→ `modules/loops/`
 - [ ] 移植數學積木（constrain, map, random）→ `modules/math/`
 - [ ] 移植變數積木 → `modules/variables/`

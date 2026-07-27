@@ -33,15 +33,12 @@ var ENGINEER_STYLE = {
   INITIALIZES_SETUP_APPENDTEXT: 'void setup()',
   INITIALIZES_LOOP_APPENDTEXT: 'void loop()',
 
-  // 邏輯（未來模組）
+  // 邏輯
   LOGIC_OPERATION_AND: '&&',
   LOGIC_OPERATION_OR: '||',
   LOGIC_BOOLEAN_TRUE: 'true',
   LOGIC_BOOLEAN_FALSE: 'false',
-  CONTROLS_IF_MSG_IF: 'if',
-  CONTROLS_IF_MSG_THEN: '',
-  CONTROLS_IF_MSG_ELSEIF: 'else if',
-  CONTROLS_IF_MSG_ELSE: 'else',
+  LOGIC_NEGATE_LABEL: '!%1',
 
   // 迴圈（未來模組）
   CONTROLS_FOR_MESSAGE: 'for(%1 = %2; %1 <= %3; %1 += %4)',

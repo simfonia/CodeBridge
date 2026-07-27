@@ -36,6 +36,9 @@
       if (typeof CODING_ZH !== 'undefined') {
         registerMessages(CODING_ZH, true);
       }
+      if (typeof LOGIC_ZH !== 'undefined') {
+        registerMessages(LOGIC_ZH, true);
+      }
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
       }
@@ -45,6 +48,9 @@
       }
       if (typeof CODING_EN !== 'undefined') {
         registerMessages(CODING_EN, true);
+      }
+      if (typeof LOGIC_EN !== 'undefined') {
+        registerMessages(LOGIC_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);
@@ -83,6 +89,9 @@
       if (typeof CODING_ZH !== 'undefined') {
         registerMessages(CODING_ZH, true);
       }
+      if (typeof LOGIC_ZH !== 'undefined') {
+        registerMessages(LOGIC_ZH, true);
+      }
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
       }
@@ -92,6 +101,9 @@
       }
       if (typeof CODING_EN !== 'undefined') {
         registerMessages(CODING_EN, true);
+      }
+      if (typeof LOGIC_EN !== 'undefined') {
+        registerMessages(LOGIC_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);
