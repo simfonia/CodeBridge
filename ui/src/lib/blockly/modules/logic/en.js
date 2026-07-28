@@ -25,6 +25,10 @@ var LOGIC_EN = {
   CONTROLS_IF_TOOLTIP_3: 'If the first value is true, then do the first block of statements. Otherwise, if the second value is true, do the second block of statements.',
   CONTROLS_IF_TOOLTIP_4: 'If the first values are true, then do the first block of statements. Otherwise, if the second value is true, do the second block of statements. If none of the values are true, do the last block of statements.',
 
+  // controls_if mutator 積木訊息
+  CONTROLS_IF_ELSEIF_TITLE_ELSEIF: 'else if',
+  CONTROLS_IF_ELSE_TITLE_ELSE: 'else',
+
   // logic_compare
   LOGIC_COMPARE_LABEL: '%1 %2 %3',
   LOGIC_COMPARE_TOOLTIP: 'Compare two values.',

@@ -25,6 +25,17 @@ var LOGIC_ZH = {
   CONTROLS_IF_TOOLTIP_3: '如果第一個值為真，則執行第一塊語句。否則，如果第二個值為真，則執行第二塊語句。',
   CONTROLS_IF_TOOLTIP_4: '如果第一個值為真，則執行第一塊語句。否則，如果第二個值為真，則執行第二塊語句。如果所有值都為假，則執行最後一塊語句。',
 
+  // controls_if 積木訊息
+  CONTROLS_IF_MSG_IF: '假如',
+  CONTROLS_IF_MSG_ELSEIF: '否則假如',
+  CONTROLS_IF_MSG_ELSE: '否則',
+  CONTROLS_IF_MSG_THEN: '',
+
+  // controls_if mutator 積木訊息
+  CONTROLS_IF_IF_TITLE_IF: '假如',
+  CONTROLS_IF_ELSEIF_TITLE_ELSEIF: '否則假如',
+  CONTROLS_IF_ELSE_TITLE_ELSE: '否則',
+
   // logic_compare
   LOGIC_COMPARE_LABEL: '%1 %2 %3',
   LOGIC_COMPARE_TOOLTIP: '比較兩個值。',

@@ -278,7 +278,7 @@
                     </shadow>
                 </value>
             </block>
-            <block type="arduino_math_random_seed">
+            <block type="math_random_seed">
                 <value name="SEED">
                     <shadow type="arduino_analog_read">
                         <value name="PIN">
@@ -289,7 +289,7 @@
                     </shadow>
                 </value>
             </block>
-            <block type="arduino_math_random_int">
+            <block type="math_random_int">
                 <value name="MIN">
                     <shadow type="math_number">
                         <field name="NUM">0</field>
@@ -475,6 +475,18 @@
     <script src="src/lib/blockly/modules/loops/en.js"></script>
     <script src="src/lib/blockly/modules/loops/blocks.js"></script>
     <script src="src/lib/blockly/modules/loops/generators.js"></script>
+
+    <!-- Math 模組：i18n → blocks → generators -->
+    <script src="src/lib/blockly/modules/math/zh-hant.js"></script>
+    <script src="src/lib/blockly/modules/math/en.js"></script>
+    <script src="src/lib/blockly/modules/math/blocks.js"></script>
+    <script src="src/lib/blockly/modules/math/generators.js"></script>
+
+    <!-- Text 模組：i18n → blocks → generators -->
+    <script src="src/lib/blockly/modules/text/zh-hant.js"></script>
+    <script src="src/lib/blockly/modules/text/en.js"></script>
+    <script src="src/lib/blockly/modules/text/blocks.js"></script>
+    <script src="src/lib/blockly/modules/text/generators.js"></script>
 
     <!-- 共用分類名稱（尚未有專屬模組的分類） -->
     <script src="src/lib/blockly/modules/common/zh-hant.js"></script>

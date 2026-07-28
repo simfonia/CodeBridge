@@ -31,8 +31,17 @@ function initBlockly() {
         Blockly.ContextMenuItems.registerCommentOptions();
     }
 
+    // 註冊 blockStyles（用於內建積木，如 controls_if mutator 中的 if 積木）
+    const theme = Blockly.Theme.defineTheme('codebridge', {
+        'base': Blockly.Themes.Classic,
+        'blockStyles': {
+            'logic_blocks': { 'colourPrimary': '#b198de' }
+        }
+    });
+
     const workspace = Blockly.inject(blocklyDiv, {
         toolbox: toolbox,
+        theme: theme,
         scrollbars: true,
         trashcan: true,
         comments: true,

@@ -33,6 +33,26 @@ CodeBridge 是一個 Tauri 桌面應用程式，為高中生教學設計的 Bloc
   - `function_definitions_`：存放函式的完整實作
   - `setups_`：存放 `void setup() { ... }` 內的程式碼
 
+### 積木顏色屬性統一規範 (Block Colour Attribute Standard)
+- **統一使用 `colour` 屬性**：所有積木（含 Blockly 內建積木覆寫）**必須**使用 `"colour": "%{BKY_XXX_HUE}"` 設定顏色。
+- **不使用 `style` 屬性**：不再使用 `"style": "xxx_blocks"` 方式，因為我們已移除 Theme 的 `blockStyles` 定義，改由語系檔直接控制顏色。
+- **顏色來源**：所有顏色值由語系檔 (`zh-hant.js` / `en.js`) 中的 `XXX_HUE` key 定義，`%{BKY_XXX_HUE}` 在 `jsonInit` 時由 Blockly 自動解析。
+- **內建積木覆寫**：如需統一內建積木（如 `math_number`、`text`、`text_join`）的顏色，必須在對應模組的 `blocks.js` 中重新定義該積木，並加入 `"colour": "%{BKY_XXX_HUE}"`。
+- **範例**：
+  ```javascript
+  // ✅ 正確：統一使用 colour 屬性
+  this.jsonInit({
+    "message0": "%{BKY_MATH_NUMBER}",
+    "args0": [...],
+    "colour": "%{BKY_MATH_HUE}",
+  });
+
+  // ❌ 錯誤：不使用 style 屬性
+  this.jsonInit({
+    "style": "math_blocks",  // ← 不再支援
+  });
+  ```
+
 ### 轉義字元與換行處理規範 (Critical)
 參考 global.md 的規範，嚴格遵守三層字串意識。
 

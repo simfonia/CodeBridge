@@ -1,6 +1,66 @@
 /// CodeBridge Logic 模組 - 積木定義
 /// 對齊 piBlockly 的 blocks/logic.js
-/// controls_if 使用 Blockly 內建定義，不需重複註冊
+/// controls_if 覆寫 Blockly 內建定義以統一顏色
+
+// ============================================================
+// controls_if - 條件判斷
+// 使用完整 jsonInit 定義以支援 else/elseif 動態增減
+// ============================================================
+Blockly.Blocks['controls_if'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": "%{BKY_CONTROLS_IF_MSG_IF} %1",
+      "args0": [
+        {
+          "type": "input_value",
+          "name": "IF0",
+          "check": "Boolean"
+        }
+      ],
+      "message1": "%{BKY_CONTROLS_IF_MSG_THEN} %1",
+      "args1": [
+        {
+          "type": "input_statement",
+          "name": "DO0"
+        }
+      ],
+      "nextStatement": true,
+      "previousStatement": true,
+      "colour": "%{BKY_LOGIC_HUE}",
+      "tooltip": "%{BKY_CONTROLS_IF_TOOLTIP_1}",
+      "mutator": "controls_if_mutator"
+    });
+  }
+};
+
+// ============================================================
+// controls_if_elseif / controls_if_else - mutator 積木（覆寫顏色）
+// Blockly 內建使用 style: 'logic_blocks'，改為 colour 統一
+// ============================================================
+Blockly.Blocks['controls_if_elseif'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": "%{BKY_CONTROLS_IF_ELSEIF_TITLE_ELSEIF}",
+      "previousStatement": null,
+      "nextStatement": null,
+      "enableContextMenu": false,
+      "colour": "%{BKY_LOGIC_HUE}",
+      "tooltip": "%{BKY_CONTROLS_IF_ELSEIF_TOOLTIP}"
+    });
+  }
+};
+
+Blockly.Blocks['controls_if_else'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": "%{BKY_CONTROLS_IF_ELSE_TITLE_ELSE}",
+      "previousStatement": null,
+      "enableContextMenu": false,
+      "colour": "%{BKY_LOGIC_HUE}",
+      "tooltip": "%{BKY_CONTROLS_IF_ELSE_TOOLTIP}"
+    });
+  }
+};
 
 // ============================================================
 // logic_compare - 比較運算子
@@ -35,7 +95,7 @@ Blockly.Blocks['logic_compare'] = {
       ],
       "inputsInline": true,
       "output": "Boolean",
-      "style": "logic_blocks",
+      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_COMPARE_TOOLTIP}",
       "helpUrl": "%{BKY_LOGIC_COMPARE_HELPURL}"
     });
@@ -71,7 +131,7 @@ Blockly.Blocks['logic_operation'] = {
       ],
       "inputsInline": true,
       "output": "Boolean",
-      "style": "logic_blocks",
+      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_OPERATION_TOOLTIP}",
       "helpUrl": "%{BKY_LOGIC_OPERATION_HELPURL}"
     });
@@ -93,7 +153,7 @@ Blockly.Blocks['logic_negate'] = {
         }
       ],
       "output": "Boolean",
-      "style": "logic_blocks",
+      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_NEGATE_TOOLTIP}",
       "helpUrl": ""
     });
@@ -118,7 +178,7 @@ Blockly.Blocks['logic_boolean'] = {
         }
       ],
       "output": "Boolean",
-      "style": "logic_blocks",
+      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_BOOLEAN_TOOLTIP}",
       "helpUrl": ""
     });

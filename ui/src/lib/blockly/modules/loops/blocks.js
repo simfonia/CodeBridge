@@ -27,7 +27,7 @@ Blockly.Blocks['controls_while'] = {
       "message2": "}",
       "previousStatement": true,
       "nextStatement": true,
-      "style": "loop_blocks",
+      "colour": "%{BKY_LOOPS_HUE}",
       "tooltip": "%{BKY_CONTROLS_WHILE_TOOLTIP}",
       "helpUrl": ""
     });
@@ -97,7 +97,7 @@ Blockly.Blocks['controls_for'] = {
       "inputsInline": true,
       "previousStatement": true,
       "nextStatement": true,
-      "style": "loop_blocks",
+      "colour": "%{BKY_LOOPS_HUE}",
       "tooltip": "%{BKY_CONTROLS_FOR_TOOLTIP}",
       "helpUrl": ""
     });
@@ -180,7 +180,7 @@ Blockly.Blocks['controls_flow_statements'] = {
       ],
       "previousStatement": true,
       "nextStatement": true,
-      "style": "loop_blocks",
+      "colour": "%{BKY_LOOPS_HUE}",
       "tooltip": "%{BKY_CONTROLS_FLOW_STATEMENTS_TOOLTIP}",
       "helpUrl": ""
     });

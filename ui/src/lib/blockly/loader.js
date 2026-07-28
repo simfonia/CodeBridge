@@ -42,6 +42,12 @@
       if (typeof LOOPS_ZH !== 'undefined') {
         registerMessages(LOOPS_ZH, true);
       }
+      if (typeof MATH_ZH !== 'undefined') {
+        registerMessages(MATH_ZH, true);
+      }
+      if (typeof TEXT_ZH !== 'undefined') {
+        registerMessages(TEXT_ZH, true);
+      }
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
       }
@@ -57,6 +63,12 @@
       }
       if (typeof LOOPS_EN !== 'undefined') {
         registerMessages(LOOPS_EN, true);
+      }
+      if (typeof MATH_EN !== 'undefined') {
+        registerMessages(MATH_EN, true);
+      }
+      if (typeof TEXT_EN !== 'undefined') {
+        registerMessages(TEXT_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);
@@ -101,6 +113,12 @@
       if (typeof LOOPS_ZH !== 'undefined') {
         registerMessages(LOOPS_ZH, true);
       }
+      if (typeof MATH_ZH !== 'undefined') {
+        registerMessages(MATH_ZH, true);
+      }
+      if (typeof TEXT_ZH !== 'undefined') {
+        registerMessages(TEXT_ZH, true);
+      }
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
       }
@@ -116,6 +134,12 @@
       }
       if (typeof LOOPS_EN !== 'undefined') {
         registerMessages(LOOPS_EN, true);
+      }
+      if (typeof MATH_EN !== 'undefined') {
+        registerMessages(MATH_EN, true);
+      }
+      if (typeof TEXT_EN !== 'undefined') {
+        registerMessages(TEXT_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);

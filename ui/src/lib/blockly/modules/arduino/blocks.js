@@ -201,7 +201,10 @@ Blockly.Blocks['arduino_analog_read'] = {
                 {
                     type: 'input_value',
                     name: 'PIN',
-                    check: ['Number', 'String']
+                    check: ['Number', 'String'],
+                    shadow: {
+                        type: 'arduino_pin_shadow'
+                    }
                 }
             ],
             output: 'Number',
@@ -210,7 +213,7 @@ Blockly.Blocks['arduino_analog_read'] = {
             helpUrl: ''
         });
     }
-};
+  };
 
 // ============================================================
 // delay

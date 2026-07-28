@@ -33,7 +33,17 @@ var ENGINEER_STYLE = {
   INITIALIZES_SETUP_APPENDTEXT: 'void setup()',
   INITIALIZES_LOOP_APPENDTEXT: 'void loop()',
 
-  // 邏輯
+  // 邏輯（對齊 piBlockly Engineer 風格）
+  CONTROLS_IF_MSG_IF: 'if',
+  CONTROLS_IF_MSG_THEN: '',
+  CONTROLS_IF_MSG_ELSEIF: 'else if',
+  CONTROLS_IF_MSG_ELSE: 'else',
+  // controls_if mutator 積木訊息
+  CONTROLS_IF_IF_TITLE_IF: 'if',
+  CONTROLS_IF_ELSEIF_TITLE_ELSEIF: 'else if',
+  CONTROLS_IF_ELSE_TITLE_ELSE: 'else',
+
+
   LOGIC_OPERATION_AND: '&&',
   LOGIC_OPERATION_OR: '||',
   LOGIC_BOOLEAN_TRUE: 'true',
@@ -45,11 +55,18 @@ var ENGINEER_STYLE = {
   CONTROLS_WHILE_MESSAGE: 'while (%1) {',
   CONTROLS_FLOW_STATEMENTS_MESSAGE: '%1',
 
-  // 數學（未來模組）
-  ARDUINO_CONSTRAIN: 'constrain(%1, %2, %3)',
-  ARDUINO_MAP: 'map(%1, %2, %3, %4, %5)',
-  ARDUINO_MATH_RANDOM_SEED: 'randomSeed(%1)',
-  ARDUINO_MATH_RANDOM_INT: 'random(%1, %2)',
-  MATH_CHANGE: '%1 += %2',
-  MATH_MODULO: '%1 %% %2',
+  // 數學（對齊 piBlockly Engineer 風格）
+  MATH_SINGLE_OP_ABSOLUTE: 'abs',
+  MATH_SINGLE_OP_ROOT: 'sqrt',
+  ARDUINO_CONSTRAIN_MSG: 'constrain( %1, %2, %3 )',
+  ARDUINO_MAP_MSG: 'map( %1, %2, %3, %4, %5 )',
+  ARDUINO_MATH_RANDOM_SEED_MSG: 'randomSeed( %1 )',
+  ARDUINO_MATH_RANDOM_INT_MSG: 'random( %1, %2 )',
+
+  // 文字（對齊 piBlockly Engineer 風格）
+  TEXT_TEXT: '"%1"',
+  TEXT_APPEND_MESSAGE: '%1 += %2',
+  TEXT_JOIN_MESSAGE: 'join',
+  TEXT_JOIN_TITLE_CREATEWITH: '',
+  TEXT_LENGTH_MESSAGE: '%1.length()',
 };

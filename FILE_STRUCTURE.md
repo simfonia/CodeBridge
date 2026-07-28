@@ -51,6 +51,16 @@ CodeBridge/
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 積木定義（controls_while, controls_for, controls_flow_statements）
 │   │       │   │   │   └── generators.js# 程式碼產生器
+│   │       │   │   ├── math/    # Math 模組（數字、運算、三角函數、constrain、map、random）
+│   │       │   │   │   ├── zh-hant.js   # 繕體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
+│   │       │   │   │   ├── blocks.js    # 積木定義（arduino_constrain, arduino_map, math_random_seed, math_random_int）
+│   │       │   │   │   └── generators.js# 程式碼產生器（包含 Blockly 內建 math_number, math_arithmetic, math_single）
+│   │       │   │   ├── text/    # Text 模組（文字常值、join、append、length）
+│   │       │   │   │   ├── zh-hant.js   # 繕體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
+│   │       │   │   │   ├── blocks.js    # 積木定義（text_append, text_length）
+│   │       │   │   │   └── generators.js# 程式碼產生器（包含 Blockly 內建 text, text_join）
 │   │       │   │   └── common/  # 共用分類名稱（暫放，未來移植後搬入專屬模組）
 │   │       │   │       ├── zh-hant.js   # 繁體中文分類名稱
 │   │       │   │       └── en.js        # 英文分類名稱
