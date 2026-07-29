@@ -34,6 +34,23 @@ function normalizeCode(code) {
         .map(function(line) {
             // 2. 移除單行註解（// 之後的全部忽略）
             line = line.replace(/\/\/.*$/g, '');
+
+            // 2.5. 保護字串與字元常數（避免內容被正規化影響）
+            // 暫存所有雙引號字串與單引號字元，替換為佔位符
+            var stringPlaceholders = [];
+            // 雙引號字串（含轉義）："(?:[^"\\]|\\.)*"
+            line = line.replace(/"(?:[^"\\]|\\.)*"/g, function(match) {
+                var idx = stringPlaceholders.length;
+                stringPlaceholders.push(match);
+                return '__STR_' + idx + '__';
+            });
+            // 單引號字元常數（含轉義）：'(?:[^'\\]|\\.)*'
+            line = line.replace(/'(?:[^'\\]|\\.)*'/g, function(match) {
+                var idx = stringPlaceholders.length;
+                stringPlaceholders.push(match);
+                return '__STR_' + idx + '__';
+            });
+
             // 3. 壓縮空白（保留 C++ 大小寫）
             line = line.replace(/\s+/g, ' ').trim();
             // 4. 寬容處理：token 空白標準化
@@ -55,8 +72,10 @@ function normalizeCode(code) {
             line = line.replace(/\(\s+/g, '(');
             line = line.replace(/\s+\)/g, ')');
             line = line.replace(/(\S)\{/g, '$1 {');
-            // 4c. 逗號後統一空格
-            line = line.replace(/,\s*/g, ', ');
+            // 4c. 逗號前後空白標準化：移除逗號前的空白，逗號後統一一個空格
+            line = line.replace(/\s*,\s*/g, ', ');
+            // 4c-2. 分號前移除空白
+            line = line.replace(/\s+;/g, ';');
             // 4d. 單一運算子前後統一空格
             line = line.replace(/\s*([=+\-*\/%<>!&|^])\s*/g, ' $1 ');
             // 4e. 關鍵字後加空格：if(, while(, for( 等
@@ -77,6 +96,10 @@ function normalizeCode(code) {
             line = line.replace(/__MOD_ASSIGN__/g, '%=');
             // 4g. 二次壓縮（避免產生多餘空白）
             line = line.replace(/\s+/g, ' ').trim();
+            // 4h. 還原字串與字元常數（保留原始內容，含空白）
+            line = line.replace(/__STR_(\d+)__/g, function(match, idx) {
+                return stringPlaceholders[parseInt(idx, 10)];
+            });
             return line;
         })
         .filter(function(line) { return line.length > 0; }); // 移除空行

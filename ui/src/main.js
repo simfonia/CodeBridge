@@ -83,50 +83,91 @@ function renderCode(code) {
     const codeContent = document.getElementById('codeContent');
     if (!codeContent) return;
 
-    var lines = code.split('\n');
-    // 移除最後空行
-    if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+    // 從 Blockly.Arduino 讀取 ID 標記常數（避免硬編碼）
+    var idMarker = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER) ? Blockly.Arduino.ID_MARKER : '// __BLOCKLY_ID:';
+    var idMarkerEnd = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER_END) ? Blockly.Arduino.ID_MARKER_END : '__';
+    var idRegex = new RegExp(idMarker + '([^\\s]+)' + idMarkerEnd, 'g');
+    var cleanIdRegex = new RegExp(' ' + idMarker + '[^\\s]+' + idMarkerEnd, 'g');
 
     codeContent.innerHTML = '';
     blockToRangeMap.clear();
     lineDoms = [];
 
-    lines.forEach(function(line, index) {
-        // 從 Blockly.Arduino 讀取 ID 標記常數（避免硬編碼）
-        var idMarker = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER) ? Blockly.Arduino.ID_MARKER : '// __BLOCKLY_ID:';
-        var idMarkerEnd = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER_END) ? Blockly.Arduino.ID_MARKER_END : '__';
+    // 1. 分行處理 ID 標記（從原始程式碼中提取）
+    var rawLines = code.split('\n');
+    if (rawLines.length > 0 && rawLines[rawLines.length - 1] === '') rawLines.pop();
+
+    var cleanedLines = [];
+    rawLines.forEach(function(line, index) {
         // 收集所有 ID 標記
-        var ids = [];
-        var idRegex = new RegExp(idMarker + '([^\\s]+)' + idMarkerEnd, 'g');
         var idMatch;
         while ((idMatch = idRegex.exec(line)) !== null) {
-            ids.push(idMatch[1]);
+            var id = idMatch[1];
+            if (!blockToRangeMap.has(id)) {
+                blockToRangeMap.set(id, { start: index, end: index });
+            } else {
+                blockToRangeMap.get(id).end = index;
+            }
         }
-        // 移除所有 ID 標記（換行前的那個，保留註解前的程式碼）
-        var cleanLine = line.replace(new RegExp(' ' + idMarker + '[^\\s]+' + idMarkerEnd, 'g'), '');
+        // 移除所有 ID 標記
+        cleanedLines.push(line.replace(cleanIdRegex, ''));
+    });
 
+    // 2. 一次性高亮完整程式碼（確保跨行語法結構正確解析）
+    var fullCode = cleanedLines.join('\n');
+    var highlightedHtml = '';
+    if (fullCode.length > 0) {
+        var result = hljs.highlight(fullCode, { language: 'arduino' });
+        highlightedHtml = result.value;
+    }
+
+    // 3. 分行處理 HTML，追蹤跨行標籤
+    var hlLines = highlightedHtml.split('\n');
+    if (hlLines.length > 0 && hlLines[hlLines.length - 1] === '') hlLines.pop();
+
+    var tagStack = []; // 追蹤跨行開啟的 HTML 標籤
+
+    hlLines.forEach(function(line, index) {
         // 建立行容器
         var lineDiv = document.createElement('div');
         lineDiv.className = 'code-line';
         lineDiv.setAttribute('data-line-index', index);
         lineDoms.push(lineDiv);
 
-        // 語法高亮
-        if (cleanLine.length > 0) {
-            var highlighted = hljs.highlight(cleanLine, { language: 'arduino' }).value;
-            lineDiv.innerHTML = highlighted;
+        if (line.length > 0) {
+            // 關閉所有目前開啟的標籤（反向順序），再重新開啟
+            // 確保每行的 HTML 結構完整，不因跨行 <span> 而斷裂
+            var closeTags = '';
+            for (var i = tagStack.length - 1; i >= 0; i--) {
+                closeTags += '</' + tagStack[i] + '>';
+            }
+            var reopenTags = '';
+            for (var i = 0; i < tagStack.length; i++) {
+                reopenTags += '<' + tagStack[i] + '>';
+            }
+
+            lineDiv.innerHTML = closeTags + line + reopenTags;
+
+            // 更新 tagStack：掃描此行中的 HTML 標籤
+            var tagRegex = /<\/?([a-zA-Z0-9-]+)(?:\s[^>]*)?>/g;
+            var match;
+            while ((match = tagRegex.exec(line)) !== null) {
+                var fullTag = match[0];
+                var tagName = match[1];
+                if (fullTag.startsWith('</')) {
+                    // 關閉標籤：從 stack 中移除最後一個匹配
+                    var idx = tagStack.lastIndexOf(tagName);
+                    if (idx !== -1) {
+                        tagStack.splice(idx, 1);
+                    }
+                } else if (!fullTag.endsWith('/>')) {
+                    // 開啟標籤（非自閉合）
+                    tagStack.push(tagName);
+                }
+            }
         } else {
             lineDiv.innerHTML = '&nbsp;';
         }
-
-        // 更新範圍映射表
-        ids.forEach(function(id) {
-            if (!blockToRangeMap.has(id)) {
-                blockToRangeMap.set(id, { start: index, end: index });
-            } else {
-                blockToRangeMap.get(id).end = index;
-            }
-        });
 
         codeContent.appendChild(lineDiv);
     });

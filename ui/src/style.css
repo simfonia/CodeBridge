@@ -236,6 +236,28 @@ body {
     padding: 0 !important;
 }
 
+/* ============================================================
+   語法高亮色彩覆蓋（覆蓋 vs.min.css 預設值）
+   ============================================================ */
+/* C++ 關鍵字（void, int, if, return 等）→ 藍色（保留 vs.min.css 預設） */
+/* Arduino API 函式（pinMode, Serial, delay 等）→ 靛色 */
+.hljs-built_in { color: #0077aa !important; }
+/* 數字 → 橘色 */
+.hljs-number { color: #d14 !important; }
+/* 字串 → 墨綠色 */
+.hljs-string { color: #690 !important; }
+/* 註解 → 淺綠色 */
+.hljs-comment { color: #5a995a !important; }
+/* 常數/屬性 → 紫色 */
+.hljs-literal { color: #7b2d8e !important; }
+.hljs-attr { color: #7b2d8e !important; }
+/* 型態（type）→ 青色 */
+.hljs-type { color: #008080 !important; }
+/* 函式名稱 → 深紅色 */
+.hljs-title { color: #a31515 !important; }
+/* 關鍵字 → 藍色（覆蓋 vs 的 #00f 為更深藍） */
+.hljs-keyword { color: #0000d0 !important; }
+
 #resizer-overlay {
     display: none;
     position: fixed;
