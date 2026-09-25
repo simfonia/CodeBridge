@@ -17,6 +17,8 @@ out/
 # Build artifacts
 *.vsix
 ui/dist/
+ui/test-results/
+ui/playwright-report/
 src-tauri/target/
 src-tauri/bin/
 src-tauri/gen/

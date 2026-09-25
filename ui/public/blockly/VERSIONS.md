@@ -5,11 +5,12 @@
 ## 載入順序
 
 1. `core/blockly.js`
-2. `core/python_compressed.js`
-3. `msg/en.js`，保存英文基礎訊息 snapshot
-4. `msg/zh-hant.js`，保存繁中基礎訊息 snapshot
-5. `plugins/*.js`
-6. CodeBridge modules、messages 與 generator
+2. `core/blocks_compressed.js`（標準 blocks 與 mutator extensions）
+3. `core/python_compressed.js`
+4. `msg/en.js`，保存英文基礎訊息 snapshot
+5. `msg/zh-hant.js`，保存繁中基礎訊息 snapshot
+6. `plugins/*.js`
+7. CodeBridge modules、messages 與 generator
 
 Blockly v13 的工作區 ARIA 初始化需要官方基礎訊息。CodeBridge loader 會先透過 `Blockly.setLocale()` 套用本目錄的訊息 snapshot，再由模組訊息覆寫積木文字。
 
@@ -18,6 +19,7 @@ Blockly v13 的工作區 ARIA 初始化需要官方基礎訊息。CodeBridge loa
 | 檔案 | Bytes | SHA-256 |
 |---|---:|---|
 | `core/blockly.js` | 640346 | `D3F46AF56951A7AED27F09F872DCA66ED70A932CA8BE9AADE3D9DF06CEACD078` |
+| `core/blocks_compressed.js` | 71578 | `25284EDEC82C518A4699A6C2E763F6A47BA863E93327C7C9685BD9A5C6EDC812` |
 | `core/python_compressed.js` | 27777 | `7D880E1763A147A4646398B5F6CF2398CF866BD12C12DB44ED4C91A5D38FCA59` |
 | `msg/en.js` | 49406 | `155B0E29AD2BD59AD463EBDE5C3ACE7685EA5C25D019E950AAB625B3259D7E02` |
 | `msg/zh-hant.js` | 54736 | `4A952C0C38ABFAA27BE00D2ADBD02DDB989E1DDBF078D6057B0927F50D76DE81` |
@@ -32,4 +34,4 @@ Blockly v13 的工作區 ARIA 初始化需要官方基礎訊息。CodeBridge loa
 - renderer：`thrasos`
 - theme：`Blockly.Themes.Classic`
 - sounds：`false`
-- Node.js 開發環境：Blockly 13.3.0 要求 Node.js 22 以上
+- Node.js 開發環境：Blockly 13.3.0 與目前測試工具鏈要求 Node.js 22.12 以上

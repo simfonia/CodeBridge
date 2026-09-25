@@ -43,7 +43,7 @@
 ## 安裝與執行
 
 ### 環境需求
-- Node.js >= 22（Blockly v13.3.0 要求）
+- Node.js >= 22.12（Blockly v13.3.0 與測試工具鏈要求）
 - Rust >= 1.70
 - Tauri CLI >= 2.0
 
@@ -70,6 +70,24 @@ npm run tauri dev
 ```bash
 npm run tauri build
 ```
+
+### 測試
+
+```bash
+# 執行 Blockly 資源、runtime 與 XML migration 完整測試
+npm test
+
+# 僅驗證資源 hash
+npm run test:blockly:assets --prefix ui
+
+# 僅執行 Edge runtime contract
+npm run test:blockly:runtime --prefix ui
+
+# 僅執行 v12 XML／generator golden fixtures
+npm run test:blockly:fixtures --prefix ui
+```
+
+Playwright 測試使用系統安裝的 Microsoft Edge，不需下載 Playwright Chromium。CI 位於 `.github/workflows/frontend-blockly.yml`，使用 Windows runner。
 
 ## 開發指南
 

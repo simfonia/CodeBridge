@@ -138,3 +138,82 @@
 - [ ] 待驗證：程式碼生成正確 (while, for, break/continue)
 - [ ] 待驗證：風格切換後分類名稱與積木文字正常
 - [ ] 待驗證：孤兒積木檢測正常
+
+## 2026-09-25：產品方向調整(參考#piBlockly 及 #pbm)
+
+### 已確認決策
+- [x] 建立 `log/plan/CodeBridgeV2.md` 與 `log/plan/CodeBridgeModulesRepository.md`
+
+### 核心積木
+- [ ] 補齊內建 Language／Coding 積木：loops、math、variables、text、array、functions
+- [ ] 將內建核心模組全面改為 manifest-driven contract
+- [ ] 保留 `arduino_pin_shadow`、code buckets 與 `Blockly.Arduino.forBlock[]` 規範
+- [ ] 核心與遠端模組共用同一 Module Runtime contract
+
+### Module Runtime
+- [ ] 實作內建、遠端、使用者模組三種來源
+- [ ] 實作 manifest schema、相容範圍、checksum 與依賴驗證
+- [ ] 實作 messages → blocks → generators → toolbox 的固定註冊順序
+- [ ] 實作本地 cache、原子更新、rollback 與離線模式
+- [ ] 拒絕重複 ID、重複 block type、缺 generator 與無效 toolbox reference
+
+### Generator 與 Code
+- [ ] 將 marked code、plain code 與 source mapping 正式分離
+- [ ] 確保 Blockly ID marker 永不寫入正式 `.ino`
+- [ ] 補齊核心與遠端模組的 block-to-code 定位測試
+- [ ] 實作完整可編輯 C++ 模式與手動修改分歧狀態
+
+### Project 與 Toolchain
+- [ ] 定義 `.ino`、Blockly XML 與 CodeBridge project metadata
+- [ ] 整合 Arduino CLI 環境偵測與 `--json` command builder
+- [ ] 實作 Board Manager：core 搜尋、安裝、移除、升級與 board discovery
+- [ ] 實作 Library Manager：library 搜尋、安裝、移除、升級與相依檢查
+- [ ] 實作 compile、upload、operation progress、cancel 與 compiler diagnostics
+- [ ] 上傳前暫停相同序列埠 Monitor，完成後依設定重連
+
+### Serial
+- [ ] 以 Rust serialport 實作雙向 Serial Monitor
+- [ ] 支援 port、baud、timestamp、HEX、篩選、清理與重連
+- [ ] 建立 CSV、tab、`label:value` Plot Data Parser
+- [ ] 建立 ring buffer、pause、clear、reconnect 與 downsampling
+- [ ] 評估並選定 uPlot 或其他即時圖表 renderer
+
+### 品質與安全
+- [ ] 建立最高層 module contract integration tests
+- [ ] 建立舊 piBlockly XML migration fixtures
+- [ ] 建立 generator golden tests 與 source mapping tests
+- [ ] 為 Tauri 設定明確 CSP，移除正式發行版 `csp: null`
+- [ ] 限制官方模組下載為 HTTPS，驗證 checksum 與 module compatibility
+
+## 2026-09-25：Blockly 更新至 v13.3.0
+
+### 已完成
+- [x] 備份 Blockly 12.3.1 core、Python generator 與外掛
+- [x] core、Python generator 與 5 個外掛更新至 13.3.0
+- [x] 加入英文／繁中 Blockly 基礎訊息 snapshot
+- [x] 修正 v13 ARIA 基礎訊息載入順序
+- [x] 明確使用 Thrasos renderer 與 Classic theme
+- [x] 停用所有 Blockly 操作音效（`sounds: false`）
+- [x] 建立資源 SHA-256 清單與 v13 API mapping
+- [x] 通過 Vite build 與 Edge headless runtime／v12 XML／Arduino 產碼驗證
+
+### 後續
+- [ ] 將目前一次性的 Edge smoke test 納入長期 CI fixture
+- [ ] 隨 variables、array、functions 模組增加更多 v12 XML 與 generator golden fixtures
+
+## 2026-09-25：Blockly 永久回歸測試與 CI
+
+### 已完成
+- [x] 加入 Vitest 5.0.1 與 Playwright Test 1.63.0，依賴 audit 為 0 vulnerabilities
+- [x] 建立 system Edge runtime contract
+- [x] 建立 v12 XML migration fixtures：setup/loop、controls_if、controls_for、text、workspace comment
+- [x] 建立 generator golden tests
+- [x] 建立 Blockly 資源 bytes／SHA-256 manifest tests
+- [x] 建立 Windows GitHub Actions CI
+- [x] 修復 v13 standard blocks／mutator 載入缺口
+- [x] 建立 v12 controls_if mutation 輸入轉換層
+- [x] 修復初始 XML 與 style reload 後 ARIA stack label
+
+### 後續
+- [ ] 補齊 variables、array、functions 時擴充各模組 XML fixtures
+- [ ] marked code 與 plain code 分離後，golden tests 改驗正式輸出不含 ID marker

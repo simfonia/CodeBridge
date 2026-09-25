@@ -56,20 +56,15 @@ function initBlockly() {
 // 啟動時注入預設 setup + loop 積木
 // ============================================================
 function injectDefaultBlocks(workspace) {
-    Blockly.Events.disable();
-    try {
-        var defaultXml = '<xml>' +
-            '<block type="initializes_setup" x="20" y="20">' +
-              '<next>' +
-                '<block type="initializes_loop" x="20" y="100"></block>' +
-              '</next>' +
-            '</block>' +
-            '</xml>';
-        var dom = Blockly.utils.xml.textToDom(defaultXml);
-        Blockly.Xml.domToWorkspace(dom, workspace);
-    } finally {
-        Blockly.Events.enable();
-    }
+    var defaultXml = '<xml>' +
+        '<block type="initializes_setup" x="20" y="20">' +
+          '<next>' +
+            '<block type="initializes_loop" x="20" y="100"></block>' +
+          '</next>' +
+        '</block>' +
+        '</xml>';
+    CodeBridgeBlocklyXml.textToWorkspace(defaultXml, workspace);
+    workspace.updateAriaLabel();
 }
 
 // ============================================================
@@ -490,13 +485,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var savedXml = sessionStorage.getItem('codebridgeWorkspaceXml');
     if (savedXml) {
         sessionStorage.removeItem('codebridgeWorkspaceXml');
-        Blockly.Events.disable();
-        try {
-            var dom = Blockly.utils.xml.textToDom(savedXml);
-            Blockly.Xml.domToWorkspace(dom, workspace);
-        } finally {
-            Blockly.Events.enable();
-        }
+        CodeBridgeBlocklyXml.textToWorkspace(savedXml, workspace);
+        workspace.updateAriaLabel();
     } else {
         injectDefaultBlocks(workspace);
     }

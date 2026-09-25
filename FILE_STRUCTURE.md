@@ -78,7 +78,7 @@ CodeBridge/
 │   │           └── core_manifest.json # 模組載入清單
 │   └── public/
 │       ├── favicon.ico      # 網站圖示（複製自 src-tauri/icons/icon.ico）
-│       └── blockly/         # Blockly 靜態資源
+│       └── blockly/         # Blockly v13.3.0 靜態資源（core、msg、plugins）
 │
 ├── resources/           # 應用資源
 ├── libraries/           # Arduino 函式庫快取
@@ -86,9 +86,12 @@ CodeBridge/
 ├── log/
 │   ├── todo.md          # 任務進度
 │   ├── plan/            # 計畫文件
-│   │   ├── BlockStyles.md   # 雙風格積木實作計畫
-│   │   ├── codingBlock.md   # Coding 模組移植計畫
-│   │   ├── LoopsBlock.md    # Loops 模組移植計畫
+│   │   ├── BlockStyles.md       # 雙風格積木實作計畫
+│   │   ├── CodeBridgeV2.md      # CodeBridge V2 總體規格（主線、工具鏈、序列與專案）
+│   │   ├── CodeBridgeModulesRepository.md # 新 codebridge-modules repository 與遷移計畫
+│   │   ├── BlocklyV13Upgrade.md # Blockly 13.3.0 升級、相容決策與驗證結果
+│   │   ├── codingBlock.md       # Coding 模組移植計畫
+│   │   ├── LoopsBlock.md        # Loops 模組移植計畫
 │   │   └── ... (其他計畫)
 │   ├── work/            # 工作日誌
 │   └── mappings/        # 知識庫
@@ -97,6 +100,18 @@ CodeBridge/
 ```
 
 ## 核心技術
-- **前端**：Svelte + TypeScript + Blockly v12.3.1 + Vite
+- **前端**：Svelte + TypeScript + Blockly v13.3.0 + Vite
 - **後端**：Rust + Tauri 2.0
-- **Arduino 整合**：Arduino CLI
+- **Arduino 整合**：Arduino CLI；負責 core、library、board discovery、compile 與 upload
+- **模組責任**：CodeBridge 提供 C++、Coding 與 Arduino 基礎核心積木；新的 `codebridge-modules` repository 提供硬體、感測器、致動器、第三方 library 與教學模組
+- **舊 pbm 定位**：`C:\Workspace\piblockly-modules` 僅作為 migration source，不在原地升級為正式 CodeBridge repository
+- **遠端模組契約**：CodeBridge Module Runtime 與新 repository 共用版本化 manifest、compatibility、checksum 與 dependency 驗證
+- **序列功能**：Rust serialport 提供 Serial Monitor；Plot Data Parser 與圖表 renderer 提供 Serial Plotter
+
+## 測試與 CI
+- `ui/playwright.config.mjs`：system Edge Playwright 配置，自動啟動 Vite。
+- `ui/tests/e2e/`：Blockly runtime、v12 XML migration 與 generator golden tests。
+- `ui/tests/fixtures/blockly-v12/`：可由 Blockly 13.3.0 載入的舊版 XML fixtures。
+- `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試。
+- `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI。
+- `log/plan/BlocklyTesting.md`：測試 seam、命令與維護規則。

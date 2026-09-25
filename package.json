@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "npm run dev --prefix ui",
     "build": "npm run build --prefix ui",
+    "test": "npm run test --prefix ui",
     "tauri": "tauri"
   },
   "description": "Tauri desktop IDE for visual Arduino programming with Blockly"

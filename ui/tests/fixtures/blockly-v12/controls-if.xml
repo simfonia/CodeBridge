@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <block type="initializes_setup" x="20" y="20">
+    <statement name="CONTENT">
+      <block type="controls_if" x="20" y="20">
+        <mutation elseifCount="1" elseCount="1"/>
+        <value name="IF0">
+          <block type="logic_compare" x="20" y="20">
+            <field name="OP">EQ</field>
+            <value name="A">
+              <shadow type="math_number">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <value name="B">
+              <shadow type="math_number">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="arduino_digital_write" x="20" y="120">
+            <value name="PIN">
+              <shadow type="arduino_pin_shadow">
+                <field name="PIN">2</field>
+              </shadow>
+            </value>
+            <field name="VALUE">HIGH</field>
+          </block>
+        </statement>
+        <value name="IF1">
+          <block type="logic_boolean" x="20" y="180">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+        <statement name="DO1">
+          <block type="arduino_digital_write" x="20" y="240">
+            <value name="PIN">
+              <shadow type="arduino_pin_shadow">
+                <field name="PIN">3</field>
+              </shadow>
+            </value>
+            <field name="VALUE">LOW</field>
+          </block>
+        </statement>
+        <value name="ELSE">
+          <block type="arduino_delay" x="20" y="300">
+            <value name="TIME">
+              <shadow type="math_number">
+                <field name="NUM">5</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+</xml>

@@ -438,6 +438,7 @@
 
     <!-- Blockly 核心 -->
     <script src="blockly/core/blockly.js"></script>
+    <script src="blockly/core/blocks_compressed.js"></script>
     <script src="blockly/core/python_compressed.js"></script>
 
     <!-- Blockly v13 內建訊息（v13 ARIA 初始化需要） -->
@@ -525,6 +526,9 @@
     <script src="src/lib/practice/practice-mode.js"></script>
 
     <!-- ====== 主程式 ====== -->
+
+    <!-- XML migration adapter（v12 → Blockly 13） -->
+    <script src="src/lib/blockly/xml-migration.js"></script>
 
     <!-- 主程式核心邏輯 -->
     <script src="src/main.js"></script>

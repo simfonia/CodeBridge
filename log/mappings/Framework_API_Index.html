@@ -6,6 +6,7 @@
 <tr><td><code>Blockly.inject(element, options)</code></td><td>建立工作區；CodeBridge 使用 <code>renderer: 'thrasos'</code>、<code>theme: Blockly.Themes.Classic</code>、<code>sounds: false</code>。</td><td>ui/src/main.js</td></tr>
 <tr><td><code>Blockly.setLocale(messages)</code></td><td>先套用 Blockly 官方基礎訊息，再由模組訊息覆寫。</td><td>ui/src/lib/blockly/loader.js</td></tr>
 <tr><td><code>Blockly.Xml.domToWorkspace(xml, workspace)</code></td><td>載入 v12／v13 Blockly XML。</td><td>ui/src/main.js、loader.js</td></tr>
+<tr><td><code>CodeBridgeBlocklyXml.textToWorkspace(xml, workspace)</code></td><td>XML 輸入邊界；將 v12 controls_if mutation 轉為 v13 格式後載入。</td><td>ui/src/lib/blockly/xml-migration.js</td></tr>
 <tr><td><code>Blockly.Xml.workspaceToDom(workspace)</code></td><td>保存工作區 XML。</td><td>ui/src/main.js、loader.js</td></tr>
 <tr><td><code>Blockly.Arduino.forBlock[type]</code></td><td>註冊 CodeBridge Arduino generator。</td><td>ui/src/lib/blockly/modules/*/generators.js</td></tr>
 <tr><td><code>Blockly.Arduino.workspaceToCode(workspace)</code></td><td>產生 setup、loop 與 code buckets 內容。</td><td>ui/src/main.js</td></tr>
@@ -17,4 +18,6 @@
 <li><code>sounds: false</code> 會跳過 Blockly media 音效載入。</li>
 <li>Thrasos 是 renderer 名稱；公開 Theme 仍為 Classic 或 Zelos。</li>
 <li>v12 已棄用的 Workspace／VariableMap 舊 API 已於 v13 移除，新程式應使用 VariableMap API。</li>
+<li>官方 <code>blocks_compressed.js</code> 必須在 CodeBridge 覆寫 blocks 前載入，以註冊 mutator extensions。</li>
+<li>v12 controls_if 的 <code>elseifCount</code>／<code>elseCount</code> 會由 migration adapter 轉成 v13 的 <code>elseif</code>／<code>else</code>。</li>
 </ul>

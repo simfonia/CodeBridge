@@ -16,6 +16,8 @@
 - [x] 以 `sounds: false` 停用所有 Blockly 操作音效
 - [x] 建立固定資源 hash 清單
 - [x] 以 Edge headless 驗證初始化、ARIA、XML 與 Arduino 產碼
+- [x] 建立 Vitest 資源 hash 契約與 Playwright runtime／migration 測試
+- [x] 建立 Windows CI，使用系統 Edge 執行前端 Blockly contract
 
 ## 相容性決策
 
@@ -23,8 +25,10 @@
 2. 保留 `Blockly.Blocks[...]` 與 `Blockly.Arduino.forBlock[...]` 註冊方式。
 3. 保留 block type 與 XML 結構，不進行 block ID 重新命名。
 4. Core-only Blockly v13 必須搭配官方 `msg/*.js`；缺少基礎訊息時，工作區 ARIA 初始化會在 `WORKSPACE_LABEL_MANY_STACKS.replace()` 失敗。
-5. `Thrasos` 是 renderer，不是公開 theme；CodeBridge 使用 `Blockly.Themes.Classic` theme 搭配 `renderer: 'thrasos'`。
-6. Blockly 停用音效的正式 injection option 是 `sounds`（複數），不是 `sound`。
+5. Blockly v13 的 `controls_if` 與 `text_join` 需要官方 standard blocks bundle 註冊 mutator extensions；CodeBridge 在覆寫 block 前先載入 `blocks_compressed.js`。
+6. v12 `controls_if` mutation 使用 `elseifCount`／`elseCount`，v13 改用 `elseif`／`else`；所有產品 XML 輸入統一經 `CodeBridgeBlocklyXml` 轉換。
+7. `Thrasos` 是 renderer，不是公開 theme；CodeBridge 使用 `Blockly.Themes.Classic` theme 搭配 `renderer: 'thrasos'`。
+8. Blockly 停用音效的正式 injection option 是 `sounds`（複數），不是 `sound`。
 
 ## 驗證結果
 
@@ -38,6 +42,12 @@
 - v13 ARIA focus target role 為 `figure` 且 label 已產生
 - Edge headless 無 console warning／error 或 page error
 - Vite production build 通過
+- Vitest 資源契約 3 tests 通過
+- Playwright system Edge contract 7 tests 通過
+- v12 `controls_if`／`text_join`／for／text／workspace comment XML fixtures 與 generator golden 通過
+- 風格切換後 migrated `controls_if` 仍保留 IF0／DO0／IF1／DO1／ELSE
+- GitHub Actions Windows CI 會執行 asset、runtime／migration 與 production build
+- npm audit 為 0 vulnerabilities
 
 ## 回退點
 

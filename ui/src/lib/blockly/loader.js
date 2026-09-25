@@ -175,7 +175,8 @@
       Blockly.Events.disable();
       try {
         ws.clear();
-        Blockly.Xml.domToWorkspace(currentXml, ws);
+        CodeBridgeBlocklyXml.domToWorkspace(currentXml, ws);
+        ws.updateAriaLabel();
       } finally {
         Blockly.Events.enable();
       }
