@@ -102,9 +102,11 @@ CI 會自動執行 `npm test` 與 build，但**不會自動替開發者產生 TD
 - **Frontend**: TypeScript + Svelte
 - **Backend**: Rust (Tauri)
 
-### 雙風格主題系統
-- **Engineer 風格**：技術專業風格，顯示 C/C++ 語法
-- **Angel 風格**：友好教學風格，使用文字描述
+### Engineer／Angel 體驗主題系統
+- **Engineer preset**：`technology-dark` 深色科技視覺 + C/C++ API 積木文字
+- **Angel preset**：`candy-light` 明亮糖果視覺 + 自然教學積木文字
+- 高階協調 interface：`ui/src/theme/theme-manager.js` 的 `CodeBridgeTheme`
+- 視覺 token：`ui/src/styles/presets.css`；視覺切換不得 clear/reload workspace。
 
 ### i18n
 - UI/積木/互動訊息在開發時一律使用i18n來設計文字字串，支援繁體中文及英文。
@@ -113,7 +115,7 @@ CI 會自動執行 `npm test` 與 build，但**不會自動替開發者產生 TD
 
 ## 重要路徑
 - **模組載入清單**：`ui/src/lib/modules/core_manifest.json`
-- **前端主程式**：`ui/src/main.ts`
+- **前端主程式**：`ui/src/main.js`（由 `ui/index.html` 以 UMD script 載入）
 - **後端主程式**：`src-tauri/src/main.rs`
 
 ## 日誌與備份保護原則

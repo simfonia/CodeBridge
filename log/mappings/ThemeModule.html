@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><title>CodeBridge Theme Module</title></head>
+<body>
+<h1>CodeBridge Theme Module</h1>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>公開 API</th><th>用途</th><th>位置</th></tr>
+<tr><td><code>CodeBridgeTheme.init()</code></td><td>讀取、遷移並套用目前的 Engineer／Angel preset。</td><td><code>ui/src/theme/theme-manager.js</code></td></tr>
+<tr><td><code>CodeBridgeTheme.setPreset(id)</code></td><td>協調 block style、視覺 theme、持久化與 Blockly palette。</td><td><code>ui/src/theme/theme-manager.js</code></td></tr>
+<tr><td><code>CodeBridgeTheme.getPreset()</code></td><td>取得目前 preset ID。</td><td><code>ui/src/theme/theme-manager.js</code></td></tr>
+<tr><td><code>CodeBridgeTheme.attachWorkspace(workspace)</code></td><td>將目前 Blockly theme 與 palette 套用到工作區。</td><td><code>ui/src/theme/theme-manager.js</code></td></tr>
+<tr><td><code>CodeBridgeBlocklyTheme.getTheme(visualTheme)</code></td><td>建立／取得 Blockly component theme。</td><td><code>ui/src/theme/blockly-adapter.js</code></td></tr>
+<tr><td><code>CodeBridgeBlocklyTheme.applyPalette(visualTheme, workspace)</code></td><td>更新既有 block、toolbox 與新 block 的 palette。</td><td><code>ui/src/theme/blockly-adapter.js</code></td></tr>
+<tr><td><code>CodeBridgeCodeTheme.apply(visualTheme)</code></td><td>套用程式碼預覽 visual theme。</td><td><code>ui/src/theme/code-theme-adapter.js</code></td></tr>
+<tr><td><code>data-codebridge-preset</code></td><td>CSS 選擇目前 Engineer／Angel token。</td><td><code>ui/src/styles/presets.css</code></td></tr>
+</table>
+<h2>持久化</h2>
+<ul>
+<li><code>codebridgeExperiencePreset</code>：高階 preset。</li>
+<li><code>codebridgeBlockStyle</code>：目前 Engineer／Angel block message overlay。</li>
+<li><code>codebridgeTheme</code>：舊相容鍵，啟動時自動遷移。</li>
+</ul>
+</body>
+</html>

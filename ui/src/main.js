@@ -33,9 +33,18 @@ function initBlockly() {
 
     // Blockly v13 明確選用 Thrasos renderer，避免未來預設 renderer 變更造成 UI 差異。
     // 同時停用 connect／disconnect／delete／drop 等所有 Blockly 操作音效。
+    const activeVisualTheme = window.CodeBridgeTheme
+        ? window.CodeBridgeTheme.getDefinition().visualTheme
+        : 'technology-dark';
+    const blocklyTheme = window.CodeBridgeBlocklyTheme
+        ? window.CodeBridgeBlocklyTheme.getTheme(activeVisualTheme)
+        : Blockly.Themes.Classic;
+    const blocklyGridColour = window.CodeBridgeBlocklyTheme
+        ? window.CodeBridgeBlocklyTheme.getGridColour()
+        : '#26364d';
     const workspace = Blockly.inject(blocklyDiv, {
         toolbox: toolbox,
-        theme: Blockly.Themes.Classic,
+        theme: blocklyTheme,
         renderer: 'thrasos',
         sounds: false,
         scrollbars: true,
@@ -44,7 +53,7 @@ function initBlockly() {
         workspaceComments: true,
         grid: {
             spacing: 20,
-            colour: '#eee',
+            colour: blocklyGridColour,
             snap: true
         }
     });
@@ -312,12 +321,10 @@ function initLangToggle() {
     
     function updateLabels(isEn) {
         if (textLeft) {
-            textLeft.style.color = isEn ? '#666' : '#FE2F89';
-            textLeft.style.fontWeight = isEn ? '400' : '700';
+            textLeft.classList.toggle('is-selected', !isEn);
         }
         if (textRight) {
-            textRight.style.color = isEn ? '#FE2F89' : '#666';
-            textRight.style.fontWeight = isEn ? '700' : '400';
+            textRight.classList.toggle('is-selected', isEn);
         }
     }
     
@@ -358,28 +365,31 @@ function initThemeToggle() {
     const menuItem = document.getElementById('btn-theme-toggle');
     if (!themeToggle) return;
     
-    const savedTheme = localStorage.getItem('codebridgeTheme') || 'engineer';
-    themeToggle.checked = (savedTheme === 'angel');
+    const savedPreset = localStorage.getItem('codebridgeExperiencePreset') || localStorage.getItem('codebridgeTheme') || 'engineer';
+    themeToggle.checked = (savedPreset === 'angel');
     
     function updateLabels(isAngel) {
         if (textLeft) {
-            textLeft.style.color = isAngel ? '#666' : '#FE2F89';
-            textLeft.style.fontWeight = isAngel ? '400' : '700';
+            textLeft.classList.toggle('is-selected', !isAngel);
         }
         if (textRight) {
-            textRight.style.color = isAngel ? '#FE2F89' : '#666';
-            textRight.style.fontWeight = isAngel ? '700' : '400';
+            textRight.classList.toggle('is-selected', isAngel);
         }
     }
     
     function applyTheme(isAngel) {
-        const newTheme = isAngel ? 'angel' : 'engineer';
+        const preset = isAngel ? 'angel' : 'engineer';
         updateLabels(isAngel);
-        localStorage.setItem('codebridgeTheme', newTheme);
-        if (typeof window.setBlockStyle === 'function') {
-            window.setBlockStyle(newTheme);
+        if (window.CodeBridgeTheme && typeof window.CodeBridgeTheme.setPreset === 'function') {
+            window.CodeBridgeTheme.setPreset(preset);
+        } else {
+            localStorage.setItem('codebridgeExperiencePreset', preset);
+            localStorage.setItem('codebridgeBlockStyle', preset);
+            if (typeof window.setBlockStyle === 'function') {
+                window.setBlockStyle(preset);
+            }
         }
-        console.log('Theme switched to:', newTheme);
+        console.log('Experience preset switched to:', preset);
     }
     
     updateLabels(themeToggle.checked);
@@ -469,15 +479,12 @@ function initPanelResizer() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[CodeBridge] Initializing...');
     
-    // 1. 載入積木訊息（根據語系 + 風格）
+    // 1. 載入積木訊息（根據語系 + Engineer／Angel 體驗 preset）
+    if (window.CodeBridgeTheme) {
+        window.CodeBridgeTheme.init();
+    }
     if (window.CodeBridgeBlocklyLoader) {
-        const locale = window.CodeBridgeBlocklyLoader.init();
-        
-        // 套用風格
-        const savedTheme = localStorage.getItem('codebridgeTheme') || 'engineer';
-        if (savedTheme === 'engineer' && typeof window.setBlockStyle === 'function') {
-            window.setBlockStyle('engineer');
-        }
+        window.CodeBridgeBlocklyLoader.init();
     }
     
     // 2. UI i18n (工具列、選單)
@@ -487,6 +494,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 3. Blockly 工作區
     const workspace = initBlockly();
+    if (window.CodeBridgeTheme) {
+        window.CodeBridgeTheme.attachWorkspace(workspace);
+    }
     if (window.CodeBridgeBlockSearch) {
         window.CodeBridgeBlockSearch.init(workspace);
     }
@@ -528,6 +538,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 10. UI 功能
     initLangToggle();
     initThemeToggle();
+    if (window.CodeBridgeTheme) {
+        window.CodeBridgeTheme.setPreset(window.CodeBridgeTheme.getPreset());
+    }
     initCodeToggle();
     initPanelResizer();
     

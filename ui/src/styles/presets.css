@@ -1,0 +1,238 @@
+/* Engineer：深色科技風 */
+:root,
+[data-codebridge-preset='engineer'] {
+    --cb-canvas: #0c121f;
+    --cb-surface: #121b2b;
+    --cb-surface-raised: #182438;
+    --cb-surface-hover: #203149;
+    --cb-text: #e8f0f9;
+    --cb-text-muted: #9aabc0;
+    --cb-border: #30445f;
+    --cb-primary: #35c7d4;
+    --cb-primary-hover: #55e0e8;
+    --cb-focus: #35c7d4;
+    --cb-danger: #ff6b7d;
+    --cb-success: #65d68a;
+    --cb-shadow: rgba(0, 0, 0, 0.5);
+    --cb-code-background: #0f1726;
+    --cb-code-text: #e8f0f9;
+    --cb-blockly-grid: #26364d;
+    --cb-overlay: rgba(18, 27, 43, 0.96);
+    --cb-code-keyword: #c792ea;
+    --cb-code-built-in: #82aaff;
+    --cb-code-number: #f78c6c;
+    --cb-code-string: #c3e88d;
+    --cb-code-comment: #697a95;
+    --cb-code-attribute: #ffcb6b;
+    color-scheme: dark;
+}
+
+/* Angel：明亮糖果風 */
+[data-codebridge-preset='angel'] {
+    --cb-canvas: #fff7fb;
+    --cb-surface: #ffffff;
+    --cb-surface-raised: #fff0f7;
+    --cb-surface-hover: #ffe1ef;
+    --cb-text: #35324a;
+    --cb-text-muted: #70677c;
+    --cb-border: #e8ccd9;
+    --cb-primary: #e94f91;
+    --cb-primary-hover: #d9367f;
+    --cb-focus: #7b61c9;
+    --cb-danger: #d94a5c;
+    --cb-success: #45a96a;
+    --cb-shadow: rgba(87, 48, 73, 0.18);
+    --cb-code-background: #fffafd;
+    --cb-code-text: #35324a;
+    --cb-blockly-grid: #eadbe4;
+    --cb-overlay: rgba(255, 250, 253, 0.97);
+    --cb-code-keyword: #8250df;
+    --cb-code-built-in: #1f6feb;
+    --cb-code-number: #c2410c;
+    --cb-code-string: #16825d;
+    --cb-code-comment: #8b7b8e;
+    --cb-code-attribute: #b45309;
+    color-scheme: light;
+}
+
+/* 應用程式表面：功能 CSS 透過語意 token 取得目前 preset 的色彩。 */
+#blocklyDiv,
+.blocklyToolbox,
+.blocklyFlyout,
+.blocklyToolboxCategory,
+.blocklyDropdownDiv {
+    background: var(--cb-surface) !important;
+    color: var(--cb-text) !important;
+}
+
+.blocklyToolboxDivider,
+.blocklyToolboxCategory,
+.blocklyFlyoutDivider {
+    border-color: var(--cb-border) !important;
+}
+
+.blocklyToolboxCategory .blocklyToolboxCategoryLabel,
+.blocklyTreeLabel,
+.blocklyFlyoutLabel {
+    color: var(--cb-text) !important;
+    font-family: inherit !important;
+}
+
+.blocklyToolboxCategory:hover .blocklyToolboxCategoryLabel,
+.blocklyTreeRow:hover,
+.blocklyTreeRow.blocklyTreeSelected {
+    background: var(--cb-surface-hover) !important;
+}
+
+.blocklyTreeRow.blocklyTreeSelected {
+    border-radius: 6px;
+}
+
+.blocklyWorkspaceSelectionRing,
+.blocklyHighlightedConnection {
+    stroke: var(--cb-focus) !important;
+}
+
+.blocklyCommentTextarea {
+    background: var(--cb-surface-raised) !important;
+    color: var(--cb-text) !important;
+    border-color: var(--cb-border) !important;
+}
+
+#toolbar,
+#codeArea {
+    background: var(--cb-surface);
+    color: var(--cb-text);
+}
+
+#codeHeader,
+#code-toggle,
+#file-breadcrumb,
+.dropdown-content,
+#block-search-container,
+#block-search,
+.serial-select {
+    background: var(--cb-surface-raised);
+    color: var(--cb-text);
+    border-color: var(--cb-border);
+}
+
+#codeContent,
+.practice-textarea {
+    background: var(--cb-code-background);
+    color: var(--cb-code-text);
+}
+
+#file-breadcrumb,
+#block-search-status,
+.code-line-number,
+.practice-line-numbers {
+    color: var(--cb-text-muted);
+}
+
+#file-breadcrumb,
+#codeHeader,
+#codeContent,
+.practice-line-numbers,
+.practice-textarea,
+.dropdown-content,
+#block-search-container {
+    border-color: var(--cb-border);
+}
+
+.toolbar-btn:hover,
+.dropdown-item:hover,
+.dropdown-content:hover,
+.toolbar-toggle:hover,
+.switch:hover {
+    background: var(--cb-surface-hover);
+}
+
+.toolbar-separator,
+#panel-resizer,
+.dropdown-separator,
+.code-header-bottom,
+.practice-header,
+.hint-current-line {
+    border-color: var(--cb-border);
+}
+
+.toolbar-btn:hover .close-icon,
+#panel-resizer:hover,
+#panel-resizer.is-dragging,
+.hint-title,
+.cheat-header {
+    color: var(--cb-primary);
+    border-color: var(--cb-primary);
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal {
+    color: var(--cb-code-keyword) !important;
+}
+.hljs-built_in,
+.hljs-title.function_ {
+    color: var(--cb-code-built-in) !important;
+}
+.hljs-number,
+.hljs-symbol {
+    color: var(--cb-code-number) !important;
+}
+.hljs-string,
+.hljs-regexp {
+    color: var(--cb-code-string) !important;
+}
+.hljs-comment,
+.hljs-quote {
+    color: var(--cb-code-comment) !important;
+}
+.hljs-attr,
+.hljs-attribute {
+    color: var(--cb-code-attribute) !important;
+}
+
+.practice-header,
+.practice-hint,
+.cheat-header,
+.cheat-overlay,
+.hint-popup {
+    background: var(--cb-overlay);
+    color: var(--cb-text);
+    border-color: var(--cb-border);
+    box-shadow: 0 8px 24px var(--cb-shadow);
+}
+
+.practice-hint,
+.hint-content,
+.cheat-content,
+.hint-line,
+.cheat-close-btn {
+    color: var(--cb-text-muted);
+}
+
+.hint-context,
+.hint-next-label {
+    color: var(--cb-text-muted);
+}
+
+.hint-current-line,
+.hint-complete,
+.cheat-content {
+    color: var(--cb-text);
+}
+
+[data-codebridge-preset='engineer'] .toolbar-btn img,
+[data-codebridge-preset='engineer'] #file-breadcrumb img {
+    filter: brightness(0) saturate(100%) invert(92%) sepia(10%) saturate(450%) hue-rotate(175deg) brightness(95%) contrast(90%);
+}
+
+[data-codebridge-preset='engineer'] .toolbar-btn:hover img,
+[data-codebridge-preset='engineer'] .toolbar-btn.active img {
+    filter: brightness(0) saturate(100%) invert(77%) sepia(45%) saturate(850%) hue-rotate(130deg) brightness(90%) contrast(88%);
+}
+
+[data-codebridge-preset='angel'] .toolbar-btn:hover img,
+[data-codebridge-preset='angel'] .toolbar-btn.active img {
+    filter: brightness(0) saturate(100%) invert(46%) sepia(63%) saturate(2450%) hue-rotate(293deg) brightness(91%) contrast(87%);
+}

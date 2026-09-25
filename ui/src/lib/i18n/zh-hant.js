@@ -26,7 +26,7 @@ var UI_ZH_HANT = {
     TLB_DRAG_RESIZE: '拖曳調整大小',
     TLB_COPY_CODE: '複製程式碼',
     TLB_EXAMPLES: '範例',
-    TLB_THEME_TOGGLE: '切換積木風格',
+    TLB_THEME_TOGGLE: '切換體驗風格（Engineer／Angel）',
     TLB_LANG_TOGGLE: '切換語系 (中文/English)',
     TLB_BLOCK_SEARCH: '搜尋積木',
     TLB_BLOCK_SEARCH_PLACEHOLDER: '搜尋積木...',

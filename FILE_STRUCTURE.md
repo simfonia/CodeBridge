@@ -26,7 +26,14 @@ CodeBridge/
 │   ├── src/
 │   │   ├── main.js      # 主程式（Blockly init + UI 操作）
 │   │   ├── i18n.js      # i18n 膠水層（語系偵測、DOM 替換）
-│   │   ├── style.css    # 全域樣式
+│   │   ├── style.css    # 功能佈局樣式（視覺色值由 styles/presets.css 提供）
+│   │   ├── styles/
+│   │   │   └── presets.css # Engineer 深色科技／Angel 明亮糖果語意 token 與 Blockly chrome
+│   │   ├── theme/        # Engineer／Angel 體驗 preset 協調
+│   │   │   ├── presets.js # Preset registry（visualTheme + blockStyle）
+│   │   │   ├── theme-manager.js # 公開 CodeBridgeTheme interface、持久化與 fallback
+│   │   │   ├── blockly-adapter.js # Blockly component theme、grid 與 block palette
+│   │   │   └── code-theme-adapter.js # 程式碼預覽主題 adapter
 │   │   └── lib/
 │   │       ├── blockly/         # Blockly 相關
 │   │       │   ├── generators/  # Generator 核心（對齊 piBlockly 架構）
@@ -129,7 +136,7 @@ CodeBridge/
 
 ## 測試與 CI
 - `ui/playwright.config.mjs`：system Edge Playwright 配置，自動啟動 Vite。
-- `ui/tests/e2e/`：Blockly runtime、v12 XML migration 與 generator golden tests。
+- `ui/tests/e2e/`：Engineer／Angel theme、Blockly runtime、v12 XML migration 與 generator golden tests。
 - `ui/tests/fixtures/blockly-v12/`：可由 Blockly 13.3.0 載入的 setup/loop、controls、text、variables、array、functions 與 workspace comment fixtures。
 - `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試。
 - `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI。

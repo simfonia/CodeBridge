@@ -319,3 +319,35 @@
 - value marker 使用 `/* // __BLOCKLY_ID:<id>__ */`，可放在表達式內，不會破壞 `digitalRead()` 或 `Serial.print(digitalRead())` 的 C++ 語法。
 - marker 只用於定位資料，renderCode 解析後會移除，不應出現在正式 `.ino`。
 - Blockly 13 的 block ID 可能包含 `*` 等符號，因此清理 regex 不能再用排除 `*` 的字元集合。
+
+## 2026-09-25：CodeBridge Engineer／Angel 體驗主題架構
+
+### 已完成
+- [x] Engineer 定義為 `technology-dark` 深色科技視覺 + Engineer C/C++ message overlay。
+- [x] Angel 定義為 `candy-light` 明亮糖果視覺 + Angel 自然教學 message overlay。
+- [x] 新增 `CodeBridgeTheme` 高階 interface，協調 visual theme、block style、儲存、fallback 與 Blockly workspace。
+- [x] 新增 `codebridgeExperiencePreset` 與 `codebridgeBlockStyle`，舊 `codebridgeTheme` 自動遷移。
+- [x] 新增集中式 CSS semantic tokens，涵蓋 UI、Blockly chrome、程式碼高亮、練習模式與提示面板。
+- [x] Blockly adapter 依 visual theme 使用不同 component theme、grid 與 block palette。
+- [x] `setBlockStyle()` 改為原地 `Blockly.setLocale()` 重繪，不再 clear/reload workspace。
+- [x] toolbox search 與 workspace ARIA label 在 Engineer／Angel 切換後同步更新。
+- [x] 新增 9 個 Playwright 公開行為 contract，覆蓋預設、切換、刷新、遷移、fallback、surface、資料安全與 palette。
+
+### 技術深挖 (Technical Deep Dive)
+- Engineer／Angel 對外是單一 preset，但內部保留 `visualTheme` 與 `blockStyle` seam，避免未來視覺與教學文字永久綁死。
+- 舊 `setBlockStyle()` 的 clear/reload 會觸發孤兒積木 detector，將 `disabled-reasons="orphan"` 寫回 XML；主題切換改用 events-disabled 的原地 locale refresh，workspace XML 與產碼保持不變。
+- Blockly 13 會在 block 建立時解析 `colour: "%{BKY_XXX_HUE}"`；Blockly adapter 因此同時更新 `*_HUE`、既有 block colour 與 toolbox XML colour，不改 block type 與 generator contract。
+- 未知 `codebridgeExperiencePreset` 安全 fallback 到 Engineer；語系 `codebridgeLang` 與 preset 相互獨立。
+
+### 驗證結果
+- Theme runtime：9 tests passed。
+- Blockly runtime：6 tests passed。
+- v12 migration／golden：10 tests passed。
+- Blockly assets：4 tests passed。
+- 合計 29 tests passed。
+- `npm run build --prefix ui`：成功；僅有既有非 module UMD script bundling warnings。
+
+## 下次啟動方向 (Next Steps)
+1. 將模組 `*_HUE` 從 locale message 正式抽離到 CodeBridge Modules palette contract，讓遠端模組不需在 zh-hant／en 重複色碼。
+2. 評估把 Blockly palette 依 block type 映射取代執行期色碼反查，提升第三方模組的自訂主題彈性。
+3. 未來新增 preset 時，只需擴充 preset registry、CSS tokens、Blockly visual adapter 與公開行為測試。

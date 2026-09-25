@@ -26,7 +26,7 @@ var UI_EN = {
     TLB_DRAG_RESIZE: 'Drag to Resize',
     TLB_COPY_CODE: 'Copy Code',
     TLB_EXAMPLES: 'Examples',
-    TLB_THEME_TOGGLE: 'Toggle Block Style (Engineer/Angel)',
+    TLB_THEME_TOGGLE: 'Switch Experience (Engineer/Angel)',
     TLB_LANG_TOGGLE: 'Switch Language (中文/English)',
     TLB_BLOCK_SEARCH: 'Search blocks',
     TLB_BLOCK_SEARCH_PLACEHOLDER: 'Search blocks...',
