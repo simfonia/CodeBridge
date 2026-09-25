@@ -440,6 +440,18 @@
     <script src="blockly/core/blockly.js"></script>
     <script src="blockly/core/python_compressed.js"></script>
 
+    <!-- Blockly v13 內建訊息（v13 ARIA 初始化需要） -->
+    <script src="blockly/msg/en.js"></script>
+    <script>
+        window.CodeBridgeBlocklyBaseLocales = window.CodeBridgeBlocklyBaseLocales || {};
+        window.CodeBridgeBlocklyBaseLocales.en = Object.assign({}, Blockly.Msg);
+    </script>
+    <script src="blockly/msg/zh-hant.js"></script>
+    <script>
+        window.CodeBridgeBlocklyBaseLocales = window.CodeBridgeBlocklyBaseLocales || {};
+        window.CodeBridgeBlocklyBaseLocales['zh-hant'] = Object.assign({}, Blockly.Msg);
+    </script>
+
     <!-- 插件 -->
     <script src="blockly/plugins/field-colour.js"></script>
     <script src="blockly/plugins/field-multilineinput.js"></script>

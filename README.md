@@ -1,7 +1,7 @@
 # CodeBridge
 
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-blue)
-![Blockly](https://img.shields.io/badge/Blockly-v12.3.1-green)
+![Blockly](https://img.shields.io/badge/Blockly-v13.3.0-green)
 ![Arduino](https://img.shields.io/badge/Arduino-C%2B%2B-red)
 
 **CodeBridge** 是一個專為教學設計的視覺化 Arduino 程式開發環境，基於 Google Blockly 技術，讓使用者透過拖拉積木的方式產生 Arduino C++ 程式碼。
@@ -31,7 +31,7 @@
 
 ### 前端
 - **框架**：Svelte + TypeScript
-- **視覺化編輯**：Blockly v12.3.1
+- **視覺化編輯**：Blockly v13.3.0
 - **建置工具**：Vite
 - **程式碼高亮**：highlight.js (Arduino language)
 
@@ -43,7 +43,7 @@
 ## 安裝與執行
 
 ### 環境需求
-- Node.js >= 16
+- Node.js >= 22（Blockly v13.3.0 要求）
 - Rust >= 1.70
 - Tauri CLI >= 2.0
 

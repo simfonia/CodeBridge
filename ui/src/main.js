@@ -31,17 +31,13 @@ function initBlockly() {
         Blockly.ContextMenuItems.registerCommentOptions();
     }
 
-    // 註冊 blockStyles（用於內建積木，如 controls_if mutator 中的 if 積木）
-    const theme = Blockly.Theme.defineTheme('codebridge', {
-        'base': Blockly.Themes.Classic,
-        'blockStyles': {
-            'logic_blocks': { 'colourPrimary': '#b198de' }
-        }
-    });
-
+    // Blockly v13 明確選用 Thrasos renderer，避免未來預設 renderer 變更造成 UI 差異。
+    // 同時停用 connect／disconnect／delete／drop 等所有 Blockly 操作音效。
     const workspace = Blockly.inject(blocklyDiv, {
         toolbox: toolbox,
-        theme: theme,
+        theme: Blockly.Themes.Classic,
+        renderer: 'thrasos',
+        sounds: false,
         scrollbars: true,
         trashcan: true,
         comments: true,

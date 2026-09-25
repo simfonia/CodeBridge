@@ -28,6 +28,13 @@
     var saved = localStorage.getItem('codebridgeLang');
     var locale = saved || (navigator.language && navigator.language.startsWith('zh') ? 'zh-hant' : 'en');
 
+    // v13 的工作區 ARIA 初始化依賴 Blockly 內建訊息；先套用官方基礎語系，
+    // 再由 CodeBridge 模組訊息覆寫積木文字與分類名稱。
+    var baseLocales = window.CodeBridgeBlocklyBaseLocales || {};
+    if (baseLocales[locale] && typeof Blockly.setLocale === 'function') {
+      Blockly.setLocale(baseLocales[locale]);
+    }
+
     // 載入對應語系的模組訊息
     if (locale === 'zh-hant') {
       if (typeof ARDUINO_ZH !== 'undefined') {

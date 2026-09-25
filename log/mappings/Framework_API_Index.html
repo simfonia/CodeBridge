@@ -1,0 +1,20 @@
+<h1>CodeBridge Blockly 13.3.0 API Index</h1>
+<p>本文件記錄已在 CodeBridge 實際 runtime 驗證的 Blockly v13 API。</p>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>API</th><th>用途</th><th>CodeBridge 位置</th></tr>
+<tr><td><code>Blockly.VERSION</code></td><td>確認執行期核心版本，應為 13.3.0。</td><td>runtime smoke test</td></tr>
+<tr><td><code>Blockly.inject(element, options)</code></td><td>建立工作區；CodeBridge 使用 <code>renderer: 'thrasos'</code>、<code>theme: Blockly.Themes.Classic</code>、<code>sounds: false</code>。</td><td>ui/src/main.js</td></tr>
+<tr><td><code>Blockly.setLocale(messages)</code></td><td>先套用 Blockly 官方基礎訊息，再由模組訊息覆寫。</td><td>ui/src/lib/blockly/loader.js</td></tr>
+<tr><td><code>Blockly.Xml.domToWorkspace(xml, workspace)</code></td><td>載入 v12／v13 Blockly XML。</td><td>ui/src/main.js、loader.js</td></tr>
+<tr><td><code>Blockly.Xml.workspaceToDom(workspace)</code></td><td>保存工作區 XML。</td><td>ui/src/main.js、loader.js</td></tr>
+<tr><td><code>Blockly.Arduino.forBlock[type]</code></td><td>註冊 CodeBridge Arduino generator。</td><td>ui/src/lib/blockly/modules/*/generators.js</td></tr>
+<tr><td><code>Blockly.Arduino.workspaceToCode(workspace)</code></td><td>產生 setup、loop 與 code buckets 內容。</td><td>ui/src/main.js</td></tr>
+<tr><td><code>Blockly.Blocks[type]</code></td><td>註冊自訂與覆寫積木；本專案維持既有註冊方式。</td><td>ui/src/lib/blockly/modules/*/blocks.js</td></tr>
+</table>
+<h2>v13 注意事項</h2>
+<ul>
+<li>Core-only 檔案必須搭配官方 <code>msg/en.js</code> 或 <code>msg/zh-hant.js</code>，否則工作區 ARIA 初始化缺少訊息。</li>
+<li><code>sounds: false</code> 會跳過 Blockly media 音效載入。</li>
+<li>Thrasos 是 renderer 名稱；公開 Theme 仍為 Classic 或 Zelos。</li>
+<li>v12 已棄用的 Workspace／VariableMap 舊 API 已於 v13 移除，新程式應使用 VariableMap API。</li>
+</ul>

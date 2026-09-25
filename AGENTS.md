@@ -8,7 +8,7 @@ CodeBridge 是一個 Tauri 桌面應用程式，為高中生教學設計的 Bloc
 ### 核心架構
 - **目標平台**：Tauri 2.0 桌面應用 (Windows/macOS/Linux)
 - **目標語言**：Arduino C++ (.ino)
-- **前端框架**：Svelte + TypeScript + Blockly v12.3.1 + Vite
+- **前端框架**：Svelte + TypeScript + Blockly v13.3.0 + Vite
 - **後端框架**：Rust + Tauri
 
 ### 影子積木規範 (Shadow Block Standards)
