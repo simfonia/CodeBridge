@@ -56,6 +56,41 @@ CodeBridge 是一個 Tauri 桌面應用程式，為高中生教學設計的 Bloc
 ### 轉義字元與換行處理規範 (Critical)
 參考 global.md 的規範，嚴格遵守三層字串意識。
 
+### Blockly v13 開發規範 (Critical)
+
+目前固定使用 **Blockly 13.3.0**，禁止直接套用 v12 寫法。詳細決策與升級紀錄見 `log/plan/BlocklyV13Upgrade.md`。
+
+- UMD 載入順序固定為：`blockly.js` → `blocks_compressed.js` → `python_compressed.js` → `msg/*.js` → plugins → CodeBridge blocks。
+- `blocks_compressed.js` 必須在 CodeBridge 覆寫 `controls_if`、`text_join` 等內建 block 前載入，否則 mutator extension 不存在。
+- v13 workspace ARIA 初始化需要官方基礎訊息；語系載入必須透過 `Blockly.setLocale()`，不可只依賴 CodeBridge 模組訊息。
+- 停用音效的 injection option 是 `sounds: false`（複數），不可寫成 `sound`。
+- Thrasos 是 renderer，不是公開 Theme；使用 `renderer: 'thrasos'` 搭配 `Blockly.Themes.Classic`。
+- 不可使用 v12 已移除的 Workspace／VariableMap 舊 API，例如 `createVariable()`、`getVariableById()`、`getAllVariables()`、`renameVariableById()`、`deleteVariableById()`；改用 VariableMap API。
+- v12 `controls_if` mutation 使用 `elseifCount`／`elseCount`，v13 使用 `elseif`／`else`。不可在 block definition 覆寫官方 mutator method。
+- 所有 XML 輸入必須使用 `CodeBridgeBlocklyXml.textToWorkspace()` 或 `domToWorkspace()`，不可直接呼叫 `Blockly.Xml.domToWorkspace()`。
+- 初始 XML、session restore 與 style reload 後，必須確認 `workspace.updateAriaLabel()` 已更新 workspace stack label。
+- 升級或替換任何 Blockly JS 資源時，必須同步更新 `ui/public/blockly/VERSIONS.md` 的 bytes 與 SHA-256。
+
+### 模組開發與 TDD (Required Workflow)
+
+新增或修改 Blockly 模組時必須採 red → green → refactor：
+
+1. **Red**：先在 `ui/tests/e2e/blockly-migration.spec.js` 或 `ui/tests/fixtures/blockly-v12/` 建立會失敗的公開行為測試。
+2. **Green**：只實作讓該測試通過所需的 block definition、messages 與 generator。
+3. **Refactor**：完成模組後才整理重複程式碼，不在 red/green 迴圈中預先抽象。
+4. 執行 `npm test`，確認 Vitest assets／module contracts 與 Playwright Edge tests 全數通過。
+5. 執行 `npm run build`，確認 production build 通過。
+
+每個公開模組 block 必須具備：
+
+- `colour`、`tooltip`、英文與繁中訊息。
+- 對應的 `Blockly.Arduino.forBlock[type]` generator；mutator-only helper blocks（例如 `controls_if_elseif`、`controls_if_else`）可列入明確 allowlist。
+- 至少一份 XML fixture，驗證可由 Blockly 13 載入。
+- 至少一個公開行為斷言；statement/value block 需有 generator golden 產碼。
+- Toolbox reference、block type、generator type 必須一致。
+
+CI 會自動執行 `npm test` 與 build，但**不會自動替開發者產生 TDD 測試**。新增測試是模組開發的必要工作，不是選用步驟。
+
 ## 開發慣例
 
 ### 積木與產生器模組化
