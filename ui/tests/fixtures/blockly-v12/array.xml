@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <block type="array_declare_global" x="20" y="20">
+    <field name="TYPE">int</field>
+    <field name="VAR">scores</field>
+    <value name="SIZE">
+      <shadow type="math_number">
+        <field name="NUM">5</field>
+      </shadow>
+    </value>
+  </block>
+  <block type="initializes_loop" x="20" y="140">
+    <statement name="CONTENT">
+      <block type="array_declare_local" x="20" y="20">
+        <field name="TYPE">int</field>
+        <field name="VAR">current</field>
+        <value name="SIZE">
+          <shadow type="math_number">
+            <field name="NUM">3</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="array_set" x="20" y="100">
+            <field name="VAR">scores</field>
+            <value name="INDEX">
+              <shadow type="math_number">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <value name="VALUE">
+              <block type="array_get" x="20" y="100">
+                <field name="VAR">current</field>
+                <value name="INDEX">
+                  <shadow type="math_number">
+                    <field name="NUM">2</field>
+                  </shadow>
+                </value>
+              </block>
+            </value>
+            <next>
+              <block type="arduino_serial_print" x="20" y="180">
+                <value name="VALUE">
+                  <block type="array_get" x="20" y="180">
+                    <field name="VAR">scores</field>
+                    <value name="INDEX">
+                      <shadow type="math_number">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="arduino_serial_println" x="20" y="260">
+                    <value name="VALUE">
+                      <block type="array_length" x="20" y="260">
+                        <field name="VAR">scores</field>
+                      </block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

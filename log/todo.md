@@ -217,3 +217,84 @@
 ### 後續
 - [ ] 補齊 variables、array、functions 時擴充各模組 XML fixtures
 - [ ] marked code 與 plain code 分離後，golden tests 改驗正式輸出不含 ID marker
+
+## 2026-09-25：補齊 Variables 模組與正式 v12 XML migration contract
+
+### 已完成
+- [x] 建立 Variables 模組：全域／區域變數宣告、variables_get、variables_set。
+- [x] 建立繁體中文／英文 Angel 訊息與 Engineer 風格 C++ 語法覆寫。
+- [x] 將 Variables 分類從 common 模組移至專屬模組，並同步 toolbox、index.html 與 loader.js。
+- [x] 建立含 variable model 的 v12 XML fixture，驗證 id、name、type 與 field_variable 綁定。
+- [x] 建立 Variables generator golden contract，驗證 global_vars_、變數賦值與變數取值。
+- [x] 更新 Blockly 13.3.0 runtime／module contract 與 Angel／Engineer 雙風格測試。
+
+### 驗證結果
+- Variables v12 migration fixture 通過。
+- Blockly module asset contract：4 tests passed。
+- Blockly runtime／雙風格 contract：2 tests passed。
+- 全部 v12 migration／golden fixtures：7 tests passed。
+- 待完成：完整 `npm test` 與 production build 驗證。
+
+- [x] 完整 `npm test --prefix ui` 與 `npm run build --prefix ui` 驗證通過。
+- [x] 完整 `npm test --prefix ui` 與 `npm run build --prefix ui` 驗證通過。
+
+## 2026-09-25：新增 Array 與 Functions 模組
+
+### 已完成
+- [x] 依 piBlockly 對齊 5 個 Array 公開積木、型別、色彩、雙風格訊息與 Arduino C++ 產生器。
+- [x] 依 piBlockly 對齊 5 個 Functions 公開積木與 2 個 mutator-only helper。
+- [x] Functions mutation 保留 v12 XML 的 `mutation`／`arg name`／`arg type` 結構，並以 Blockly 13.3.0 API 實作 mutator lifecycle。
+- [x] 函式原型與定義分別寫入 `function_prototypes_`／`function_definitions_`。
+- [x] 將 Array／Functions 分類訊息從 common 移至專屬模組，並同步 toolbox、index.html、loader.js 與 Engineer style。
+- [x] 新增 array.xml、functions.xml v12 migration fixtures 與 generator golden contracts。
+- [x] 修正 ArrayBlock.md、FunctionsBlock.md 與 TextBlock.md 中根層級積木、helper 可見性、訊息數量及 v12 API 描述錯誤。
+
+### 驗證結果
+- Array v12 migration fixture 通過。
+- Functions v12 mutation 與 generator golden fixture 通過。
+- Blockly module asset contract：4 tests passed。
+- Playwright runtime／migration／雙風格：12 tests passed。
+- `npm test --prefix ui`：成功。
+- `npm run build --prefix ui`：成功；僅有既有非 module UMD script bundling warnings。
+
+### 技術深挖 (Technical Deep Dive)
+- piBlockly Functions 原始碼含 Blockly v12 VariableMap／Procedures API；CodeBridge 保留公開 block type、field、input 與 mutation XML，但不移植已失效的自動 Procedures 同步。
+- `array_declare_global` 與兩個函式定義是根層級積木；區域陣列宣告、陣列設定、return 與 statement 呼叫仍須置於合法 statement 容器。
+- 手動呼叫積木依自身 mutation 產生參數，不依賴 Blockly 內建 Procedures 自動更新；compose 時以參數名稱保留既有 value connection。
+- `custom_functions_return` 產生器不再手動加入兩個空格，函式本體縮排統一由 `statementToCode()` 處理。
+
+## 下次啟動方向 (Next Steps)
+1. 評估是否將 marked code 與 plain code 分离，讓 golden tests 直接驗證正式 `.ino` 不含 ID marker。
+2. 後續新增自動同步型客製函式呼叫時，應先定義 Blockly 13 Procedures integration contract，不直接複製 piBlockly v12 API。
+
+### 最終驗證補充
+- 新增 toolbox／runtime block definition 契約：10 個公開 block reference 完整，12 個 Array／Functions block definitions（包含 2 個 mutator helper）皆可在 Blockly 13.3.0 執行期建立。
+- 最終完整 `npm test --prefix ui`：Vitest 4 tests passed、Playwright 13 tests passed。
+- 最終 `npm run build --prefix ui`：成功；警告僅為既有非 module UMD script bundling warnings。
+
+## 2026-09-25：新增 Toolbox 積木搜尋框
+
+### 已完成
+- [x] 依 Cocoya 行為新增 Blockly toolbox 上方搜尋框。
+- [x] 搜尋引擎以實際 toolbox language tree 建立公開 block definition 索引，不搜尋 mutator-only helper。
+- [x] 支援 block type、Blockly message、tooltip、欄位文字與分類名稱搜尋，採不分大小寫的多關鍵字 AND 比對，最多顯示 30 筆。
+- [x] 支援清除按鈕、Escape、無結果訊息、鍵盤 aria label 與 IME composition。
+- [x] 點擊搜尋結果新增 block 後自動清空搜尋並隱藏 flyout。
+- [x] `setBlockStyle()` 更新 toolbox 後自動重建索引並保留查詢字串。
+- [x] 新增繁體中文／英文搜尋 UI 訊息、Cocoya 風格 CSS 與 `CodeBridgeBlockSearch` 公開 API。
+- [x] 新增 Playwright toolbox search contract，覆蓋 Array 搜尋、helper 排除、清除、無結果與雙風格刷新。
+
+### 技術深挖 (Technical Deep Dive)
+- Blockly 13.3.0 toolbox 根節點使用 `.blocklyToolbox`，因此同時保留 `.blocklyToolboxDiv` fallback，不能直接沿用 Cocoya 舊 selector。
+- 搜尋不掃描整個 `Blockly.Blocks`，而是掃描目前 toolbox language tree 的公開 block item，避免把 `custom_functions_mutatorcontainer`／`custom_functions_mutatorarg` 等 helper 顯示為可拖入積木。
+- `controls_for` 的既有 loops `setTimeout(updateLabels)` 會在暫時 block dispose 後執行；搜尋引擎跳過該 block 的暫時實例化，但保留其既有 message 索引，避免搜尋功能引入 browser pageerror。
+- 分類名稱會由 language tree category 遞迴加入搜尋 blob，讓 Arduino／Array／Functions 等分類名稱也可被搜尋。
+
+### 驗證結果
+- `npm test --prefix ui`：Vitest 4 tests passed、Playwright 15 tests passed。
+- `npm run build --prefix ui`：成功；僅有既有非 module UMD script bundling warnings。
+- 新增 toolbox search runtime contract 無 browser console error／warning。
+
+## 下次啟動方向 (Next Steps)
+1. 若未來 Blockly 支援可安全建立 headless temporary block，可移除 `controls_for` 的暫時實例化 skip，改為更完整的欄位文字索引。
+2. 若 Variables dynamic category 需要被搜尋，可新增 Blockly Variables dynamic dropdown 的 definition adapter，不直接掃描所有全域 block types。

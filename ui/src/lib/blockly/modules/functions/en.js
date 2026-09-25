@@ -1,0 +1,21 @@
+/// CodeBridge Functions Module - English messages (Angel style base)
+var FUNCTIONS_EN = {
+  FUNCTIONS_CATEGORY: 'Functions',
+  FUNCTIONS_HUE: '#d22f73',
+  CUSTOM_FUNCTIONS_DEFNORETURN_MESSAGE: 'do task %1 (%2)',
+  CUSTOM_FUNCTIONS_DEFRETURN_MESSAGE: 'do task %2 (%3) and report back %1',
+  CUSTOM_FUNCTIONS_CALLNORETURN_MESSAGE: 'do task %1 (%2)',
+  CUSTOM_FUNCTIONS_CALLRETURN_MESSAGE: 'get report from task %1 (%2)',
+  CUSTOM_FUNCTIONS_MUTATORCONTAINER_MESSAGE: 'function inputs',
+  CUSTOM_FUNCTIONS_MUTATORARG_MESSAGE: 'parameter',
+  CUSTOM_FUNCTIONS_RETURN_MESSAGE: 'report back %1',
+  FUNCTIONS_DEFNORETURN_TOOLTIP: 'Creates a function with no output.',
+  FUNCTIONS_DEFRETURN_TOOLTIP: 'Creates a function with an output.',
+  FUNCTIONS_CALLNORETURN_TOOLTIP: 'Execute the user-defined function.',
+  FUNCTIONS_CALLRETURN_TOOLTIP: 'Execute the user-defined function and use its output.',
+  FUNCTIONS_MUTATORCONTAINER_TOOLTIP: 'Configure function parameters.',
+  FUNCTIONS_MUTATORARG_TOOLTIP: 'Add an input to the function.',
+  FUNCTIONS_RETURN_TOOLTIP: 'Returns a value from a function.',
+  FUNCTIONS_RETURN_OUTSIDE_WARNING: 'Return blocks may only be used within a function.',
+  FUNCTIONS_RETURN_IN_VOID_WARNING: 'A void function cannot return a value.',
+};

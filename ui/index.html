@@ -501,6 +501,26 @@
     <script src="src/lib/blockly/modules/text/blocks.js"></script>
     <script src="src/lib/blockly/modules/text/generators.js"></script>
 
+    <!-- Variables 模組：i18n → blocks → generators -->
+    <script src="src/lib/blockly/modules/variables/zh-hant.js"></script>
+    <script src="src/lib/blockly/modules/variables/en.js"></script>
+    <script src="src/lib/blockly/modules/variables/blocks.js"></script>
+    <script src="src/lib/blockly/modules/variables/generators.js"></script>
+
+    <!-- Array 模組：i18n → blocks → generators -->
+    <script src="src/lib/blockly/modules/array/zh-hant.js"></script>
+    <script src="src/lib/blockly/modules/array/en.js"></script>
+    <script src="src/lib/blockly/modules/array/blocks.js"></script>
+    <script src="src/lib/blockly/modules/array/generators.js"></script>
+
+    <!-- Functions 模組：i18n → blocks → generators -->
+    <script src="src/lib/blockly/modules/functions/zh-hant.js"></script>
+    <script src="src/lib/blockly/modules/functions/en.js"></script>
+    <script src="src/lib/blockly/modules/functions/blocks.js"></script>
+    <script src="src/lib/blockly/modules/functions/generators.js"></script>
+
+
+
     <!-- 共用分類名稱（尚未有專屬模組的分類） -->
     <script src="src/lib/blockly/modules/common/zh-hant.js"></script>
     <script src="src/lib/blockly/modules/common/en.js"></script>
@@ -529,6 +549,10 @@
 
     <!-- XML migration adapter（v12 → Blockly 13） -->
     <script src="src/lib/blockly/xml-migration.js"></script>
+    <!-- Toolbox 搜尋引擎（需在 main.js 前載入） -->
+    <script src="src/lib/blockly/toolbox-search.js"></script>
+
+
 
     <!-- 主程式核心邏輯 -->
     <script src="src/main.js"></script>

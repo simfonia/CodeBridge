@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <variables>
+    <variable id="counter" type="">counter</variable>
+  </variables>
+  <block type="variables_declare_global" x="20" y="20">
+    <field name="TYPE">int</field>
+    <field name="VAR" id="counter">counter</field>
+    <value name="VALUE">
+      <shadow type="math_number">
+        <field name="NUM">0</field>
+      </shadow>
+    </value>
+  </block>
+  <block type="initializes_loop" x="20" y="120">
+    <statement name="CONTENT">
+      <block type="variables_set" x="20" y="20">
+        <field name="VAR" id="counter">counter</field>
+        <value name="VALUE">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="variables_set" x="20" y="100">
+            <field name="VAR" id="counter">counter</field>
+            <value name="VALUE">
+              <shadow type="math_number">
+                <field name="NUM">2</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="arduino_delay" x="20" y="180">
+                <value name="TIME">
+                  <block type="variables_get" x="20" y="180">
+                    <field name="VAR" id="counter">counter</field>
+                  </block>
+                </value>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

@@ -5,7 +5,4 @@
 var COMMON_ZH = {
   MATH_CATEGORY: '數學',
   TEXT_CATEGORY: '文字',
-  VARIABLES_CATEGORY: '變數',
-  ARRAY_CATEGORY: '陣列',
-  FUNCTIONS_CATEGORY: '函式',
 };

@@ -13,7 +13,9 @@ const blockPattern = /Blockly\.Blocks\[['"]([^'"]+)['"]\]/g;
 const generatorPattern = /Blockly\.Arduino\.forBlock\[['"]([^'"]+)['"]\]/g;
 const mutatorOnlyBlocks = new Set([
   'controls_if_elseif',
-  'controls_if_else'
+  'controls_if_else',
+  'custom_functions_mutatorcontainer',
+  'custom_functions_mutatorarg'
 ]);
 
 async function listFiles(directory) {

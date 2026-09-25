@@ -214,7 +214,7 @@ ui/src/lib/blockly/modules/text/
 
 | 項目 | Text 模組 | Functions 模組 | Array 模組 |
 |------|----------|---------------|-----------|
-| 積木數量 | 4 個 (2 個自訂 + 2 個內建) | 7 個 (含 2 個 mutator) | 5 個 |
+| 積木數量 | 4 個 (2 個自訂 + 2 個內建) | 5 個公開積木 + 2 個 mutator-only helper | 5 個 |
 | Blockly 內建 blocks | 2 個 (text, text_join) | 0 個 | 0 個 |
 | 動態輸入 | 有 (text_join itemCount_) | 有 (mutator 參數) | 無 |
 | 特殊處理 | String() 轉換, quote_() | mutationToDom/domToMutation | global_vars_ 去重 |

@@ -55,6 +55,16 @@
       if (typeof TEXT_ZH !== 'undefined') {
         registerMessages(TEXT_ZH, true);
       }
+      if (typeof VARIABLES_ZH !== 'undefined') {
+        registerMessages(VARIABLES_ZH, true);
+      }
+      if (typeof ARRAY_ZH !== 'undefined') {
+        registerMessages(ARRAY_ZH, true);
+      }
+      if (typeof FUNCTIONS_ZH !== 'undefined') {
+        registerMessages(FUNCTIONS_ZH, true);
+      }
+
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
       }
@@ -76,6 +86,15 @@
       }
       if (typeof TEXT_EN !== 'undefined') {
         registerMessages(TEXT_EN, true);
+      }
+      if (typeof VARIABLES_EN !== 'undefined') {
+        registerMessages(VARIABLES_EN, true);
+      }
+      if (typeof ARRAY_EN !== 'undefined') {
+        registerMessages(ARRAY_EN, true);
+      }
+      if (typeof FUNCTIONS_EN !== 'undefined') {
+        registerMessages(FUNCTIONS_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);
@@ -117,6 +136,10 @@
       if (typeof LOGIC_ZH !== 'undefined') {
         registerMessages(LOGIC_ZH, true);
       }
+      if (typeof VARIABLES_ZH !== 'undefined') {
+        registerMessages(VARIABLES_ZH, true);
+      }
+
       if (typeof LOOPS_ZH !== 'undefined') {
         registerMessages(LOOPS_ZH, true);
       }
@@ -125,6 +148,12 @@
       }
       if (typeof TEXT_ZH !== 'undefined') {
         registerMessages(TEXT_ZH, true);
+      }
+      if (typeof ARRAY_ZH !== 'undefined') {
+        registerMessages(ARRAY_ZH, true);
+      }
+      if (typeof FUNCTIONS_ZH !== 'undefined') {
+        registerMessages(FUNCTIONS_ZH, true);
       }
       if (typeof COMMON_ZH !== 'undefined') {
         registerMessages(COMMON_ZH, true);
@@ -136,6 +165,10 @@
       if (typeof CODING_EN !== 'undefined') {
         registerMessages(CODING_EN, true);
       }
+      if (typeof VARIABLES_EN !== 'undefined') {
+        registerMessages(VARIABLES_EN, true);
+      }
+
       if (typeof LOGIC_EN !== 'undefined') {
         registerMessages(LOGIC_EN, true);
       }
@@ -147,6 +180,12 @@
       }
       if (typeof TEXT_EN !== 'undefined') {
         registerMessages(TEXT_EN, true);
+      }
+      if (typeof ARRAY_EN !== 'undefined') {
+        registerMessages(ARRAY_EN, true);
+      }
+      if (typeof FUNCTIONS_EN !== 'undefined') {
+        registerMessages(FUNCTIONS_EN, true);
       }
       if (typeof COMMON_EN !== 'undefined') {
         registerMessages(COMMON_EN, true);
@@ -169,6 +208,9 @@
       if (toolboxXml) {
         var newToolbox = toolboxXml.cloneNode(true);
         ws.updateToolbox(newToolbox);
+        if (window.CodeBridgeBlockSearch) {
+          window.CodeBridgeBlockSearch.refresh(ws);
+        }
       }
 
       // 清除並重新載入工作區

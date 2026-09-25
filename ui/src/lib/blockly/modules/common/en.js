@@ -5,7 +5,4 @@
 var COMMON_EN = {
   MATH_CATEGORY: 'Math',
   TEXT_CATEGORY: 'Text',
-  VARIABLES_CATEGORY: 'Variables',
-  ARRAY_CATEGORY: 'Array',
-  FUNCTIONS_CATEGORY: 'Functions',
 };

@@ -32,6 +32,8 @@ CodeBridge/
 │   │       │   ├── generators/  # Generator 核心（對齊 piBlockly 架構）
 │   │       │   │   └── _core.js # Blockly.Arduino generator 核心（init/finish/scrub_）
 │   │       │   ├── modules/     # 積木模組（以 toolbox 分類為單位）
+│       │       │   ├── toolbox-search.js # Toolbox 公開積木索引、搜尋框與 flyout 結果
+
 │   │       │   │   ├── arduino/ # Arduino 模組（結構 + I/O + 時間 + 序列）
 │   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（顏色、分類、積木文字、tooltips）
 │   │       │   │   │   ├── en.js        # 英文訊息
@@ -61,7 +63,24 @@ CodeBridge/
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 積木定義（text_append, text_length）
 │   │       │   │   │   └── generators.js# 程式碼產生器（包含 Blockly 內建 text, text_join）
-│   │       │   │   └── common/  # 共用分類名稱（暫放，未來移植後搬入專屬模組）
+│   │       │   │   ├── variables/ # Variables 模組（全域／區域宣告、get、set）
+│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
+│   │       │   │   │   ├── blocks.js    # 積木定義（variables_declare_global/local, variables_get/set）
+│   │       │   │   │   └── generators.js# 程式碼產生器
+
+│   │       │   │   ├── array/      # Array 模組（全域／區域宣告、get、set、length）
+│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
+│   │       │   │   │   ├── blocks.js    # 積木定義（5 個 piBlockly 對齊積木）
+│   │       │   │   │   └── generators.js# 程式碼產生器
+│   │       │   │   ├── functions/  # Functions 模組（5 個公開積木 + 2 個 mutator helper）
+│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
+│   │       │   │   │   ├── blocks.js    # 函式定義、return、手動呼叫與參數 mutator
+│   │       │   │   │   └── generators.js# 原型、定義、return 與呼叫產生器
+
+│   │       │   │   └── common/      # 相容保留的共用訊息
 │   │       │   │       ├── zh-hant.js   # 繁體中文分類名稱
 │   │       │   │       └── en.js        # 英文分類名稱
 │   │       │   ├── style/        # 跨模組風格
@@ -111,7 +130,7 @@ CodeBridge/
 ## 測試與 CI
 - `ui/playwright.config.mjs`：system Edge Playwright 配置，自動啟動 Vite。
 - `ui/tests/e2e/`：Blockly runtime、v12 XML migration 與 generator golden tests。
-- `ui/tests/fixtures/blockly-v12/`：可由 Blockly 13.3.0 載入的舊版 XML fixtures。
+- `ui/tests/fixtures/blockly-v12/`：可由 Blockly 13.3.0 載入的 setup/loop、controls、text、variables、array、functions 與 workspace comment fixtures。
 - `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試。
 - `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI。
 - `log/plan/BlocklyTesting.md`：測試 seam、命令與維護規則。

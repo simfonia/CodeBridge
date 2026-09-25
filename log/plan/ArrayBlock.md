@@ -181,12 +181,12 @@ ui/src/lib/blockly/modules/array/
 ### 6.6 ID 標記與程式碼定位
 - CodeBridge 的 `scrub_` 會自動在每行程式碼行尾插入 `// __BLOCKLY_ID:xxx__`
 - array 積木不需要手動添加 ID 標記 (value/statement 積木由 scrub_ 處理)
-- `array_declare_global` 和 `array_declare_local` 不在 `scopeDefiningRootBlocks` 中 (不能放在頂層)
+- `array_declare_global` 已列入 `scopeDefiningRootBlocks`，可作為根層級全域宣告
+- `array_declare_local` 是 statement 積木，必須放在 `initializes_setup` 或 `initializes_loop` 內
 
 ### 6.7 孤兒積木檢測
-- `array_declare_global`, `array_declare_local`, `array_set` 是 statement 積木
-- 如果放在頂層 → 會被標記為 disabled (孤兒積木)
-- 正確使用方式：放在 `initializes_setup` 或 `initializes_loop` 內
+- `array_declare_global` 可放在根層級；`array_declare_local`、`array_set` 若放在根層級會被標記為 disabled（孤兒積木）
+- 區域陣列宣告與設定的正確使用方式是放在 `initializes_setup` 或 `initializes_loop` 內
 - `array_get`, `array_length` 是 value 積木，不會有孤兒問題
 
 ---
@@ -201,7 +201,7 @@ ui/src/lib/blockly/modules/array/
 - [ ] array_length 可正常計算陣列長度
 - [ ] 全域陣列只會宣告一次 (global_vars_ 去重)
 - [ ] 風格切換後分類名稱與積木文字正常
-- [ ] 孤兒積木檢測正常 (declare/set 不能放在頂層)
+- [ ] 孤兒積木檢測正常（全域宣告可放根層級，區域宣告與設定須位於 setup/loop 內）
 
 ---
 

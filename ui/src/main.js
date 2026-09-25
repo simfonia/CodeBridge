@@ -480,6 +480,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 3. Blockly 工作區
     const workspace = initBlockly();
+    if (window.CodeBridgeBlockSearch) {
+        window.CodeBridgeBlockSearch.init(workspace);
+    }
     
     // 4. 注入積木（優先使用 sessionStorage 中的暫存資料，否則注入預設）
     var savedXml = sessionStorage.getItem('codebridgeWorkspaceXml');

@@ -28,6 +28,10 @@ var UI_ZH_HANT = {
     TLB_EXAMPLES: '範例',
     TLB_THEME_TOGGLE: '切換積木風格',
     TLB_LANG_TOGGLE: '切換語系 (中文/English)',
+    TLB_BLOCK_SEARCH: '搜尋積木',
+    TLB_BLOCK_SEARCH_PLACEHOLDER: '搜尋積木...',
+    TLB_BLOCK_SEARCH_CLEAR: '清除積木搜尋',
+    TLB_BLOCK_SEARCH_NO_RESULTS: '找不到符合的積木',
     
     // 練習模式
     PRACTICE_ENTER: '✍️ 練習',

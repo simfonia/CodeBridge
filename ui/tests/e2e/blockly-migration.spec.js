@@ -137,6 +137,145 @@ void setup() {
 
 // Global variables
 `
+  },
+  {
+    name: 'variables.xml',
+    expectedTypes: [
+      'arduino_delay',
+      'initializes_loop',
+      'math_number',
+      'math_number',
+      'math_number',
+      'variables_declare_global',
+      'variables_get',
+      'variables_set',
+      'variables_set'
+    ],
+    expectedVariables: [
+      { id: 'counter', name: 'counter', type: '' }
+    ],
+    expectedCode: `// Includes
+
+
+// Global variables
+int counter = 0;
+
+void loop() {
+  counter = 1;
+  counter = 2;
+  delay(counter);
+
+}
+`
+  },
+  {
+    name: 'array.xml',
+    expectedTypes: [
+      'arduino_serial_print',
+      'arduino_serial_println',
+      'array_declare_global',
+      'array_declare_local',
+      'array_get',
+      'array_get',
+      'array_length',
+      'array_set',
+      'initializes_loop',
+      'math_number',
+      'math_number',
+      'math_number',
+      'math_number',
+      'math_number'
+    ],
+    expectedCode: `// Includes
+
+
+// Global variables
+int scores[5];
+
+void loop() {
+  int current[3];
+  scores[1] = current[2];
+  Serial.print(scores[1]);
+  Serial.println(sizeof(scores) / sizeof(scores[0]));
+
+}
+`
+  },
+  {
+    name: 'functions.xml',
+    expectedTypes: [
+      'arduino_delay',
+      'arduino_serial_print',
+      'custom_functions_callnoreturn_manual',
+      'custom_functions_callreturn_manual',
+      'custom_functions_defnoreturn',
+      'custom_functions_defreturn',
+      'custom_functions_return',
+      'initializes_loop',
+      'math_number',
+      'math_number',
+      'math_number',
+      'math_number'
+    ],
+    expectedFunctionMutations: {
+      custom_functions_defnoreturn: {
+        arguments: ['led'],
+        argumentTypes: ['int'],
+        params: 'int led',
+        inputNames: ['TOPROW', 'STACK', 'BOTTOMROW']
+      },
+      custom_functions_defreturn: {
+        arguments: ['value'],
+        argumentTypes: ['float'],
+        params: 'float value',
+        inputNames: ['TOPROW', 'STACK', 'BOTTOMROW']
+      },
+      custom_functions_callnoreturn_manual: {
+        arguments: ['led'],
+        argumentTypes: ['int'],
+        params: null,
+        inputNames: ['TOPROW', 'ARG0', 'END_ROW']
+      },
+      custom_functions_callreturn_manual: {
+        arguments: ['value'],
+        argumentTypes: ['float'],
+        params: null,
+        inputNames: ['TOPROW', 'ARG0', 'END_ROW']
+      },
+      custom_functions_return: {
+        arguments: [],
+        argumentTypes: [],
+        params: null,
+        inputNames: ['VALUE']
+      }
+    },
+    expectedCode: `// Includes
+
+
+// Global variables
+
+
+// Function prototypes
+int scaleValue(float value);
+void resetLED(int led);
+
+// Function definitions
+int scaleValue(float value) {
+  return 7;
+}
+
+
+void resetLED(int led) {
+  delay(100);
+}
+
+
+void loop() {
+  resetLED(3);
+  Serial.print(scaleValue(2));
+
+}
+`
   }
 ];
 
@@ -164,8 +303,28 @@ for (const fixture of cases) {
       window.CodeBridgeBlocklyXml.textToWorkspace(workspaceXml, workspace);
       workspace.updateAriaLabel();
       const blocks = workspace.getAllBlocks(false);
+      const functionMutations = Object.fromEntries(
+        blocks
+          .filter((block) => block.type.startsWith('custom_functions_'))
+          .filter((block) => !block.type.startsWith('custom_functions_mutator'))
+          .map((block) => [block.type, {
+            arguments: Array.from(block.arguments_ ?? []),
+            argumentTypes: Array.from(block.argTypes_ ?? []),
+            params: block.getFieldValue('PARAMS'),
+            inputNames: block.inputList.map((input) => input.name)
+          }])
+      );
       return {
         types: blocks.map((block) => block.type).sort(),
+        functionMutations,
+        variableModel: (() => {
+          const variable = workspace.getVariableMap().getVariable('counter');
+          return variable ? {
+            id: variable.getId(),
+            name: variable.getName(),
+            type: variable.getType()
+          } : null;
+        })(),
         comments: blocks.flatMap((block) =>
           block.getCommentText ? [block.getCommentText()] : []
         ).filter(Boolean),
@@ -193,6 +352,12 @@ for (const fixture of cases) {
     }, xml);
 
     expect(result.types).toEqual(fixture.expectedTypes);
+    expect(result.variableModel).toEqual(
+      fixture.expectedVariables?.[0] ?? null
+    );
+    expect(result.functionMutations).toEqual(
+      fixture.expectedFunctionMutations ?? {}
+    );
     expect(result.comments).toEqual(
       fixture.expectedComment ? [fixture.expectedComment] : []
     );

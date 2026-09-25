@@ -28,6 +28,10 @@ var UI_EN = {
     TLB_EXAMPLES: 'Examples',
     TLB_THEME_TOGGLE: 'Toggle Block Style (Engineer/Angel)',
     TLB_LANG_TOGGLE: 'Switch Language (中文/English)',
+    TLB_BLOCK_SEARCH: 'Search blocks',
+    TLB_BLOCK_SEARCH_PLACEHOLDER: 'Search blocks...',
+    TLB_BLOCK_SEARCH_CLEAR: 'Clear block search',
+    TLB_BLOCK_SEARCH_NO_RESULTS: 'No matching blocks',
     
     // Practice Mode
     PRACTICE_ENTER: '✍️ Practice',

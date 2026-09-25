@@ -5,7 +5,7 @@
 將 piBlockly 的 Functions 模組移植到 CodeBridge，建立 `modules/functions/`。Engineer 風格的積木文字與產生器必須對齊 piBlockly 的實作。
 
 ### 參考資訊
-- **piBlockly blocks**: `C:/Workspace/piblockly/media/blocks/functions.js` (7 個自訂積木)
+- **piBlockly blocks**: `C:/Workspace/piblockly/media/blocks/functions.js`（5 個 toolbox 公開積木 + 2 個 mutator-only helper）
 - **piBlockly generators**: `C:/Workspace/piblockly/media/generators/functions.js` (5 個產生器)
 - **piBlockly i18n**: `C:/Workspace/piblockly/media/zh-hant.js` + `en.js` (Engineer/Angel 對應表)
 - **CodeBridge 已完成模式**: Arduino / Coding / Logic / Loops / Math / Array 模組
@@ -141,7 +141,7 @@ Parameter type name                  ← message0
 ui/src/lib/blockly/modules/functions/
 ├── zh-hant.js       # Angel-style i18n (繁體中文)
 ├── en.js            # Angel-style i18n (English)
-├── blocks.js        # 7 個自訂積木定義 (包含 2 個 mutator blocks)
+├── blocks.js        # 5 個公開積木 + 2 個 mutator-only helper 定義
 └── generators.js    # 5 個 Arduino 產生器
 ```
 
@@ -154,9 +154,9 @@ ui/src/lib/blockly/modules/functions/
 ## 5. 實作步驟
 
 ### Phase 1：建立模組檔案
-- [ ] 建立 `modules/functions/zh-hant.js` — Angel 基底訊息 (FUNCTIONS_HUE, FUNCTIONS_CATEGORY, 13 個 key + 7 個 tooltip)
+- [ ] 建立 `modules/functions/zh-hant.js` — Angel 基底訊息（FUNCTIONS_HUE、FUNCTIONS_CATEGORY、7 個積木訊息、7 個 tooltip、2 個 return 警告）
 - [ ] 建立 `modules/functions/en.js` — Angel 基底訊息 (英文對應)
-- [ ] 建立 `modules/functions/blocks.js` — 7 個自訂積木定義
+- [ ] 建立 `modules/functions/blocks.js` — 5 個公開積木與 2 個 mutator-only helper 定義
   - `custom_functions_defnoreturn`: appendDummyInput(TOPROW: void + NAME + ( + PARAMS + ) {), appendStatementInput(STACK), appendDummyInput(BOTTOMROW: }), mutator
   - `custom_functions_defreturn`: 同 defnoreturn 但加入 TYPE dropdown
   - `custom_functions_return`: appendValueInput(VALUE), previousStatement, onchange 驗證
@@ -215,7 +215,7 @@ ui/src/lib/blockly/modules/functions/
 ### 6.5 custom_functions_return 的驗證機制
 - 使用 `setOnChange` 監聽 block 變化
 - 檢查是否在函式內 (遍歷 `getSurroundParent()`)
-- 檢查函式是否有回傳值 (FUNCTION_TYPES)
+- 檢查直接父積木是否為 `custom_functions_defreturn` 或 `custom_functions_defnoreturn`
 - 如果不是在函式內或在 void 函式中使用 → 顯示警告
 
 ### 6.6 轉義字元規範
@@ -226,19 +226,18 @@ ui/src/lib/blockly/modules/functions/
 ### 6.7 ID 標記與程式碼定位
 - CodeBridge 的 `scrub_` 會自動在每行程式碼行尾插入 `// __BLOCKLY_ID:xxx__`
 - functions 積木不需要手動添加 ID 標記 (value/statement 積木由 scrub_ 處理)
-- `custom_functions_defnoreturn` 和 `custom_functions_defreturn` 不在 `scopeDefiningRootBlocks` 中 (不能放在頂層)
+- `custom_functions_defnoreturn` 和 `custom_functions_defreturn` 已列入 `scopeDefiningRootBlocks`，可作為根層級函式定義
 
 ### 6.8 孤兒積木檢測
-- `custom_functions_defnoreturn`, `custom_functions_defreturn`, `custom_functions_return`, `custom_functions_callnoreturn_manual` 是 statement 積木
-- 如果放在頂層 → 會被標記為 disabled (孤兒積木)
-- 正確使用方式：放在 `initializes_setup` 或 `initializes_loop` 內
-- `custom_functions_callreturn_manual` 是 value 積木，不會有孤兒問題
+- `custom_functions_defnoreturn`、`custom_functions_defreturn` 是根層級定義積木，不需 statement 連接
+- `custom_functions_return`、`custom_functions_callnoreturn_manual` 若放在根層級會被標記為 disabled（孤兒積木），必須位於函式本體、setup 或 loop 內
+- `custom_functions_callreturn_manual` 是 value 積木，不會有根層級孤兒問題
 
 ---
 
 ## 7. 驗證計畫
 - [ ] toolbox 分類名稱正確顯示 (函式 / Functions)
-- [ ] 所有 7 個積木可拖入工作區
+- [ ] 5 個公開積木可從 toolbox 拖入工作區，2 個 helper 僅由 mutator 使用
 - [ ] custom_functions_defnoreturn 可正常定義無回傳函式
 - [ ] custom_functions_defreturn 可正常定義有回傳函式 (int/float/String/bool)
 - [ ] custom_functions_return 可正常生成 return 程式碼
@@ -248,7 +247,7 @@ ui/src/lib/blockly/modules/functions/
 - [ ] 函式原型與定義正確分離 (function_prototypes_/function_definitions_)
 - [ ] custom_functions_return 的驗證機制正常 (只能在函式內使用)
 - [ ] 風格切換後分類名稱與積木文字正常
-- [ ] 孤兒積木檢測正常 (函式定義/呼叫不能放在頂層)
+- [ ] 孤兒積木檢測正常（函式定義可放根層級，return 與 statement 呼叫須置於合法容器）
 
 ---
 
@@ -270,15 +269,15 @@ ui/src/lib/blockly/modules/functions/
 
 | 項目 | Functions 模組 | Array 模組 | Math 模組 |
 |------|---------------|-----------|----------|
-| 積木數量 | 7 個 (含 2 個 mutator) | 5 個 | 7 個 |
+| 積木數量 | 5 個公開積木 + 2 個 mutator-only helper | 5 個 | 7 個 |
 | Blockly 內建 blocks | 0 個 | 0 個 | 3 個 |
 | Mutator 機制 | 有 (複雜) | 無 | 無 |
 | 特殊處理 | mutationToDom/domToMutation, decompose/compose | global_vars_ 去重 | 三角函數轉換 |
-| 孤兒積木 | 4 個 | 3 個 | 1 個 |
+| 根層級可放置 | 2 個函式定義 | 1 個全域陣列宣告 | 視各 statement 契約而定 |
 | Engineer 覆寫 key 數量 | 7 個 | 7 個 | 6 個 |
 
 **關鍵挑戰**：
 1. **Mutator 機制**：需要實作完整的 mutationToDom/domToMutation/decompose/compose 生命週期
 2. **函式原型與定義分離**：使用 CodeBridge 的程式碼籃子架構 (function_prototypes_/function_definitions_)
-3. **參數動態管理**：透過 mutator 動態新增/刪除參數，並更新函式定義與所有呼叫點
-4. **驗證機制**：custom_functions_return 需要驗證使用位置是否正確
+3. **參數動態管理**：透過 mutator 動態新增／刪除參數；manual call 依自身 mutation 產生參數，不依賴 Procedures 自動同步
+4. **驗證機制**：custom_functions_return 驗證直接父積木是否為函式定義
