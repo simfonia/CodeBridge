@@ -298,3 +298,24 @@
 ## 下次啟動方向 (Next Steps)
 1. 若未來 Blockly 支援可安全建立 headless temporary block，可移除 `controls_for` 的暫時實例化 skip，改為更完整的欄位文字索引。
 2. 若 Variables dynamic category 需要被搜尋，可新增 Blockly Variables dynamic dropdown 的 definition adapter，不直接掃描所有全域 block types。
+
+## 2026-09-25：修正 value block 程式碼定位
+
+### 問題與修正
+- 問題：點選 `digitalRead()` 等 value block 時沒有高亮，也沒有錯誤訊息。原因是既有 `scrub_()` 只替 statement block 寫入 ID marker，`valueToCode()` 產生的 expression 沒有 block-to-source mapping。
+- 修正：CodeBridge generator core 統一包裝 `valueToCode()`，對非 shadow、非 `math_number` 的 value block 加入合法 C++ block comment marker。
+- `renderCode()` 與 migration golden cleanup 支援含特殊字元的 Blockly 13 block ID，並移除 block comment marker 後再交給 syntax highlighter。
+- 保留 `math_number` 與 shadow block 不加 marker，避免破壞 `controls_for` 的數字字面值判斷與既有 simple-for 產碼。
+
+### 測試
+- 新增 `digital-read.xml` v12 fixture。
+- 新增「點選 digitalRead value block 高亮生成行」回歸測試。
+- `npm run test:blockly:fixtures --prefix ui`：10 tests passed。
+- `npm run test:blockly:runtime --prefix ui`：6 tests passed。
+- `npm run test:blockly:assets --prefix ui`：4 tests passed。
+- `npm run build --prefix ui`：成功；僅有既有非 module UMD script bundling warnings。
+
+### 技術深挖 (Technical Deep Dive)
+- value marker 使用 `/* // __BLOCKLY_ID:<id>__ */`，可放在表達式內，不會破壞 `digitalRead()` 或 `Serial.print(digitalRead())` 的 C++ 語法。
+- marker 只用於定位資料，renderCode 解析後會移除，不應出現在正式 `.ino`。
+- Blockly 13 的 block ID 可能包含 `*` 等符號，因此清理 regex 不能再用排除 `*` 的字元集合。

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml>
+  <block type="initializes_setup" x="20" y="20">
+    <statement name="CONTENT">
+      <block type="arduino_serial_print" x="20" y="20">
+        <value name="VALUE">
+          <block type="arduino_digital_read" x="20" y="20">
+            <value name="PIN">
+              <shadow type="arduino_pin_shadow">
+                <field name="PIN">2</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+</xml>

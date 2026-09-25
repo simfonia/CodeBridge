@@ -79,6 +79,11 @@ function renderCode(code) {
     var idMarkerEnd = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER_END) ? Blockly.Arduino.ID_MARKER_END : '__';
     var idRegex = new RegExp(idMarker + '([^\\s]+)' + idMarkerEnd, 'g');
     var cleanIdRegex = new RegExp(' ' + idMarker + '[^\\s]+' + idMarkerEnd, 'g');
+    var escapedMarker = idMarker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var cleanValueMarkerRegex = new RegExp(
+        '/\\*\\s*' + escapedMarker + '[^\\r\\n]*?\\s*\\*/',
+        'g'
+    );
 
     codeContent.innerHTML = '';
     blockToRangeMap.clear();
@@ -101,7 +106,9 @@ function renderCode(code) {
             }
         }
         // 移除所有 ID 標記
-        cleanedLines.push(line.replace(cleanIdRegex, ''));
+        cleanedLines.push(
+            line.replace(cleanValueMarkerRegex, '').replace(cleanIdRegex, '')
+        );
     });
 
     // 2. 一次性高亮完整程式碼（確保跨行語法結構正確解析）

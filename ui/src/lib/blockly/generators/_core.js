@@ -56,6 +56,23 @@ Blockly.Arduino.ORDER_NONE = 99;
 Blockly.Arduino.ID_MARKER = '// __BLOCKLY_ID:';
 Blockly.Arduino.ID_MARKER_END = '__';
 
+// Value blocks are expressions embedded in a parent statement. Add a
+// removable C++ block comment so selecting a value block can still locate
+// its generated source line without changing the generated expression.
+var codeBridgeValueToCode = Blockly.Arduino.valueToCode;
+Blockly.Arduino.valueToCode = function(block, inputName, order) {
+  var code = codeBridgeValueToCode.call(this, block, inputName, order);
+  var valueBlock = block && block.getInputTargetBlock(inputName);
+  var isShadow = valueBlock && valueBlock.isShadow && valueBlock.isShadow();
+  var canMark = valueBlock && valueBlock.id &&
+    !isShadow && valueBlock.type !== 'math_number';
+  if (typeof code === 'string' && canMark) {
+    return code + '/* ' + Blockly.Arduino.ID_MARKER + valueBlock.id +
+      Blockly.Arduino.ID_MARKER_END + ' */';
+  }
+  return code;
+};
+
 // =============================================================================
 // 程式碼籃子（Code Buckets）初始化與組裝
 // =============================================================================

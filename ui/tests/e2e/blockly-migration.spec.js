@@ -280,7 +280,9 @@ void loop() {
 ];
 
 function removeIdMarkers(code) {
-  return code.replace(/ \/\/ __BLOCKLY_ID:[^\r\n]*/g, '');
+  return code
+    .replace(/\/\*\s*\/\/ __BLOCKLY_ID:[^\r\n]*?\s*\*\//g, '')
+    .replace(/ \/\/ __BLOCKLY_ID:[^\r\n]*/g, '');
 }
 
 for (const fixture of cases) {
@@ -399,4 +401,40 @@ test('preserves migrated controls_if when switching block style', async ({ page 
   expect(result.inputNames).toEqual(['IF0', 'DO0', 'IF1', 'DO1', 'ELSE']);
   expect(result.ariaLabel).toBe('1 stack of blocks');
   expect(browserMessages).toEqual([]);
+});
+
+test('highlights the generated line for a selected digitalRead value block', async ({ page }) => {
+  const messages = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' || message.type() === 'warning') {
+      messages.push(`${message.type()}: ${message.text()}`);
+    }
+  });
+  page.on('pageerror', (error) => messages.push(`pageerror: ${error.message}`));
+
+  await page.goto('/');
+  await page.waitForFunction(() => window.Blockly?.getMainWorkspace?.());
+  const xml = await readFile(join(fixtureDirectory, 'digital-read.xml'), 'utf8');
+  const result = await page.evaluate((workspaceXml) => {
+    const workspace = window.Blockly.getMainWorkspace();
+    workspace.clear();
+    window.CodeBridgeBlocklyXml.textToWorkspace(workspaceXml, workspace);
+    const code = window.Blockly.Arduino.workspaceToCode(workspace);
+    window.renderCode(code);
+    const block = workspace.getBlocksByType('arduino_digital_read', false)[0];
+    window.syncSelection(block.id);
+    return {
+      code: document.getElementById('codeContent').textContent,
+      range: window.blockToRangeMap.get(block.id),
+      highlightedLines: Array.from(
+        document.querySelectorAll('#codeContent .highlight-line'),
+        (line) => line.textContent
+      )
+    };
+  }, xml);
+
+  expect(result.code).toContain('digitalRead(2)');
+  expect(result.range).toEqual({ start: 7, end: 7 });
+  expect(result.highlightedLines).toEqual(['  Serial.print(digitalRead(2));']);
+  expect(messages).toEqual([]);
 });
