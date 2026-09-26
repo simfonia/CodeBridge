@@ -10,15 +10,27 @@
 <tr><td><code>CodeBridgeTheme.getPreset()</code></td><td>取得目前 preset ID。</td><td><code>ui/src/theme/theme-manager.js</code></td></tr>
 <tr><td><code>CodeBridgeTheme.attachWorkspace(workspace)</code></td><td>將目前 Blockly theme 與 palette 套用到工作區。</td><td><code>ui/src/theme/theme-manager.js</code></td></tr>
 <tr><td><code>CodeBridgeBlocklyTheme.getTheme(visualTheme)</code></td><td>建立／取得 Blockly component theme。</td><td><code>ui/src/theme/blockly-adapter.js</code></td></tr>
-<tr><td><code>CodeBridgeBlocklyTheme.applyPalette(visualTheme, workspace)</code></td><td>更新既有 block、toolbox 與新 block 的 palette。</td><td><code>ui/src/theme/blockly-adapter.js</code></td></tr>
+<tr><td><code>CodeBridgeBlocklyTheme.applyPalette(visualTheme, workspace)</code></td><td>依 block type 的語意角色更新 workspace block、toolbox 與分類色。</td><td><code>ui/src/theme/blockly-adapter.js</code></td></tr>
+<tr><td><code>CodeBridgeBlockPalette.getColour(visualTheme, role)</code></td><td>取得語意角色在指定 visual theme 的色碼。</td><td><code>ui/src/theme/block-palette.js</code></td></tr>
+<tr><td><code>CodeBridgeBlockPalette.getColourForRole(role)</code></td><td>取得目前 preset 視覺主題下該角色的色碼，供 block <code>init()</code> 呼叫。</td><td><code>ui/src/theme/block-palette.js</code></td></tr>
+<tr><td><code>CodeBridgeBlockPalette.getRoleForBlockType(type)</code></td><td>把 block type 對應到語意角色（精確規則優先於前綴規則）。</td><td><code>ui/src/theme/block-palette.js</code></td></tr>
+<tr><td><code>CodeBridgeBlockPalette.getRoleForCategoryName(name)</code></td><td>把 toolbox 分類名稱對應到語意角色，dynamic 分類亦可對齊。</td><td><code>ui/src/theme/block-palette.js</code></td></tr>
+<tr><td><code>CodeBridgeBlockPalette.registerModule(manifest)</code></td><td>第三方模組以 <code>{id, role, typePrefix?, blockTypes?, colours}</code> 加入 palette contract。</td><td><code>ui/src/theme/block-palette.js</code></td></tr>
+<tr><td><code>CodeBridgeBlockPalette.getCategories()</code></td><td>讀取 toolbox 各分類的語意角色，供分類色塊對齊。</td><td><code>ui/src/theme/block-palette.js</code></td></tr>
 <tr><td><code>CodeBridgeCodeTheme.apply(visualTheme)</code></td><td>套用程式碼預覽 visual theme。</td><td><code>ui/src/theme/code-theme-adapter.js</code></td></tr>
 <tr><td><code>data-codebridge-preset</code></td><td>CSS 選擇目前 Engineer／Angel token。</td><td><code>ui/src/styles/presets.css</code></td></tr>
 </table>
 <h2>持久化</h2>
 <ul>
-<li><code>codebridgeExperiencePreset</code>：高階 preset。</li>
-<li><code>codebridgeBlockStyle</code>：目前 Engineer／Angel block message overlay。</li>
-<li><code>codebridgeTheme</code>：舊相容鍵，啟動時自動遷移。</li>
+<li><code>codebridgeExperiencePreset</code>：唯一的體驗 preset 鍵（engineer 或 angel）。</li>
+<li>專案尚未發佈，不保留 <code>codebridgeTheme</code> 遷移與 <code>codebridgeBlockStyle</code> 第二鍵。</li>
+<li><code>codebridgeLang</code>：UI 語系，與 preset 相互獨立。</li>
+</ul>
+<h2>積木顏色來源</h2>
+<ul>
+<li>模組語系檔（<code>modules/*/zh-hant.js</code>、<code>en.js</code>）不含任何 <code>*_HUE</code> 色碼。</li>
+<li>block 定義於 <code>jsonInit()</code> 之後呼叫 <code>this.setColour(CodeBridgeBlockPalette.getColourForRole(role))</code>。</li>
+<li>preset 切換時由 <code>CodeBridgeBlocklyTheme.applyPalette()</code> 依 <code>block.type</code> 重算顏色，不依 block 目前的 colour 值反查。</li>
 </ul>
 </body>
 </html>

@@ -3,12 +3,6 @@
 
 var ARDUINO_EN = {
   // Colors
-  ARDUINO_STRUCTURE_HUE: '#585858',
-  ARDUINO_CONTROL_HUE: '#016c8d',
-  ARDUINO_DIGITAL_IO_HUE: '#0f960a',
-  ARDUINO_ANALOG_IO_HUE: '#FF9800',
-  ARDUINO_TIME_HUE: '#1f039b',
-  ARDUINO_SERIAL_HUE: '#359AFF',
 
   // Category names (only Arduino module's own)
   ARDUINO_CATEGORY: 'Arduino',

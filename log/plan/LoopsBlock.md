@@ -89,7 +89,7 @@ for (int %1 = %2; %3 %4 %5; %6 %7 %8) {   ← message0
 
 ```
 ui/src/lib/blockly/modules/loops/
-├── zh-hant.js       # Angel-style i18n (繁體中文)
+├── zh-hant.js       # Angel-style i18n (正體中文)
 ├── en.js            # Angel-style i18n (English)
 ├── blocks.js        # 3 個自訂積木定義
 └── generators.js    # 3 個 Arduino 產生器

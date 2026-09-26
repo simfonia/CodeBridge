@@ -1,7 +1,6 @@
 /// CodeBridge Array Module - English messages (Angel style base)
 var ARRAY_EN = {
   ARRAY_CATEGORY: 'Array',
-  ARRAY_HUE: '#d1972b',
   ARRAY_DECLARE_GLOBAL_TITLE: 'Create Global Array',
   ARRAY_DECLARE_LOCAL_TITLE: 'Create Local Array',
   ARRAY_GET_BRACKET_OPEN: 'item #',

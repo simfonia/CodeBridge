@@ -1,7 +1,6 @@
-/// CodeBridge Array 模組 - 繁體中文訊息（Angel 風格基底）
+/// CodeBridge Array 模組 - 正體中文訊息（Angel 風格基底）
 var ARRAY_ZH = {
   ARRAY_CATEGORY: '陣列',
-  ARRAY_HUE: '#d1972b',
   ARRAY_DECLARE_GLOBAL_TITLE: '建立全域陣列',
   ARRAY_DECLARE_LOCAL_TITLE: '建立區域陣列',
   ARRAY_GET_BRACKET_OPEN: '項目 #',

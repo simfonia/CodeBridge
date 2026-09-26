@@ -1,6 +1,5 @@
 /// CodeBridge Variables Module - English messages (Angel style base)
 var VARIABLES_EN = {
-  VARIABLES_HUE: '#ef9a9a',
   VARIABLES_CATEGORY: 'Variables',
   VARIABLES_DEFAULT_NAME: 'var',
   VARIABLES_DECLARE_GLOBAL_MESSAGE: 'create global variable %2 of type %1 with value %3',

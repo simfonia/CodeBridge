@@ -1,4 +1,4 @@
-/// CodeBridge Loops 模組 - 繁體中文訊息（Angel 風格基底）
+/// CodeBridge Loops 模組 - 正體中文訊息（Angel 風格基底）
 /// 包含：分類名稱、積木文字、tooltips
 /// Engineer 風格覆寫在 style/engineer.js
 ///
@@ -7,7 +7,6 @@
 
 var LOOPS_ZH = {
   // 顏色
-  LOOPS_HUE: '#7fcd81',
 
   // 分類名稱
   LOOPS_CATEGORY: '迴圈',

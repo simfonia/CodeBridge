@@ -7,7 +7,6 @@
 
 var LOOPS_EN = {
   // Colors
-  LOOPS_HUE: '#7fcd81',
 
   // Category name
   LOOPS_CATEGORY: 'Loops',

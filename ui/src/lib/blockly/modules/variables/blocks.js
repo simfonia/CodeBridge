@@ -24,10 +24,10 @@
           inputsInline: false,
           previousStatement: true,
           nextStatement: true,
-          colour: '%{BKY_VARIABLES_HUE}',
           tooltip: tooltipKey,
           helpUrl: ''
         });
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('variables'));
       }
     };
   }
@@ -51,10 +51,10 @@
           variable: '%{BKY_VARIABLES_DEFAULT_NAME}'
         }],
         output: null,
-        colour: '%{BKY_VARIABLES_HUE}',
         tooltip: '%{BKY_VARIABLES_GET_TOOLTIP}',
         helpUrl: ''
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('variables'));
     }
   };
 
@@ -72,10 +72,10 @@
         ],
         previousStatement: true,
         nextStatement: true,
-        colour: '%{BKY_VARIABLES_HUE}',
         tooltip: '%{BKY_VARIABLES_SET_TOOLTIP}',
         helpUrl: ''
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('variables'));
     }
   };
 })();

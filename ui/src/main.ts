@@ -17,7 +17,7 @@ async function init() {
     }
 
     // 2. 初始化 Blockly 系統
-    //    預設使用繁體中文 + Angel 風格
+    //    預設使用正體中文 + Angel 風格
     const config = initCodeBridgeBlockly('zh-hant', 'angel');
 
     // 3. 注入 Blockly 工作區

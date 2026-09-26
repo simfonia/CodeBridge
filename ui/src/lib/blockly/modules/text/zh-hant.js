@@ -1,10 +1,9 @@
-/// CodeBridge Text 模組 - 繁體中文訊息（Angel 風格基底）
+/// CodeBridge Text 模組 - 正體中文訊息（Angel 風格基底）
 /// 包含：分類名稱、積木文字、tooltips
 /// Engineer 風格覆寫在 style/engineer.js
 
 var TEXT_ZH = {
   // 顏色
-  TEXT_HUE: '#6a8871',
 
   // 分類名稱
   TEXT_CATEGORY: '文字',

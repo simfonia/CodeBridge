@@ -33,7 +33,7 @@
 
 ```
 ui/src/lib/blockly/modules/coding/
-├── zh-hant.js       # 繁體中文訊息
+├── zh-hant.js       # 正體中文訊息
 ├── en.js            # 英文訊息
 ├── blocks.js        # 積木定義
 └── generators.js    # 程式碼產生器

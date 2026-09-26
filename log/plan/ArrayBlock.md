@@ -111,7 +111,7 @@ length of Array varName               ← message0
 
 ```
 ui/src/lib/blockly/modules/array/
-├── zh-hant.js       # Angel-style i18n (繁體中文)
+├── zh-hant.js       # Angel-style i18n (正體中文)
 ├── en.js            # Angel-style i18n (English)
 ├── blocks.js        # 5 個自訂積木定義
 └── generators.js    # 5 個 Arduino 產生器

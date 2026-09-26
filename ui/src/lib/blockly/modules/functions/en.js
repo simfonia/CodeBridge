@@ -1,7 +1,6 @@
 /// CodeBridge Functions Module - English messages (Angel style base)
 var FUNCTIONS_EN = {
   FUNCTIONS_CATEGORY: 'Functions',
-  FUNCTIONS_HUE: '#d22f73',
   CUSTOM_FUNCTIONS_DEFNORETURN_MESSAGE: 'do task %1 (%2)',
   CUSTOM_FUNCTIONS_DEFRETURN_MESSAGE: 'do task %2 (%3) and report back %1',
   CUSTOM_FUNCTIONS_CALLNORETURN_MESSAGE: 'do task %1 (%2)',

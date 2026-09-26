@@ -89,7 +89,7 @@
       }
       this.arguments_ = [];
       this.argTypes_ = [];
-      this.setColour('%{BKY_FUNCTIONS_HUE}');
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('functions'));
       this.setTooltip(Blockly.Msg[isStatement
         ? 'FUNCTIONS_CALLNORETURN_TOOLTIP'
         : 'FUNCTIONS_CALLRETURN_TOOLTIP']);
@@ -135,7 +135,7 @@
       this.appendDummyInput('ROW')
           .appendField(Blockly.Msg.CUSTOM_FUNCTIONS_MUTATORCONTAINER_MESSAGE);
       this.appendStatementInput('STACK');
-      this.setColour('%{BKY_FUNCTIONS_HUE}');
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('functions'));
       this.setTooltip(Blockly.Msg.FUNCTIONS_MUTATORCONTAINER_TOOLTIP);
       this.contextMenu = false;
     }
@@ -149,7 +149,7 @@
           .appendField(new Blockly.FieldTextInput('x'), 'NAME');
       this.setPreviousStatement(true);
       this.setNextStatement(true);
-      this.setColour('%{BKY_FUNCTIONS_HUE}');
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('functions'));
       this.setTooltip(Blockly.Msg.FUNCTIONS_MUTATORARG_TOOLTIP);
       this.contextMenu = false;
     }
@@ -184,7 +184,7 @@
       appendMessageFields(inputRow, message, hasReturnType);
       this.appendStatementInput('STACK');
       this.appendDummyInput('BOTTOMROW').appendField('}');
-      this.setColour('%{BKY_FUNCTIONS_HUE}');
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('functions'));
       this.setTooltip(Blockly.Msg[hasReturnType
         ? 'FUNCTIONS_DEFRETURN_TOOLTIP'
         : 'FUNCTIONS_DEFNORETURN_TOOLTIP']);
@@ -216,7 +216,7 @@
           .appendField(Blockly.Msg.CUSTOM_FUNCTIONS_RETURN_MESSAGE.split('%1')[0]);
       this.setInputsInline(true);
       this.setPreviousStatement(true, null);
-      this.setColour('%{BKY_FUNCTIONS_HUE}');
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('functions'));
       this.setTooltip(Blockly.Msg.FUNCTIONS_RETURN_TOOLTIP);
       this.setHelpUrl('');
       this.setOnChange(function() {

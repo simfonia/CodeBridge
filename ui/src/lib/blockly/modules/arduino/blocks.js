@@ -18,10 +18,10 @@ Blockly.Blocks['arduino_pin_shadow'] = {
                 }
             ],
             output: ['Number', 'String'],
-            colour: '%{BKY_ARDUINO_CONTROL_HUE}',
             tooltip: '',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('control'));
     }
 };
 
@@ -41,10 +41,10 @@ Blockly.Blocks['initializes_setup'] = {
                 }
             ],
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_STRUCTURE_HUE}',
             tooltip: '%{BKY_INITIALIZES_SETUP_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };
 
@@ -64,10 +64,10 @@ Blockly.Blocks['initializes_loop'] = {
                 }
             ],
             previousStatement: true,
-            colour: '%{BKY_ARDUINO_STRUCTURE_HUE}',
             tooltip: '%{BKY_INITIALIZES_LOOP_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };
 
@@ -97,10 +97,10 @@ Blockly.Blocks['arduino_pin_mode'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_CONTROL_HUE}',
             tooltip: '%{BKY_ARDUINO_PIN_MODE_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('control'));
     }
 };
 
@@ -129,10 +129,10 @@ Blockly.Blocks['arduino_digital_write'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_DIGITAL_IO_HUE}',
             tooltip: '%{BKY_ARDUINO_DIGITAL_WRITE_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('digital'));
     }
 };
 
@@ -152,10 +152,10 @@ Blockly.Blocks['arduino_digital_read'] = {
                 }
             ],
             output: 'Number',
-            colour: '%{BKY_ARDUINO_DIGITAL_IO_HUE}',
             tooltip: '%{BKY_ARDUINO_DIGITAL_READ_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('digital'));
     }
 };
 
@@ -182,10 +182,10 @@ Blockly.Blocks['arduino_analog_write'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_ANALOG_IO_HUE}',
             tooltip: '%{BKY_ARDUINO_ANALOG_WRITE_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('analog'));
     }
 };
 
@@ -208,10 +208,10 @@ Blockly.Blocks['arduino_analog_read'] = {
                 }
             ],
             output: 'Number',
-            colour: '%{BKY_ARDUINO_ANALOG_IO_HUE}',
             tooltip: '%{BKY_ARDUINO_ANALOG_READ_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('analog'));
     }
   };
 
@@ -232,10 +232,10 @@ Blockly.Blocks['arduino_delay'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_TIME_HUE}',
             tooltip: '%{BKY_ARDUINO_DELAY_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('time'));
     }
 };
 
@@ -256,10 +256,10 @@ Blockly.Blocks['arduino_delay_microseconds'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_TIME_HUE}',
             tooltip: '%{BKY_ARDUINO_DELAY_MICROSECONDS_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('time'));
     }
 };
 
@@ -272,10 +272,10 @@ Blockly.Blocks['arduino_millis'] = {
             type: 'arduino_millis',
             message0: '%{BKY_ARDUINO_MILLIS}',
             output: 'Number',
-            colour: '%{BKY_ARDUINO_TIME_HUE}',
             tooltip: '%{BKY_ARDUINO_MILLIS_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('time'));
     }
 };
 
@@ -288,10 +288,10 @@ Blockly.Blocks['arduino_micros'] = {
             type: 'arduino_micros',
             message0: '%{BKY_ARDUINO_MICROS}',
             output: 'Number',
-            colour: '%{BKY_ARDUINO_TIME_HUE}',
             tooltip: '%{BKY_ARDUINO_MICROS_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('time'));
     }
 };
 
@@ -324,10 +324,10 @@ Blockly.Blocks['arduino_serial_begin'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_SERIAL_HUE}',
             tooltip: '%{BKY_ARDUINO_SERIAL_BEGIN_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('serial'));
     }
 };
 
@@ -348,10 +348,10 @@ Blockly.Blocks['arduino_serial_print'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_SERIAL_HUE}',
             tooltip: '%{BKY_ARDUINO_SERIAL_PRINT_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('serial'));
     }
 };
 
@@ -372,10 +372,10 @@ Blockly.Blocks['arduino_serial_println'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_SERIAL_HUE}',
             tooltip: '%{BKY_ARDUINO_SERIAL_PRINTLN_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('serial'));
     }
 };
 
@@ -388,10 +388,10 @@ Blockly.Blocks['arduino_serial_available'] = {
             type: 'arduino_serial_available',
             message0: '%{BKY_ARDUINO_SERIAL_AVAILABLE}',
             output: 'Number',
-            colour: '%{BKY_ARDUINO_SERIAL_HUE}',
             tooltip: '%{BKY_ARDUINO_SERIAL_AVAILABLE_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('serial'));
     }
 };
 
@@ -404,10 +404,10 @@ Blockly.Blocks['arduino_serial_read'] = {
             type: 'arduino_serial_read',
             message0: '%{BKY_ARDUINO_SERIAL_READ}',
             output: 'Number',
-            colour: '%{BKY_ARDUINO_SERIAL_HUE}',
             tooltip: '%{BKY_ARDUINO_SERIAL_READ_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('serial'));
     }
 };
 
@@ -421,9 +421,9 @@ Blockly.Blocks['arduino_serial_print_newline'] = {
             message0: '%{BKY_ARDUINO_SERIAL_PRINT_NEWLINE}',
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_ARDUINO_SERIAL_HUE}',
             tooltip: '',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('serial'));
     }
 };

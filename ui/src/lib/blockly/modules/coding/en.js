@@ -3,7 +3,6 @@
 
 var CODING_EN = {
   // Colour
-  CODING_HUE: '#585858',
 
   // Category name
   CODING_CATEGORY: 'Coding',

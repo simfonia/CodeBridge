@@ -197,15 +197,20 @@
       applyEngineerStyle();
     }
 
-    // 套用訊息後讓 Blockly 原地重繪；不可 clear/reload workspace，
-    // 否則孤兒積木狀態可能在視覺切換時被寫回 XML。
+    // 套用訊息後重建已存在的 block，讓 init() 重新依當前 style 建立欄位文字。
+    // 重建期間停用 events，避免孤兒積木狀態被誤記錄為主題切換事件。
+    var ws = Blockly.getMainWorkspace();
+    var workspaceXml = ws ? Blockly.Xml.workspaceToDom(ws) : null;
     Blockly.Events.disable();
     try {
       Blockly.setLocale(Blockly.Msg);
+      if (ws && workspaceXml) {
+        ws.clear();
+        CodeBridgeBlocklyXml.domToWorkspace(workspaceXml, ws);
+      }
     } finally {
       Blockly.Events.enable();
     }
-    var ws = Blockly.getMainWorkspace();
     if (ws) {
       var toolboxXml = document.getElementById('toolbox-xml');
       if (toolboxXml) {

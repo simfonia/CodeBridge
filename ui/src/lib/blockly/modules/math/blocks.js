@@ -17,10 +17,10 @@ Blockly.Blocks['math_number'] = {
         }
       ],
       "output": "Number",
-      "colour": "%{BKY_MATH_HUE}",
       "tooltip": "%{BKY_MATH_NUMBER_TOOLTIP}",
       "helpUrl": ""
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('math'));
   }
 };
 
@@ -53,10 +53,10 @@ Blockly.Blocks['math_arithmetic'] = {
       ],
       "inputsInline": true,
       "output": "Number",
-      "colour": "%{BKY_MATH_HUE}",
       "tooltip": "%{BKY_MATH_ARITHMETIC_TOOLTIP}",
       "helpUrl": "%{BKY_MATH_ARITHMETIC_HELPURL}"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('math'));
   }
 };
 
@@ -85,10 +85,10 @@ Blockly.Blocks['math_single'] = {
         }
       ],
       "output": "Number",
-      "colour": "%{BKY_MATH_HUE}",
       "tooltip": "%{BKY_MATH_SINGLE_TOOLTIP}",
       "helpUrl": "%{BKY_MATH_SINGLE_HELPURL}"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('math'));
   }
 };
 
@@ -118,10 +118,10 @@ Blockly.Blocks['math_single'] = {
         ],
         "inputsInline": true,
         "output": "Number",
-        "colour": "%{BKY_MATH_HUE}",
         "tooltip": "%{BKY_ARDUINO_CONSTRAIN_TOOLTIP}",
         "helpUrl": ""
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('math'));
     }
   };
 
@@ -158,10 +158,10 @@ Blockly.Blocks['math_single'] = {
         ],
         "inputsInline": true,
         "output": "Number",
-        "colour": "%{BKY_MATH_HUE}",
         "tooltip": "%{BKY_ARDUINO_MAP_TOOLTIP}",
         "helpUrl": ""
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('math'));
     }
   };
 
@@ -192,10 +192,10 @@ Blockly.Blocks['math_single'] = {
         "inputsInline": true,
         "previousStatement": true,
         "nextStatement": true,
-        "colour": "%{BKY_MATH_HUE}",
         "tooltip": "%{BKY_ARDUINO_MATH_RANDOM_SEED_TOOLTIP}",
         "helpUrl": ""
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('math'));
     }
   };
 
@@ -225,9 +225,9 @@ Blockly.Blocks['math_single'] = {
         ],
         "inputsInline": true,
         "output": "Number",
-        "colour": "%{BKY_MATH_HUE}",
         "tooltip": "%{BKY_ARDUINO_MATH_RANDOM_INT_TOOLTIP}",
         "helpUrl": ""
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('math'));
     }
   };

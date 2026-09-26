@@ -1,6 +1,5 @@
-/// CodeBridge Variables 模組 - 繁體中文訊息（Angel 風格基底）
+/// CodeBridge Variables 模組 - 正體中文訊息（Angel 風格基底）
 var VARIABLES_ZH = {
-  VARIABLES_HUE: '#ef9a9a',
   VARIABLES_CATEGORY: '變數',
   VARIABLES_DEFAULT_NAME: 'var',
   VARIABLES_DECLARE_GLOBAL_MESSAGE: '建立全域變數 %2 型別為 %1 初始值為 %3',

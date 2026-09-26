@@ -34,23 +34,25 @@ CodeBridge 是一個 Tauri 桌面應用程式，為高中生教學設計的 Bloc
   - `setups_`：存放 `void setup() { ... }` 內的程式碼
 
 ### 積木顏色屬性統一規範 (Block Colour Attribute Standard)
-- **統一使用 `colour` 屬性**：所有積木（含 Blockly 內建積木覆寫）**必須**使用 `"colour": "%{BKY_XXX_HUE}"` 設定顏色。
-- **不使用 `style` 屬性**：不再使用 `"style": "xxx_blocks"` 方式，因為我們已移除 Theme 的 `blockStyles` 定義，改由語系檔直接控制顏色。
-- **顏色來源**：所有顏色值由語系檔 (`zh-hant.js` / `en.js`) 中的 `XXX_HUE` key 定義，`%{BKY_XXX_HUE}` 在 `jsonInit` 時由 Blockly 自動解析。
-- **內建積木覆寫**：如需統一內建積木（如 `math_number`、`text`、`text_join`）的顏色，必須在對應模組的 `blocks.js` 中重新定義該積木，並加入 `"colour": "%{BKY_XXX_HUE}"`。
+- **統一使用 `setColour()`**：所有積木（含 Blockly 內建積木覆寫）在 `jsonInit()` 之後呼叫 `this.setColour(CodeBridgeBlockPalette.getColourForRole('role'))` 設定顏色。
+- **不使用 `style` 屬性**：不再使用 `"style": "xxx_blocks"` 方式，因為我們已移除 Theme 的 `blockStyles` 定義，改由語意 palette 與語系 key 控制顏色。
+- **不使用 `colour: '%{BKY_XXX_HUE}'`**：色碼不再經由 Blockly message 佔位符解析，避免語系檔與執行期色碼雙重來源。
+- **顏色來源（語意 palette contract）**：模組色碼的**唯一來源**為 `ui/src/theme/block-palette.js` 的語意角色（`structure`、`control`、`digital`、`analog`、`time`、`serial`、`logic`、`loops`、`math`、`text`、`variables`、`array`、`functions`）。執行期重算顏色時以 `block.type` 查角色，**不可**依 block 目前的 colour 值反查。
+- **語系檔不含色碼**：`modules/*/zh-hant.js` 與 `en.js` 只維護文字、分類名稱與 tooltips，不得維護 `*_HUE`。
+- **第三方模組加入**：`CodeBridgeBlockPalette.registerModule({id, role, typePrefix?, blockTypes?, colours})`；未登錄語意角色的積木保持原色。
+- **內建積木覆寫**：如需統一內建積木（如 `math_number`、`text`、`text_join`）的顏色，必須在對應模組的 `blocks.js` 中重新定義該積木並呼叫 `setColour()`。
 - **範例**：
   ```javascript
-  // ✅ 正確：統一使用 colour 屬性
-  this.jsonInit({
-    "message0": "%{BKY_MATH_NUMBER}",
-    "args0": [...],
-    "colour": "%{BKY_MATH_HUE}",
-  });
+  // ✅ 正確：由語意角色取色
+  Blockly.Blocks['logic_compare'] = {
+    init: function() {
+      this.jsonInit({ /* ... */ });
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
+    }
+  };
 
   // ❌ 錯誤：不使用 style 屬性
-  this.jsonInit({
-    "style": "math_blocks",  // ← 不再支援
-  });
+  this.jsonInit({ "style": "logic_blocks" });  // ← 不再支援
   ```
 
 ### 轉義字元與換行處理規範 (Critical)
@@ -109,7 +111,7 @@ CI 會自動執行 `npm test` 與 build，但**不會自動替開發者產生 TD
 - 視覺 token：`ui/src/styles/presets.css`；視覺切換不得 clear/reload workspace。
 
 ### i18n
-- UI/積木/互動訊息在開發時一律使用i18n來設計文字字串，支援繁體中文及英文。
+- UI/積木/互動訊息在開發時一律使用i18n來設計文字字串，支援正體中文及英文。
 - 前端語言檔 ui/src/i18n.js
 - 積木語言檔置於該模組下，對齊#cocoya方式
 
@@ -121,6 +123,13 @@ CI 會自動執行 `npm test` 與 build，但**不會自動替開發者產生 TD
 ## 日誌與備份保護原則
 - **日誌追加保護 (Append-Only)**：異動需記錄於 `log/work/yyyy-mm-dd.md`
 - **覆寫前置備份**：若需覆寫檔案，必須先備份到 `backup/` 資料夾
+
+## 暫存檔案規範 (Temporary Files)
+- **一律寫在本專案的 `temp/` 目錄**：任何暫存腳本（例如批次改寫檔案的 Python／PowerShell 腳本）、中間產物、暫存 XML 或除錯輸出，都必須放在 `**該專案**/temp/` 之下。
+- **不得寫入外部工具目錄**：不可將暫存檔案寫到 Python 安裝目錄（如 `C:\WPy64-*\`）、系統暫存區或任何全域工具路徑。這些目錄屬於環境所有，寫入會污染其他專案且難以清理。
+- **`temp/` 不納入版控**：`temp/` 已列於 `.gitignore`，內容為一次性用途，完成後應自行刪除。
+- **完成後清理**：暫存腳本執行完畢即刪除，不留殘留檔案於 `temp/`。
+- **需要重複使用的工具**：若某腳本會反覆使用，應正式納入專案結構並記入 `FILE_STRUCTURE.md`，而非長期滯留於 `temp/`。
 
 ## 工作流規範
 1. **啟動 CodeBridge**：選擇新專案或開啟現有專案

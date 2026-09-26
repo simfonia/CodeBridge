@@ -111,14 +111,14 @@
     <!-- Toolbox XML (隱藏) - 對齊 piBlockly 結構，使用 %{BKY_...} 佔位符 -->
     <xml id="toolbox-xml" style="display: none;">
         <!-- Arduino 主分類 -->
-        <category name="%{BKY_ARDUINO_CATEGORY}" colour="#016c8d">
+        <category name="%{BKY_ARDUINO_CATEGORY}">
             <!-- 結構 -->
-            <category name="%{BKY_ARDUINO_STRUCTURE_CATEGORY}" colour="#585858">
+            <category name="%{BKY_ARDUINO_STRUCTURE_CATEGORY}">
                 <block type="initializes_setup"></block>
                 <block type="initializes_loop"></block>
             </category>
             <!-- I/O -->
-            <category name="%{BKY_ARDUINO_IO_CATEGORY}" colour="#016c8d">
+            <category name="%{BKY_ARDUINO_IO_CATEGORY}">
                 <block type="arduino_pin_mode">
                     <value name="PIN">
                         <shadow type="arduino_pin_shadow">
@@ -161,7 +161,7 @@
                 </block>
             </category>
             <!-- 時間 -->
-            <category name="%{BKY_ARDUINO_TIME_CATEGORY}" colour="#1f039b">
+            <category name="%{BKY_ARDUINO_TIME_CATEGORY}">
                 <block type="arduino_delay">
                     <value name="TIME">
                         <shadow type="math_number">
@@ -180,7 +180,7 @@
                 <block type="arduino_micros"></block>
             </category>
             <!-- 序列埠 -->
-            <category name="%{BKY_ARDUINO_SERIAL_CATEGORY}" colour="#359AFF">
+            <category name="%{BKY_ARDUINO_SERIAL_CATEGORY}">
                 <block type="arduino_serial_begin"></block>
                 <block type="arduino_serial_print">
                     <value name="VALUE">
@@ -201,7 +201,7 @@
             </category>
         </category>
         <!-- Coding -->
-        <category name="%{BKY_CODING_CATEGORY}" colour="#585858">
+        <category name="%{BKY_CODING_CATEGORY}">
             <block type="coding_comment"></block>
             <block type="coding_include"></block>
             <block type="coding_raw_statement"></block>
@@ -211,7 +211,7 @@
         </category>
         <sep></sep>
         <!-- 邏輯 -->
-        <category name="%{BKY_LOGIC_CATEGORY}" colour="#b198de">
+        <category name="%{BKY_LOGIC_CATEGORY}">
             <block type="controls_if"></block>
             <block type="logic_compare"></block>
             <block type="logic_operation"></block>
@@ -219,7 +219,7 @@
             <block type="logic_boolean"></block>
         </category>
         <!-- 迴圈 -->
-        <category name="%{BKY_LOOPS_CATEGORY}" colour="#7fcd81">
+        <category name="%{BKY_LOOPS_CATEGORY}">
             <block type="controls_while"></block>
             <block type="controls_for">
                 <value name="FROM">
@@ -241,7 +241,7 @@
             <block type="controls_flow_statements"></block>
         </category>
         <!-- 數學 -->
-        <category name="%{BKY_MATH_CATEGORY}" colour="#5C68A6">
+        <category name="%{BKY_MATH_CATEGORY}">
             <block type="math_number"></block>
             <block type="math_arithmetic"></block>
             <block type="math_single"></block>
@@ -304,7 +304,7 @@
             </block>
         </category>
         <!-- 文字 -->
-        <category name="%{BKY_TEXT_CATEGORY}" colour="#6a8871">
+        <category name="%{BKY_TEXT_CATEGORY}">
             <block type="text"></block>
             <block type="text_join"></block>
             <block type="text_append">
@@ -316,9 +316,9 @@
         </category>
         <sep></sep>
         <!-- 變數 -->
-        <category name="%{BKY_VARIABLES_CATEGORY}" colour="#ef9a9a" custom="VARIABLE"></category>
+        <category name="%{BKY_VARIABLES_CATEGORY}" custom="VARIABLE"></category>
         <!-- 陣列 -->
-        <category name="%{BKY_ARRAY_CATEGORY}" colour="#d1972b">
+        <category name="%{BKY_ARRAY_CATEGORY}">
             <block type="array_declare_global">
                 <value name="SIZE">
                     <shadow type="math_number">
@@ -350,7 +350,7 @@
             <block type="array_length"></block>
         </category>
         <!-- 函式 -->
-        <category name="%{BKY_FUNCTIONS_CATEGORY}" colour="#d22f73">
+        <category name="%{BKY_FUNCTIONS_CATEGORY}">
             <block type="custom_functions_defnoreturn"></block>
             <block type="custom_functions_defreturn"></block>
             <block type="custom_functions_return"></block>
@@ -548,6 +548,7 @@
 
     <!-- ====== 體驗主題 ====== -->
     <script src="src/theme/presets.js"></script>
+    <script src="src/theme/block-palette.js"></script>
     <script src="src/theme/blockly-adapter.js"></script>
     <script src="src/theme/code-theme-adapter.js"></script>
     <script src="src/theme/theme-manager.js"></script>

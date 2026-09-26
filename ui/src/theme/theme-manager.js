@@ -5,8 +5,6 @@
 
     var DEFAULT_PRESET = 'engineer';
     var PRESET_KEY = 'codebridgeExperiencePreset';
-    var LEGACY_STYLE_KEY = 'codebridgeTheme';
-    var STYLE_KEY = 'codebridgeBlockStyle';
     var currentPreset = DEFAULT_PRESET;
 
     function isSupported(preset) {
@@ -15,15 +13,7 @@
 
     function readStoredPreset() {
         var stored = localStorage.getItem(PRESET_KEY);
-        if (isSupported(stored)) return stored;
-
-        var legacyStyle = localStorage.getItem(LEGACY_STYLE_KEY);
-        if (legacyStyle === 'angel' || legacyStyle === 'engineer') {
-            localStorage.setItem(PRESET_KEY, legacyStyle);
-            localStorage.setItem(STYLE_KEY, legacyStyle);
-            return legacyStyle;
-        }
-        return DEFAULT_PRESET;
+        return isSupported(stored) ? stored : DEFAULT_PRESET;
     }
 
     function applyVisualTheme(preset) {
@@ -37,7 +27,6 @@
     function init() {
         currentPreset = readStoredPreset();
         localStorage.setItem(PRESET_KEY, currentPreset);
-        localStorage.setItem(STYLE_KEY, CODEBRIDGE_EXPERIENCE_PRESETS[currentPreset].blockStyle);
         applyVisualTheme(currentPreset);
         return currentPreset;
     }
@@ -53,7 +42,6 @@
         var nextPreset = isSupported(preset) ? preset : DEFAULT_PRESET;
         currentPreset = nextPreset;
         localStorage.setItem(PRESET_KEY, nextPreset);
-        localStorage.setItem(STYLE_KEY, CODEBRIDGE_EXPERIENCE_PRESETS[nextPreset].blockStyle);
         applyVisualTheme(nextPreset);
 
         var workspace = typeof Blockly !== 'undefined' && typeof Blockly.getMainWorkspace === 'function'

@@ -51,8 +51,17 @@ function initBlockly() {
         trashcan: true,
         comments: true,
         workspaceComments: true,
+        zoom: {
+            controls: true,
+            wheel: true,
+            startScale: 1,
+            maxScale: 3,
+            minScale: 0.3,
+            scaleSpeed: 1.2
+        },
         grid: {
             spacing: 20,
+            length: 0,
             colour: blocklyGridColour,
             snap: true
         }
@@ -365,7 +374,7 @@ function initThemeToggle() {
     const menuItem = document.getElementById('btn-theme-toggle');
     if (!themeToggle) return;
     
-    const savedPreset = localStorage.getItem('codebridgeExperiencePreset') || localStorage.getItem('codebridgeTheme') || 'engineer';
+    const savedPreset = localStorage.getItem('codebridgeExperiencePreset') || 'engineer';
     themeToggle.checked = (savedPreset === 'angel');
     
     function updateLabels(isAngel) {
@@ -382,12 +391,6 @@ function initThemeToggle() {
         updateLabels(isAngel);
         if (window.CodeBridgeTheme && typeof window.CodeBridgeTheme.setPreset === 'function') {
             window.CodeBridgeTheme.setPreset(preset);
-        } else {
-            localStorage.setItem('codebridgeExperiencePreset', preset);
-            localStorage.setItem('codebridgeBlockStyle', preset);
-            if (typeof window.setBlockStyle === 'function') {
-                window.setBlockStyle(preset);
-            }
         }
         console.log('Experience preset switched to:', preset);
     }

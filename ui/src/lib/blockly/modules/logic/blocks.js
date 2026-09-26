@@ -26,10 +26,10 @@ Blockly.Blocks['controls_if'] = {
       ],
       "nextStatement": true,
       "previousStatement": true,
-      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_CONTROLS_IF_TOOLTIP_1}",
       "mutator": "controls_if_mutator"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
   }
 };
 
@@ -44,9 +44,9 @@ Blockly.Blocks['controls_if_elseif'] = {
       "previousStatement": null,
       "nextStatement": null,
       "enableContextMenu": false,
-      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_CONTROLS_IF_ELSEIF_TOOLTIP}"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
   }
 };
 
@@ -56,9 +56,9 @@ Blockly.Blocks['controls_if_else'] = {
       "message0": "%{BKY_CONTROLS_IF_ELSE_TITLE_ELSE}",
       "previousStatement": null,
       "enableContextMenu": false,
-      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_CONTROLS_IF_ELSE_TOOLTIP}"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
   }
 };
 
@@ -95,10 +95,10 @@ Blockly.Blocks['logic_compare'] = {
       ],
       "inputsInline": true,
       "output": "Boolean",
-      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_COMPARE_TOOLTIP}",
       "helpUrl": "%{BKY_LOGIC_COMPARE_HELPURL}"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
   }
 };
 
@@ -131,10 +131,10 @@ Blockly.Blocks['logic_operation'] = {
       ],
       "inputsInline": true,
       "output": "Boolean",
-      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_OPERATION_TOOLTIP}",
       "helpUrl": "%{BKY_LOGIC_OPERATION_HELPURL}"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
   }
 };
 
@@ -153,10 +153,10 @@ Blockly.Blocks['logic_negate'] = {
         }
       ],
       "output": "Boolean",
-      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_NEGATE_TOOLTIP}",
       "helpUrl": ""
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
   }
 };
 
@@ -178,9 +178,9 @@ Blockly.Blocks['logic_boolean'] = {
         }
       ],
       "output": "Boolean",
-      "colour": "%{BKY_LOGIC_HUE}",
       "tooltip": "%{BKY_LOGIC_BOOLEAN_TOOLTIP}",
       "helpUrl": ""
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('logic'));
   }
 };

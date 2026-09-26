@@ -133,7 +133,7 @@
 - [x] 更新 `index.html`（加入 loops 模組 script 標籤）
 - [x] 更新 `loader.js`（加入 LOOPS_ZH/LOOPS_EN 註冊）
 - [x] 更新 `FILE_STRUCTURE.md`（加入 loops/ 目錄說明）
-- [ ] 待驗證：toolbox 分類名稱正確顯示
+- [x] 待驗證：toolbox 分類名稱正確顯示
 - [ ] 待驗證：所有 3 個積木可拖入工作區
 - [ ] 待驗證：程式碼生成正確 (while, for, break/continue)
 - [ ] 待驗證：風格切換後分類名稱與積木文字正常
@@ -222,7 +222,7 @@
 
 ### 已完成
 - [x] 建立 Variables 模組：全域／區域變數宣告、variables_get、variables_set。
-- [x] 建立繁體中文／英文 Angel 訊息與 Engineer 風格 C++ 語法覆寫。
+- [x] 建立正體中文／英文 Angel 訊息與 Engineer 風格 C++ 語法覆寫。
 - [x] 將 Variables 分類從 common 模組移至專屬模組，並同步 toolbox、index.html 與 loader.js。
 - [x] 建立含 variable model 的 v12 XML fixture，驗證 id、name、type 與 field_variable 綁定。
 - [x] 建立 Variables generator golden contract，驗證 global_vars_、變數賦值與變數取值。
@@ -281,7 +281,7 @@
 - [x] 支援清除按鈕、Escape、無結果訊息、鍵盤 aria label 與 IME composition。
 - [x] 點擊搜尋結果新增 block 後自動清空搜尋並隱藏 flyout。
 - [x] `setBlockStyle()` 更新 toolbox 後自動重建索引並保留查詢字串。
-- [x] 新增繁體中文／英文搜尋 UI 訊息、Cocoya 風格 CSS 與 `CodeBridgeBlockSearch` 公開 API。
+- [x] 新增正體中文／英文搜尋 UI 訊息、Cocoya 風格 CSS 與 `CodeBridgeBlockSearch` 公開 API。
 - [x] 新增 Playwright toolbox search contract，覆蓋 Array 搜尋、helper 排除、清除、無結果與雙風格刷新。
 
 ### 技術深挖 (Technical Deep Dive)
@@ -351,6 +351,38 @@
 1. 將模組 `*_HUE` 從 locale message 正式抽離到 CodeBridge Modules palette contract，讓遠端模組不需在 zh-hant／en 重複色碼。
 2. 評估把 Blockly palette 依 block type 映射取代執行期色碼反查，提升第三方模組的自訂主題彈性。
 3. 未來新增 preset 時，只需擴充 preset registry、CSS tokens、Blockly visual adapter 與公開行為測試。
+
+## 2026-09-26：CodeBridge Modules 語意積木 palette contract
+
+### 已完成
+- [x] 新增 `ui/src/theme/block-palette.js`，以 13 個語意角色取代 18 個 `*_HUE` message key 作為模組色碼唯一來源。
+- [x] `blockly-adapter.js` 改為依 `block.type` 查語意角色取色，移除執行期色碼反查。
+- [x] 新增 `CATEGORY_ROLES`，讓 Variables dynamic 分類也能對齊 Engineer／Angel palette。
+- [x] 提供 `registerModule({id, role, typePrefix?, blockTypes?, colours})`，第三方模組可加入語意 palette contract。
+- [x] 新增 4 個公開行為 contract：語意 manifest 覆蓋 toolbox 全部 block type、依 block type 重新著色、語系檔不再殘留 CodeBridge 專屬 `*_HUE`、第三方模組註冊。
+### 相容層移除（專案未發佈，不保留 legacy）
+- [x] 48 處 block 定義的 `colour: '%{BKY_XXX_HUE}'` 改為 `this.setColour(CodeBridgeBlockPalette.getColourForRole(role))`。
+- [x] 刪除 9 個模組語系檔共 36 行 `*_HUE` 色碼 key 與「顏色」註解。
+- [x] 刪除 `LEGACY_HUE_ROLES`、`syncLegacyHueMessages()`、`getRoleForMessageKey()`。
+- [x] 刪除 `codebridgeTheme` 遷移與 `codebridgeBlockStyle` 第二鍵，持久化僅留 `codebridgeExperiencePreset`。
+- [x] 刪除 toolbox XML 中 13 處硬編碼 `colour` 屬性，一律由 adapter 依語意角色設定。
+- [x] `main.js` 主題切換移除 fallback 分支與雙鍵寫入。
+### 技術深挖 (Technical Deep Dive)
+- colour 是執行期狀態而非識別碼。舊色碼反查在 block 被手動改色後會染成錯誤角色；改用 `block.type` 後，顏色成為 block 的純函式結果。
+- `jsonInit()` 只接受字串，無法在參數物件內呼叫函式取得色碼，因此顏色必須在 `jsonInit()` 之後以 `setColour()` 設定。
+- Blockly 官方 `msg/en.js`、`msg/zh-hant.js` 自帶 `LOGIC_HUE`、`MATH_HUE`、`VARIABLES_HUE`（值為數字色碼），與 CodeBridge 模組的 `*_HUE` 無關，刪除模組定義後仍會存在。
+- `getRoleForBlockType()` 依序檢查第三方註冊 → 精確 `TYPE_ROLES` → 第三方前綴 → 內建前綴，讓 `controls_for`（loops）之類例外不需特例程式碼。
+
+### 驗證結果
+- Theme suite：18 passed。
+- 完整 `npm test`：35 passed。
+- `npm run build`：成功。
+- 備份：`backup/block_palette_20260926_090516`、`backup/remove_legacy_20260926_100401`。
+
+### 下次啟動方向 (Next Steps)
+1. 主題相關待辦已清空；下一階段回到 Arduino CLI 工具鏈 Phase T2（compile／upload 草稿寫入、operation 事件串流、compiler diagnostics 雙向定位）。
+2. 第三方模組仍需自行宣告 `blockTypes`／`typePrefix`；可考慮併入 `core_manifest.json` 由 loader 自動呼叫 `registerModule()`。
+3. 新增 preset 只需擴充 `presets.js`、`presets.css`、`block-palette.js` 與 contract tests，不需修改 `main.js`。
 
 ## 2026-09-25：Arduino CLI 工具鏈 Phase T1（B 方案）
 

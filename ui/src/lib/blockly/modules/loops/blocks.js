@@ -27,10 +27,10 @@ Blockly.Blocks['controls_while'] = {
       "message2": "}",
       "previousStatement": true,
       "nextStatement": true,
-      "colour": "%{BKY_LOOPS_HUE}",
       "tooltip": "%{BKY_CONTROLS_WHILE_TOOLTIP}",
       "helpUrl": ""
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('loops'));
   }
 };
 
@@ -97,10 +97,10 @@ Blockly.Blocks['controls_for'] = {
       "inputsInline": true,
       "previousStatement": true,
       "nextStatement": true,
-      "colour": "%{BKY_LOOPS_HUE}",
       "tooltip": "%{BKY_CONTROLS_FOR_TOOLTIP}",
       "helpUrl": ""
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('loops'));
 
     // 同步變數名稱到 VAR_LABEL_1 / VAR_LABEL_2
     var updateLabels = function(block) {
@@ -180,9 +180,9 @@ Blockly.Blocks['controls_flow_statements'] = {
       ],
       "previousStatement": true,
       "nextStatement": true,
-      "colour": "%{BKY_LOOPS_HUE}",
       "tooltip": "%{BKY_CONTROLS_FLOW_STATEMENTS_TOOLTIP}",
       "helpUrl": ""
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('loops'));
   }
 };

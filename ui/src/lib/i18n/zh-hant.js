@@ -1,4 +1,4 @@
-/// CodeBridge UI 翻譯 - 繁體中文
+/// CodeBridge UI 翻譯 - 正體中文
 /// 僅包含工具列、選單、對話框等 UI 文字
 /// 積木文字、分類名稱、顏色、tooltips 屬於 blockly/messages/
 

@@ -141,7 +141,7 @@ random( %1, %2 )            ← message0 (Engineer) / 隨機數，介於 %1 和 
 
 ```
 ui/src/lib/blockly/modules/math/
-├── zh-hant.js       # Angel-style i18n (繁體中文)
+├── zh-hant.js       # Angel-style i18n (正體中文)
 ├── en.js            # Angel-style i18n (English)
 ├── blocks.js        # 4 個自訂積木定義 (arduino_constrain, arduino_map, math_random_seed, math_random_int)
 └── generators.js    # 8 個 Arduino 產生器 (包含 Blockly 內建 blocks 的覆寫)

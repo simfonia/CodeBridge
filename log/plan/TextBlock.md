@@ -99,7 +99,7 @@ join                    ← message0 (Engineer) / 組合文字 (Angel)
 
 ```
 ui/src/lib/blockly/modules/text/
-├── zh-hant.js       # Angel-style i18n (繁體中文)
+├── zh-hant.js       # Angel-style i18n (正體中文)
 ├── en.js            # Angel-style i18n (English)
 ├── blocks.js        # 2 個自訂積木定義 (text_append, text_length)
 └── generators.js    # 4 個 Arduino 產生器 (包含 2 個 Blockly 內建 blocks 覆寫)

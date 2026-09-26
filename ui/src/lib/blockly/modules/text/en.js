@@ -4,7 +4,6 @@
 
 var TEXT_EN = {
   // Colors
-  TEXT_HUE: '#6a8871',
 
   // Category name
   TEXT_CATEGORY: 'Text',

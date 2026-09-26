@@ -27,10 +27,10 @@ Blockly.Blocks['coding_comment'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_CODING_HUE}',
             tooltip: '%{BKY_CODING_COMMENT_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };
 
@@ -51,10 +51,10 @@ Blockly.Blocks['coding_include'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_CODING_HUE}',
             tooltip: '%{BKY_CODING_INCLUDE_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };
 
@@ -75,10 +75,10 @@ Blockly.Blocks['coding_raw_statement'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_CODING_HUE}',
             tooltip: '%{BKY_CODING_RAW_STATEMENT_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };
 
@@ -98,10 +98,10 @@ Blockly.Blocks['coding_raw_input'] = {
                 }
             ],
             output: true,
-            colour: '%{BKY_CODING_HUE}',
             tooltip: '%{BKY_CODING_RAW_INPUT_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };
 
@@ -122,10 +122,10 @@ Blockly.Blocks['coding_raw_definition'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_CODING_HUE}',
             tooltip: '%{BKY_CODING_RAW_DEFINITION_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };
 
@@ -155,9 +155,9 @@ Blockly.Blocks['coding_raw_wrapper'] = {
             ],
             previousStatement: true,
             nextStatement: true,
-            colour: '%{BKY_CODING_HUE}',
             tooltip: '%{BKY_CODING_RAW_WRAPPER_TOOLTIP}',
             helpUrl: ''
         });
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('structure'));
     }
 };

@@ -1,4 +1,4 @@
-/// CodeBridge Logic 模組 - 繁體中文訊息（Angel 風格基底）
+/// CodeBridge Logic 模組 - 正體中文訊息（Angel 風格基底）
 /// 包含：分類名稱、積木文字、tooltips
 /// Engineer 風格覆寫在 style/engineer.js
 ///
@@ -8,10 +8,6 @@
 
 var LOGIC_ZH = {
   // 顏色
-  LOGIC_HUE: '#b198de',
-  LOGIC_COMPARE_HUE: '#b198de',
-  LOGIC_OPERATION_HUE: '#b198de',
-  LOGIC_BOOLEAN_HUE: '#b198de',
 
   // 分類名稱
   LOGIC_CATEGORY: '邏輯',

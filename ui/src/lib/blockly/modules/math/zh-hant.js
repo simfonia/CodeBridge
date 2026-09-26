@@ -1,10 +1,9 @@
-/// CodeBridge Math 模組 - 繁體中文訊息（Angel 風格基底）
+/// CodeBridge Math 模組 - 正體中文訊息（Angel 風格基底）
 /// 包含：分類名稱、積木文字、tooltips
 /// Engineer 風格覆寫在 style/engineer.js
 
 var MATH_ZH = {
   // 顏色
-  MATH_HUE: '#5C68A6',
 
   // 分類名稱
   MATH_CATEGORY: '數學',

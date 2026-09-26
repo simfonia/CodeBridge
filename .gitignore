@@ -24,6 +24,7 @@ src-tauri/bin/
 src-tauri/gen/
 
 # CodeBridge Runtime / Temp
+temp/
 temp_scripts/
 *.tmp
 *.log

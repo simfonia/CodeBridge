@@ -8,10 +8,6 @@
 
 var LOGIC_EN = {
   // Colors
-  LOGIC_HUE: '#b198de',
-  LOGIC_COMPARE_HUE: '#b198de',
-  LOGIC_OPERATION_HUE: '#b198de',
-  LOGIC_BOOLEAN_HUE: '#b198de',
 
   // Category name
   LOGIC_CATEGORY: 'Logic',

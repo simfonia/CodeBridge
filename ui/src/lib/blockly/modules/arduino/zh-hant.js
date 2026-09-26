@@ -1,14 +1,8 @@
-/// CodeBridge Arduino 模組 - 繁體中文訊息
+/// CodeBridge Arduino 模組 - 正體中文訊息
 /// 包含：顏色、分類名稱、積木文字、下拉選項、tooltips
 
 var ARDUINO_ZH = {
   // 顏色
-  ARDUINO_STRUCTURE_HUE: '#585858',
-  ARDUINO_CONTROL_HUE: '#016c8d',
-  ARDUINO_DIGITAL_IO_HUE: '#0f960a',
-  ARDUINO_ANALOG_IO_HUE: '#FF9800',
-  ARDUINO_TIME_HUE: '#1f039b',
-  ARDUINO_SERIAL_HUE: '#359AFF',
 
   // 分類名稱（僅 Arduino 模組自有分類）
   ARDUINO_CATEGORY: 'Arduino',

@@ -50,53 +50,53 @@ CodeBridge/
 │       │       │   ├── toolbox-search.js # Toolbox 公開積木索引、搜尋框與 flyout 結果
 
 │   │       │   │   ├── arduino/ # Arduino 模組（結構 + I/O + 時間 + 序列）
-│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（顏色、分類、積木文字、tooltips）
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息（分類名稱、積木文字、tooltips；不含色碼）
 │   │       │   │   │   ├── en.js        # 英文訊息
-│   │       │   │   │   ├── blocks.js    # 積木定義
+│   │       │   │   │   ├── blocks.js    # 積木定義（顏色由 CodeBridgeBlockPalette 語意角色提供）
 │   │       │   │   │   └── generators.js# 程式碼產生器
 │   │       │   │   ├── coding/  # Coding 模組（註解、引入、原始程式碼）
-│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息
 │   │       │   │   │   ├── en.js        # 英文訊息
 │   │       │   │   │   ├── blocks.js    # 積木定義
 │   │       │   │   │   └── generators.js# 程式碼產生器
 │   │       │   │   ├── logic/   # Logic 模組（if/else, compare, operation, boolean）
-│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息
 │   │       │   │   │   ├── en.js        # 英文訊息
 │   │       │   │   │   └── generators.js# 程式碼產生器（blocks 為 Blockly 內建）
 │   │       │   │   ├── loops/   # Loops 模組（while, for, break/continue）
-│   │       │   │   │   ├── zh-hant.js   # 繕體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息（Angel 風格基底）
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 積木定義（controls_while, controls_for, controls_flow_statements）
 │   │       │   │   │   └── generators.js# 程式碼產生器
 │   │       │   │   ├── math/    # Math 模組（數字、運算、三角函數、constrain、map、random）
-│   │       │   │   │   ├── zh-hant.js   # 繕體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息（Angel 風格基底）
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 積木定義（arduino_constrain, arduino_map, math_random_seed, math_random_int）
 │   │       │   │   │   └── generators.js# 程式碼產生器（包含 Blockly 內建 math_number, math_arithmetic, math_single）
 │   │       │   │   ├── text/    # Text 模組（文字常值、join、append、length）
-│   │       │   │   │   ├── zh-hant.js   # 繕體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息（Angel 風格基底）
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 積木定義（text_append, text_length）
 │   │       │   │   │   └── generators.js# 程式碼產生器（包含 Blockly 內建 text, text_join）
 │   │       │   │   ├── variables/ # Variables 模組（全域／區域宣告、get、set）
-│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息（Angel 風格基底）
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 積木定義（variables_declare_global/local, variables_get/set）
 │   │       │   │   │   └── generators.js# 程式碼產生器
 
 │   │       │   │   ├── array/      # Array 模組（全域／區域宣告、get、set、length）
-│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息（Angel 風格基底）
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 積木定義（5 個 piBlockly 對齊積木）
 │   │       │   │   │   └── generators.js# 程式碼產生器
 │   │       │   │   ├── functions/  # Functions 模組（5 個公開積木 + 2 個 mutator helper）
-│   │       │   │   │   ├── zh-hant.js   # 繁體中文訊息（Angel 風格基底）
+│   │       │   │   │   ├── zh-hant.js   # 正體中文訊息（Angel 風格基底）
 │   │       │   │   │   ├── en.js        # 英文訊息（Angel 風格基底）
 │   │       │   │   │   ├── blocks.js    # 函式定義、return、手動呼叫與參數 mutator
 │   │       │   │   │   └── generators.js# 原型、定義、return 與呼叫產生器
 
 │   │       │   │   └── common/      # 相容保留的共用訊息
-│   │       │   │       ├── zh-hant.js   # 繁體中文分類名稱
+│   │       │   │       ├── zh-hant.js   # 正體中文分類名稱
 │   │       │   │       └── en.js        # 英文分類名稱
 │   │       │   ├── style/        # 跨模組風格
 │   │       │   │   └── engineer.js # Engineer 風格覆寫（C++ 語法）
@@ -104,7 +104,7 @@ CodeBridge/
 │   │       ├── practice/         # 練習模式（程式碼撰寫導航員）
 │   │       │   └── practice-mode.js # 練習模式核心（比對引擎 + 提示系統）
 │   │       ├── i18n/             # UI 翻譯（獨立於積木訊息）
-│   │       │   ├── zh-hant.js    # 繁體中文 UI 文字（TLB_xxx, MSG_xxx, PRACTICE_xxx）
+│   │       │   ├── zh-hant.js    # 正體中文 UI 文字（TLB_xxx, MSG_xxx, PRACTICE_xxx）
 │   │       │   └── en.js         # 英文 UI 文字
 │   │       ├── components/       # Svelte 元件
 │   │       ├── stores/           # 狀態管理
@@ -124,11 +124,13 @@ CodeBridge/
 │   │   ├── CodeBridgeV2.md      # CodeBridge V2 總體規格（主線、工具鏈、序列與專案）
 │   │   ├── CodeBridgeModulesRepository.md # 新 codebridge-modules repository 與遷移計畫
 │   │   ├── BlocklyV13Upgrade.md # Blockly 13.3.0 升級、相容決策與驗證結果
+│   │   │   ├── ExperienceThemeArchitecture.md # Engineer／Angel 體驗主題與語意 palette contract 架構
 │   │   ├── codingBlock.md       # Coding 模組移植計畫
 │   │   ├── LoopsBlock.md        # Loops 模組移植計畫
 │   │   └── ... (其他計畫)
 │   ├── work/            # 工作日誌
 │   └── mappings/        # 知識庫
+├── temp/                # 暫存檔案（僅供開發暫用，不得寫入外部工具目錄）
 ├── backup/              # 備份資料夾
 └── .git/              # Git 倉庫
 ```

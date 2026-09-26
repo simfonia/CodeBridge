@@ -17,10 +17,10 @@ Blockly.Blocks['text'] = {
         }
       ],
       "output": "String",
-      "colour": "%{BKY_TEXT_HUE}",
       "tooltip": "%{BKY_TEXT_TEXT_TOOLTIP}",
       "helpUrl": ""
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('text'));
   }
 };
 
@@ -29,11 +29,11 @@ Blockly.Blocks['text_join'] = {
     this.jsonInit({
       "message0": "%{BKY_TEXT_JOIN_MESSAGE}",
       "output": "String",
-      "colour": "%{BKY_TEXT_HUE}",
       "tooltip": "%{BKY_TEXT_JOIN_TOOLTIP}",
       "helpUrl": "",
       "mutator": "text_join_mutator"
     });
+  this.setColour(CodeBridgeBlockPalette.getColourForRole('text'));
   }
 };
 
@@ -59,10 +59,10 @@ Blockly.Blocks['text_join'] = {
         "inputsInline": true,
         "previousStatement": true,
         "nextStatement": true,
-        "colour": "%{BKY_TEXT_HUE}",
         "tooltip": "%{BKY_TEXT_APPEND_TOOLTIP}",
         "helpUrl": ""
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('text'));
     }
   };
 
@@ -79,9 +79,9 @@ Blockly.Blocks['text_join'] = {
         ],
         "inputsInline": true,
         "output": "Number",
-        "colour": "%{BKY_TEXT_HUE}",
         "tooltip": "%{BKY_TEXT_LENGTH_TOOLTIP}",
         "helpUrl": ""
       });
+    this.setColour(CodeBridgeBlockPalette.getColourForRole('text'));
     }
   };

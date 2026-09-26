@@ -20,7 +20,7 @@
         this.setInputsInline(true);
         this.setPreviousStatement(true, null);
         this.setNextStatement(true, null);
-        this.setColour(Blockly.Msg.ARRAY_HUE);
+        this.setColour(CodeBridgeBlockPalette.getColourForRole('array'));
         this.setTooltip(Blockly.Msg[type + '_TOOLTIP']);
         this.setHelpUrl('');
       }
@@ -45,7 +45,7 @@
       this.appendDummyInput('END').appendField(Blockly.Msg.ARRAY_GET_BRACKET_CLOSE);
       this.setInputsInline(true);
       this.setOutput(true, null);
-      this.setColour(Blockly.Msg.ARRAY_HUE);
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('array'));
       this.setTooltip(Blockly.Msg.ARRAY_GET_TOOLTIP);
       this.setHelpUrl('');
     }
@@ -63,7 +63,7 @@
       this.setInputsInline(true);
       this.setPreviousStatement(true, null);
       this.setNextStatement(true, null);
-      this.setColour(Blockly.Msg.ARRAY_HUE);
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('array'));
       this.setTooltip(Blockly.Msg.ARRAY_SET_TOOLTIP);
       this.setHelpUrl('');
     }
@@ -76,7 +76,7 @@
           .appendField(new Blockly.FieldTextInput('myArray'), 'VAR');
       this.setInputsInline(true);
       this.setOutput(true, 'Number');
-      this.setColour(Blockly.Msg.ARRAY_HUE);
+      this.setColour(CodeBridgeBlockPalette.getColourForRole('array'));
       this.setTooltip(Blockly.Msg.ARRAY_LENGTH_TOOLTIP);
       this.setHelpUrl('');
     }

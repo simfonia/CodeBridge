@@ -1,9 +1,8 @@
-/// CodeBridge Coding 模組 - 繁體中文訊息
+/// CodeBridge Coding 模組 - 正體中文訊息
 /// 包含：分類名稱、積木文字、tooltips
 
 var CODING_ZH = {
   // 顏色
-  CODING_HUE: '#585858',
 
   // 分類名稱
   CODING_CATEGORY: 'Coding',

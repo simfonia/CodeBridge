@@ -48,7 +48,7 @@ ui/src/lib/blockly/
 │
 ├── messages/                   # 訊息管理（核心設計）
 │   ├── index.ts                # 匯出 + Blockly.Msg 擴充邏輯
-│   ├── zh-hant.ts              # 繁體中文（全部積木）
+│   ├── zh-hant.ts              # 正體中文（全部積木）
 │   ├── en.ts                   # 英文（全部積木）
 │   └── style/                  # Engineer 風格覆寫層
 │       ├── index.ts            # 套用/移除風格

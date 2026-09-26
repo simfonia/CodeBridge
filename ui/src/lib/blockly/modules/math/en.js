@@ -4,7 +4,6 @@
 
 var MATH_EN = {
   // Colors
-  MATH_HUE: '#5C68A6',
 
   // Category name
   MATH_CATEGORY: 'Math',

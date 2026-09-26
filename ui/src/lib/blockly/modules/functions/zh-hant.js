@@ -1,7 +1,6 @@
-/// CodeBridge Functions 模組 - 繁體中文訊息（Angel 風格基底）
+/// CodeBridge Functions 模組 - 正體中文訊息（Angel 風格基底）
 var FUNCTIONS_ZH = {
   FUNCTIONS_CATEGORY: '函式',
-  FUNCTIONS_HUE: '#d22f73',
   CUSTOM_FUNCTIONS_DEFNORETURN_MESSAGE: '建立函式 %1 (%2)',
   CUSTOM_FUNCTIONS_DEFRETURN_MESSAGE: '建立函式 %2 (%3) 並傳回 %1',
   CUSTOM_FUNCTIONS_CALLNORETURN_MESSAGE: '執行函式 %1 (%2)',
