@@ -1,7 +1,8 @@
 pub mod arduino;
 pub mod commands;
+pub mod project;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use std::sync::{Arc, Mutex};
 
 use arduino::operations::OperationRegistry;
@@ -42,6 +43,16 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .on_window_event(|window, event| {
+            // 使用者按下視窗右上角的 X：先攔截，請前端確認未儲存變更，
+            // 前端決定要儲存／不儲存／取消後再呼叫 app_close 真正關閉。
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.emit(events::REQUEST_CLOSE, ());
+                }
+            }
+        })
         .setup(|app| {
             // 於啟動時建立 CodeBridge 專屬的 CLI 目錄，避免首次編譯時失敗。
             let app_data_dir = app
@@ -70,6 +81,11 @@ pub fn run() {
             commands::lib_list,
             commands::operation_status,
             commands::operation_cancel,
+            project::project_read,
+            project::project_save,
+            project::project_exists,
+            project::project_reveal,
+            commands::app_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -98,4 +114,6 @@ pub mod events {
     pub const OPERATION_STATUS: &str = "codebridge://operation-status";
     /// 編譯診斷結果。
     pub const COMPILE_DIAGNOSTICS: &str = "codebridge://compile-diagnostics";
+    /// 視窗被要求關閉（攔截 CloseRequested 後通知前端處理未儲存變更）。
+    pub const REQUEST_CLOSE: &str = "codebridge://request-close";
 }

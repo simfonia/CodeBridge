@@ -4,6 +4,7 @@
 
 - [目前待辦](#目前待辦)
 - [2026-09-26](#2026-09-26)
+  - [工具列實作與 .cbg 專案](#2026-09-26工具列實作與-cbg-專案)
 - [2026-09-25](#2026-09-25)
 - [2026-07](#2026-07)
 
@@ -13,6 +14,15 @@
 
 > 本節為**彙整視圖**，集結各日期章節中所有未完成項目。
 > 各章節內仍保留原始清單以維持歷史紀錄，兩者若有差異以本章節為準。
+
+### 工具列後續（2026-09-26 本輪凍結，需另開一輪）
+- [ ] Phase 3 Serial Monitor / Terminal：`btn-refresh-serial`、`serial-selector`、`btn-terminal`、`btn-pause/clear/close-terminal`、Rust `open_serial_monitor` 串流（port/baud/重連/HEX/時間戳待討論）
+- [ ] `btn-run` / `btn-stop`：等 Arduino CLI T2 compile/upload 完成後接 operation 事件串流
+- [ ] Phase 4 `btn-diagnose` 與設定選單擴充（Board Manager / Library Manager / CLI 設定）
+- [ ] `.cbg` Windows 副檔名註冊與雙擊開檔（argv 解析、NSIS/WiX 自訂腳本）
+- [ ] 匯出 `.ino` 檔（選配；貼到 IDE 的需求已由「複製程式碼」滿足）
+- [ ] 工具列組態治理：讓 `btn-exit-practice`、`btn-cheat-close` 也經過 `data-action` 契約（目前由 practice-mode.js 自行綁定）
+- [ ] 總提供 `chevron-down` 與 `history` 圖示（下拉與最近專案圖示）
 
 ### 下一階段主線：Arduino CLI 工具鏈 Phase T2
 - [ ] compile / upload 的草稿寫入（plain code 落地、marker 不寫入磁碟）
@@ -80,6 +90,35 @@
 > 當日已結案。以下項目已轉入文首「目前待辦」追蹤。
 
 ---
+
+## 2026-09-26：工具列實作與 .cbg 專案（dirty 判斷）
+
+### 已完成
+- [x] Phase 0：`ui/src/lib/tauri/bridge.js` 建立 Tauri IPC 橋接層（`withGlobalTauri` + `capabilities/default.json`），純瀏覽器環境自動降級為 disabled 或 toast 提示。
+- [x] Phase 1：`project-store.js` dirty（當前 XML vs 最後儲存 XML 字串比對）、`plain-code.js` 去除 ID marker、`confirm-dialog.js`、`toast.js`、`clipboard.js`；檔名圖示與 `#btn-save` 高亮連動、`beforeunload` 攔截、草稿自動還原。
+- [x] `btn-copy-code`：複製去 marker 的 plain code，供貼到 Arduino IDE（含 execCommand fallback）。
+- [x] Phase 2：`src-tauri/src/project.rs` 提供 `project_read/project_save/project_exists`（副檔名白名單、UTF-8 無 BOM、LF、BOM 容忍）；New / Open（含最近清單）/ Save / Save As / 範例全部實作。
+- [x] 內建範例 `blink.cbg` 與 `serial-hello.cbg`（`ui/public/examples/`）。
+- [x] 按鈕契約：未實作按鈕全部加入 `disabled`，以 `toolbar-registry.js` + `toolbar-buttons.test.js` 固定。
+
+### 技術深挖 (Technical Deep Dive)
+- `.cbp` 是 Code::Blocks 專案檔（舊名 `.cbproj`），C/C++ 教學學生會混淆；`.cbg` 無通用標準佔用，故採用 `.cbg`，且副檔名集中於 `CodeBridgeProject.EXT` 與 Rust `PROJECT_EXTENSION`。
+- 專案只存空間 XML（結構上不落盤），不存 `.ino`：程式碼面板本身為唯讀，`coding_raw_*` 積木可承載任意手寫 C++，雙檔同步問題直接消失。
+- metadata 收錄在根元素的 `cbp:` namespaced 屬性；Blockly 重建 XML 時不會保留自訂屬性，因此寫檔時必須重新注入（serialize 作為冪等函數會先剔除舊屬性）。
+- dirty 以字串比對而非事件計數：undo 回原狀會自動清除 dirty，且 change listener 需避開 `isUiEvent`（與 `updateOrphanBlocks` 同條件）。
+- 事件委派監聽器的 `event.currentTarget` 是 `document` 而非匹配元素，因此工具列動作簿一律使用 `event.target.closest('[data-action]')` 結果。
+- `theme-runtime.spec.js` 原本以 `document.querySelector('.dropdown-content')` 取第一個下拉，新增下拉後會指到錯的元素；已改為從 `#btn-settings-root` 取對應 dropdown。
+
+### 驗證結果
+- `npm run test:unit`：Vitest 39 passed。
+- `npm test`：Playwright 44 passed（含 `toolbar.spec.js` 9 項）。
+- `cargo test`：90 passed（含 `project::tests` 5 項）。
+- `npm run build`、`cargo build`：成功。
+- 備份：`backup/toolbar_phase0_20260926_150000`。
+
+### 下次啟動方向 (Next Steps)
+> 本輪已結案；未實作項已轉入文首「目前待辦」的「工具列後續」小節追蹤。
+
 
 # 2026-09-25
 

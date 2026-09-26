@@ -544,6 +544,209 @@ input:checked + .slider:before {
     background: #f0f0f0;
 }
 
+/* === 檔名膠囊：已儲存專案可點擊以在檔案總管中顯示 === */
+#file-breadcrumb {
+    border-radius: 12px;
+    padding: 2px 8px;
+    transition: background 0.2s;
+}
+
+#file-breadcrumb.is-linked {
+    cursor: pointer;
+}
+
+#file-breadcrumb.is-linked:hover {
+    background: var(--cb-menu-hover, var(--cb-surface-hover));
+}
+
+#file-breadcrumb:focus-visible {
+    outline: 2px solid var(--cb-focus, #35c7d4);
+    outline-offset: 1px;
+}
+
+/* 下拉清單的標題列與空狀態訊息（顏色由 presets.css 的 token 提供） */
+.dropdown-header {
+    padding: 6px 12px 4px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--cb-border, #eee);
+}
+
+.dropdown-message {
+    padding: 10px 12px;
+    font-size: 12px;
+}
+
+.dropdown-content.is-wide {
+    min-width: 220px;
+}
+
+/* 下拉箭頭：放在按鈕右下角，hover 時以 is-open 表示展開狀態 */
+.toolbar-caret {
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    line-height: 0;
+    pointer-events: none;
+}
+
+.toolbar-caret img {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+}
+
+.toolbar-dropdown.is-open .toolbar-caret img {
+    opacity: 1;
+    transform: rotate(180deg);
+}
+
+/* 最近專案項目：左側圖示 + 名稱 + 右側移除鈕 */
+.recent-item {
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.recent-item span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recent-icon {
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    flex: 0 0 auto;
+    opacity: 0.85;
+}
+
+.recent-remove {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+/* 點擊按鈕也能固定展開的下拉（滑鼠 hover 之外的環境） */
+.toolbar-dropdown.is-open .dropdown-content {
+    display: block;
+}
+
+/* === 未實作按鈕（disabled）：顯示為不可用而非無反應 === */
+.toolbar-btn[disabled],
+.terminal-tool-btn[disabled],
+.dropdown-item[disabled],
+.serial-select[disabled] {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* === 確認對話框 === */
+.cb-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 10, 18, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.cb-overlay[hidden] {
+    display: none;
+}
+
+.cb-dialog {
+    min-width: 320px;
+    max-width: 420px;
+    background: var(--cb-surface-raised, #fff);
+    color: var(--cb-text, #222);
+    border: 1px solid var(--cb-border, #d5d5d5);
+    border-radius: 8px;
+    padding: 20px 22px 16px;
+    box-shadow: 0 12px 32px var(--cb-shadow, rgba(0, 0, 0, 0.28));
+}
+
+.cb-dialog-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--cb-text, #222);
+}
+
+.cb-dialog-message {
+    font-size: 13px;
+    color: var(--cb-text-muted, #555);
+    line-height: 1.6;
+    margin-bottom: 16px;
+    word-break: break-word;
+}
+
+.cb-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.cb-dialog-button {
+    border: 1px solid var(--cb-border, #d5d5d5);
+    background: var(--cb-surface, #fff);
+    color: var(--cb-text, #333);
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.cb-dialog-button:hover {
+    background: var(--cb-menu-hover, var(--cb-surface-hover, #f3f3f3));
+}
+
+.cb-dialog-button.is-primary {
+    background: var(--cb-primary, #FE2F89);
+    border-color: var(--cb-primary, #FE2F89);
+    color: #fff;
+}
+
+.cb-dialog-button.is-primary:hover {
+    background: var(--cb-primary-hover, #FE2F89);
+}
+
+/* === Toast 提示 === */
+.cb-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    background: rgba(32, 32, 32, 0.92);
+    color: #fff;
+    font-size: 13px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    z-index: 2100;
+    pointer-events: none;
+    max-width: 70vw;
+    text-align: center;
+}
+
+.cb-toast[hidden] {
+    display: none;
+}
+
+.cb-toast.is-error {
+    background: rgba(200, 32, 32, 0.94);
+}
+
+.cb-toast.is-success {
+    background: rgba(28, 132, 74, 0.94);
+}
+
 .dropdown-separator {
     height: 1px;
     background: #e0e0e0;

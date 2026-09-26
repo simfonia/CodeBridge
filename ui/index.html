@@ -30,34 +30,61 @@
             <div id="toolbar">
                 <!-- 左側群組：平台與檔案 -->
                 <div class="toolbar-group">
-                    <div id="file-breadcrumb">
-                        <img src="src/icons/load_project_24dp_1F1F1F.png" style="width: 14px; opacity: 0.5;">
+                    <div id="file-breadcrumb" data-action="reveal-project" role="button" tabindex="0" title="%{BKY_TLB_FILE_NEW}">
+                        <img id="project-state-icon" src="src/icons/load_project_24dp_1F1F1F.png" style="width: 14px; opacity: 0.5;" alt="">
                         <span id="current-filename">%{BKY_TLB_FILE_NEW}</span>
                     </div>
-                    <div class="toolbar-btn" id="btn-examples" title="%{BKY_TLB_EXAMPLES}">
-                        <img src="src/icons/examples_24dp_1F1F1F.png">
+                    <div class="toolbar-dropdown">
+                        <div class="toolbar-btn" id="btn-examples" data-action="open-example" title="%{BKY_TLB_EXAMPLES}">
+                            <img src="src/icons/examples_24dp_1F1F1F.png" alt="">
+                            <span class="toolbar-caret"><img src="src/icons/chevron-down-solid.png" alt=""></span>
+                        </div>
+                        <div id="examples-dropdown" class="dropdown-content is-wide">
+                            <div class="dropdown-header">%{BKY_TLB_EXAMPLES_TITLE}</div>
+                            <div id="examples-list"></div>
+                            <div class="dropdown-message" id="examples-empty">%{BKY_TLB_EXAMPLES_EMPTY}</div>
+                        </div>
                     </div>
                     <div class="toolbar-separator"></div>
-                    <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
-                        <img src="src/icons/doc-new.png">
+                    <div class="toolbar-btn" id="btn-new" data-action="new-project" title="%{BKY_TLB_NEW}">
+                        <img src="src/icons/doc-new.png" alt="">
                     </div>
-                    <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
-                        <img src="src/icons/open-file.png">
+                    <div class="toolbar-dropdown">
+                        <div class="toolbar-btn" id="btn-open" data-action="open-project" title="%{BKY_TLB_OPEN}">
+                            <img src="src/icons/open-file.png" alt="">
+                            <span class="toolbar-caret"><img src="src/icons/chevron-down-solid.png" alt=""></span>
+                        </div>
+                        <div class="dropdown-content is-wide" id="open-dropdown">
+                            <div class="dropdown-item" id="btn-open-file" data-action="open-project" title="%{BKY_TLB_OPEN_DIALOG}">
+                                <img src="src/icons/load_project_24dp_1F1F1F.png" style="width: 16px; height: 16px; margin-right: 8px;" alt="">
+                                <span>%{BKY_TLB_OPEN_DIALOG}</span>
+                            </div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-header"><img src="src/icons/recent.png" alt="">%{BKY_TLB_RECENT_PROJECTS}</div>
+                            <div id="recent-projects"></div>
+                            <div class="dropdown-message" id="recent-empty">%{BKY_TLB_RECENT_EMPTY}</div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-item" id="btn-clear-recents" data-action="clear-recents" title="%{BKY_TLB_CLEAR_RECENTS}">
+                                <img src="src/icons/remove-from-trash.png" style="width: 16px; height: 16px; margin-right: 8px;" alt="">
+                                <span>%{BKY_TLB_CLEAR_RECENTS}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
-                        <img src="src/icons/save.png">
+                    <div class="toolbar-btn" id="btn-save" data-action="save-project" title="%{BKY_TLB_SAVE}">
+                        <img src="src/icons/save.png" alt="">
                     </div>
-                    <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
-                        <img src="src/icons/save-as.png">
+                    <div class="toolbar-btn" id="btn-save-as" data-action="save-project-as" title="%{BKY_TLB_SAVE_AS}">
+                        <img src="src/icons/save-as.png" alt="">
                     </div>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-dropdown">
-                        <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
-                            <img src="src/icons/settings_24dp_1F1F1F.png">
+                        <div class="toolbar-btn" id="btn-settings-root" data-action="settings-menu" title="%{BKY_TLB_SETTINGS}">
+                            <img src="src/icons/settings_24dp_1F1F1F.png" alt="">
+                            <span class="toolbar-caret"><img src="src/icons/chevron-down-solid.png" alt=""></span>
                         </div>
                         <div class="dropdown-content">
-                            <div class="dropdown-item" id="btn-diagnose">
-                                <img src="src/icons/module-puzzle-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                            <div class="dropdown-item" id="btn-diagnose" data-action="diagnose" title="%{BKY_TLB_DIAGNOSE}" disabled>
+                                <img src="src/icons/module-puzzle-1.png" style="width: 16px; height: 16px; margin-right: 8px;" alt="">
                                 <span>%{BKY_TLB_DIAGNOSE}</span>
                             </div>
                             <div class="dropdown-separator"></div>
@@ -90,21 +117,21 @@
 
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
-                    <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
-                        <img src="src/icons/connect_serial_24dp_1F1F1F.png">
+                    <div class="toolbar-btn" id="btn-refresh-serial" data-action="refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}" disabled>
+                        <img src="src/icons/connect_serial_24dp_1F1F1F.png" alt="">
                     </div>
-                    <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}">
+                    <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}" disabled>
                         <option value="">%{BKY_TLB_NO_PORT}</option>
                     </select>
                     <div class="toolbar-separator"></div>
-                    <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
-                        <img src="src/icons/run_blocks_24dp_75FB4C.png">
+                    <div class="toolbar-btn" id="btn-run" data-action="run-program" title="%{BKY_TLB_RUN}" disabled>
+                        <img src="src/icons/run_blocks_24dp_75FB4C.png" alt="">
                     </div>
-                    <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP_PROGRAM}">
-                        <img src="src/icons/stop_24dp_EA3323.png">
+                    <div class="toolbar-btn" id="btn-stop" data-action="stop-program" title="%{BKY_TLB_STOP_PROGRAM}" disabled>
+                        <img src="src/icons/stop_24dp_EA3323.png" alt="">
                     </div>
-                    <div class="toolbar-btn" id="btn-terminal" title="%{BKY_TLB_TERMINAL}">
-                        <img src="src/icons/terminal_24dp_1F1F1F.png">
+                    <div class="toolbar-btn" id="btn-terminal" data-action="toggle-terminal" title="%{BKY_TLB_TERMINAL}" disabled>
+                        <img src="src/icons/terminal_24dp_1F1F1F.png" alt="">
                     </div>
                 </div>
             </div>
@@ -368,13 +395,13 @@
                         <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <button class="terminal-tool-btn" id="btn-pause-terminal" title="%{BKY_TLB_PAUSE_SCROLL}">
-                            <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                        <button class="terminal-tool-btn" id="btn-pause-terminal" data-action="terminal-pause" title="%{BKY_TLB_PAUSE_SCROLL}" disabled>
+                            <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;" alt="">
                         </button>
-                        <button class="terminal-tool-btn" id="btn-clear-terminal" title="%{BKY_TLB_CLEAR_CONSOLE}">
-                            <img src="src/icons/brush-3-ai-line_ff007c.png" style="width: 16px; height: 16px;">
+                        <button class="terminal-tool-btn" id="btn-clear-terminal" data-action="terminal-clear" title="%{BKY_TLB_CLEAR_CONSOLE}" disabled>
+                            <img src="src/icons/brush-3-ai-line_ff007c.png" style="width: 16px; height: 16px;" alt="">
                         </button>
-                        <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
+                        <button class="terminal-tool-btn" id="btn-close-terminal" data-action="terminal-close" title="%{BKY_TLB_CLOSE_PANEL}" disabled>
                             <span style="font-size: 16px; font-weight: bold;">×</span>
                         </button>
                     </div>
@@ -390,11 +417,11 @@
             <div id="codeHeader">
                 <span>%{BKY_TLB_ARDUINO_PREVIEW}</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="toolbar-btn" id="btn-practice" title="%{BKY_PRACTICE_ENTER}" style="width: 24px; height: 24px;">
-                        <img src="src/icons/pen-new-square-outline.png" style="width: 18px; height: 18px;">
+                    <div class="toolbar-btn" id="btn-practice" data-action="practice-mode" title="%{BKY_PRACTICE_ENTER}" style="width: 24px; height: 24px;">
+                        <img src="src/icons/pen-new-square-outline.png" style="width: 18px; height: 18px;" alt="">
                     </div>
-                    <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
-                        <img src="src/icons/copy-duotone.png" style="width: 18px; height: 18px;">
+                    <div class="toolbar-btn" id="btn-copy-code" data-action="copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
+                        <img src="src/icons/copy-duotone.png" style="width: 18px; height: 18px;" alt="">
                     </div>
                 </div>
             </div>
@@ -404,8 +431,8 @@
                 <div class="practice-header">
                     <span class="practice-title">%{BKY_PRACTICE_TITLE}</span>
                     <div class="practice-controls">
-                        <div class="toolbar-btn" id="btn-cheat" title="%{BKY_PRACTICE_CHEAT}" style="width: 24px; height: 24px; display: none;">
-                            <img src="src/icons/eye-closed-circle.png" style="width: 18px; height: 18px;">
+                        <div class="toolbar-btn" id="btn-cheat" data-action="practice-cheat" title="%{BKY_PRACTICE_CHEAT}" style="width: 24px; height: 24px; display: none;">
+                            <img src="src/icons/eye-closed-circle.png" style="width: 18px; height: 18px;" alt="">
                         </div>
                         <button id="btn-exit-practice" class="practice-btn" style="display: none;">
                             %{BKY_PRACTICE_EXIT}
@@ -560,7 +587,22 @@
     <!-- Toolbox 搜尋引擎（需在 main.js 前載入） -->
     <script src="src/lib/blockly/toolbox-search.js"></script>
 
+    <!-- ====== Tauri IPC 橋接層（瀏覽器環境自動降級） ====== -->
+    <script src="src/lib/tauri/bridge.js"></script>
 
+    <!-- ====== 專案層（.cbg 單檔 XML、plain code、I/O） ====== -->
+    <script src="src/lib/project/plain-code.js"></script>
+    <script src="src/lib/project/project-store.js"></script>
+    <script src="src/lib/project/project-io.js"></script>
+
+    <!-- ====== UI 元件（剪貼簿、確認對話框、Toast） ====== -->
+    <script src="src/lib/ui/clipboard.js"></script>
+    <script src="src/lib/ui/confirm-dialog.js"></script>
+    <script src="src/lib/ui/toast.js"></script>
+
+    <!-- ====== 工具列按鈕 registry 與行為 ====== -->
+    <script src="src/lib/ui/toolbar-registry.js"></script>
+    <script src="src/lib/ui/toolbar.js"></script>
 
     <!-- 主程式核心邏輯 -->
     <script src="src/main.js"></script>

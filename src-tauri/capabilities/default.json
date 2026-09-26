@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "CodeBridge 前端最小權限：僅開啟 IPC core 與檔案選擇對話框。檔案讀寫一律經由 Rust 的 project_* command，不使用 plugin-fs 的任意路徑存取。",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-set-focus",
+    "dialog:allow-open",
+    "dialog:allow-save"
+  ]
+}

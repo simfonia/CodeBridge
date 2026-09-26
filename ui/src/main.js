@@ -6,6 +6,21 @@
 // ============================================================
 var blockToRangeMap = new Map(); // blockId → {start, end}
 var lineDoms = [];               // 程式碼行 DOM 陣列
+var currentMarkedCode = '';      // 最近一次產生的 marked code（含 ID 標記）
+var projectStore = null;         // CodeBridgeProject store（.cbg 專案狀態）
+
+/// dirty 判斷使用 debounce，避免拖曳積木時過度序列化工作區。
+var dirtyTimer = null;
+function scheduleDirtyCheck(workspace) {
+    if (dirtyTimer) clearTimeout(dirtyTimer);
+    dirtyTimer = setTimeout(function() {
+        dirtyTimer = null;
+        if (!projectStore || !window.CodeBridgeProjectIO) return;
+        var snapshot = window.CodeBridgeProjectIO.serializeWorkspace();
+        projectStore.refresh(snapshot);
+        projectStore.setDraft(snapshot);
+    }, 150);
+}
 
 // ============================================================
 // Blockly 初始化
@@ -92,16 +107,10 @@ function renderCode(code) {
     const codeContent = document.getElementById('codeContent');
     if (!codeContent) return;
 
-    // 從 Blockly.Arduino 讀取 ID 標記常數（避免硬編碼）
-    var idMarker = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER) ? Blockly.Arduino.ID_MARKER : '// __BLOCKLY_ID:';
-    var idMarkerEnd = (typeof Blockly !== 'undefined' && Blockly.Arduino && Blockly.Arduino.ID_MARKER_END) ? Blockly.Arduino.ID_MARKER_END : '__';
-    var idRegex = new RegExp(idMarker + '([^\\s]+)' + idMarkerEnd, 'g');
-    var cleanIdRegex = new RegExp(' ' + idMarker + '[^\\s]+' + idMarkerEnd, 'g');
-    var escapedMarker = idMarker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    var cleanValueMarkerRegex = new RegExp(
-        '/\\*\\s*' + escapedMarker + '[^\\r\\n]*?\\s*\\*/',
-        'g'
-    );
+    // ID 標記的解析與去除規則由 CodeBridgePlainCode 提供，
+    // 讓預覽面板、複製到剪貼簿與 compile/upload 共用同一套實作。
+    var plainCode = window.CodeBridgePlainCode;
+    var patterns = plainCode.buildPatterns();
 
     codeContent.innerHTML = '';
     blockToRangeMap.clear();
@@ -114,19 +123,15 @@ function renderCode(code) {
     var cleanedLines = [];
     rawLines.forEach(function(line, index) {
         // 收集所有 ID 標記
-        var idMatch;
-        while ((idMatch = idRegex.exec(line)) !== null) {
-            var id = idMatch[1];
+        plainCode.extractIds(line).forEach(function(id) {
             if (!blockToRangeMap.has(id)) {
                 blockToRangeMap.set(id, { start: index, end: index });
             } else {
                 blockToRangeMap.get(id).end = index;
             }
-        }
+        });
         // 移除所有 ID 標記
-        cleanedLines.push(
-            line.replace(cleanValueMarkerRegex, '').replace(cleanIdRegex, '')
-        );
+        cleanedLines.push(plainCode.stripLine(line, patterns));
     });
 
     // 2. 一次性高亮完整程式碼（確保跨行語法結構正確解析）
@@ -205,6 +210,8 @@ function updateCode(workspace) {
     } else {
         code = generateArduinoCode(workspace);
     }
+    // 保留 marked code 供「複製程式碼」使用；複製時才去除 ID 標記。
+    currentMarkedCode = code;
     renderCode(code);
 }
 
@@ -344,12 +351,9 @@ function initLangToggle() {
         const newLang = isEn ? 'en' : 'zh-hant';
         updateLabels(isEn);
         localStorage.setItem('codebridgeLang', newLang);
-        // 儲存當前工作區 XML 到 sessionStorage，避免 reload 後遺失
-        var ws = Blockly.getMainWorkspace();
-        if (ws) {
-            var xmlDom = Blockly.Xml.workspaceToDom(ws);
-            var xmlText = Blockly.Xml.domToText(xmlDom);
-            sessionStorage.setItem('codebridgeWorkspaceXml', xmlText);
+        // 切換語系會重載頁面，先把目前工作區寫入專案草稿避免遺失
+        if (projectStore && window.CodeBridgeProjectIO) {
+            projectStore.setDraft(window.CodeBridgeProjectIO.serializeWorkspace());
         }
         console.log('Language switched to:', newLang);
         location.reload();
@@ -504,20 +508,44 @@ document.addEventListener('DOMContentLoaded', function() {
         window.CodeBridgeBlockSearch.init(workspace);
     }
     
-    // 4. 注入積木（優先使用 sessionStorage 中的暫存資料，否則注入預設）
-    var savedXml = sessionStorage.getItem('codebridgeWorkspaceXml');
-    if (savedXml) {
-        sessionStorage.removeItem('codebridgeWorkspaceXml');
-        CodeBridgeBlocklyXml.textToWorkspace(savedXml, workspace);
+    // 4. 專案狀態（.cbg）與工作區還原
+    //    還原優先序：未儲存草稿 > 最後儲存的工作區快照 > 預設 setup + loop 積木。
+    //    草稿與快照的差異由 store 以字串比對決定 dirty，因此使用者關掉分頁也不會遺失進度。
+    projectStore = window.CodeBridgeProject.createStore();
+    window.CodeBridgeProjectIO.init({
+        store: projectStore,
+        getWorkspace: function() { return workspace; },
+        getCode: function() { return currentMarkedCode; },
+        injectDefaultBlocks: function() { injectDefaultBlocks(workspace); },
+        onWorkspaceReloaded: function() { updateCode(workspace); }
+    });
+
+    var initialState = projectStore.getState();
+    var savedSnapshot = projectStore.getSnapshot();
+    var draft = projectStore.getDraft();
+    var restoreText = draft || savedSnapshot;
+
+    if (restoreText) {
+        CodeBridgeBlocklyXml.textToWorkspace(restoreText, workspace);
         workspace.updateAriaLabel();
     } else {
         injectDefaultBlocks(workspace);
     }
+
+    // 建立乾淨基準（有路徑則沿用，路徑為空代表未命名專案），再比對現況標記 dirty。
+    projectStore.markSaved({
+        path: initialState.path,
+        name: initialState.name,
+        snapshot: savedSnapshot || window.CodeBridgeProjectIO.serializeWorkspace(),
+        meta: initialState.meta
+    });
+    projectStore.refresh(window.CodeBridgeProjectIO.serializeWorkspace());
     
-    // 5. 程式碼更新監聽
+    // 5. 程式碼更新監聽 + dirty 判斷（debounce 150ms）
     workspace.addChangeListener(function(event) {
         if (event && event.isUiEvent) return;
         updateCode(workspace);
+        scheduleDirtyCheck(workspace);
     });
     
     // 6. 孤兒積木檢測
@@ -547,5 +575,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initCodeToggle();
     initPanelResizer();
     
+    // 11. 工具列（.cbg 專案 I/O、dirty 指示、最近專案與範例）
+    if (window.CodeBridgeToolbarUI) {
+        window.CodeBridgeToolbarUI.init({ store: projectStore });
+    }
+
     console.log('[CodeBridge] Initialized successfully');
 });

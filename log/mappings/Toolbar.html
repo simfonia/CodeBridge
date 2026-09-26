@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><title>CodeBridge Toolbar 與 .cbg 專案</title></head>
+<body>
+<h1>CodeBridge Toolbar 與 .cbg 專案</h1>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>公開 API</th><th>用途</th><th>位置</th></tr>
+<tr><td><code>CodeBridgeTauri.isAvailable()</code></td><td>Tauri runtime 是否可用；純瀏覽器環境為 false，呼叫端須降級為 disabled 或提示。</td><td><code>ui/src/lib/tauri/bridge.js</code></td></tr>
+<tr><td><code>CodeBridgeTauri.invoke(command, args)</code></td><td>呼叫 Rust command。</td><td><code>ui/src/lib/tauri/bridge.js</code></td></tr>
+<tr><td><code>CodeBridgeTauri.describeError(error)</code></td><td>把 Rust 的 <code>KEY|detail</code> 錯誤拆成 i18n key 與補充說明。</td><td><code>ui/src/lib/tauri/bridge.js</code></td></tr>
+<tr><td><code>CodeBridgeTauri.pickProjectToOpen() / pickProjectSavePath(name)</code></td><td>開啟／另存新檔對話框（僅 <code>.cbg</code>），使用者取消回傳 null。</td><td><code>ui/src/lib/tauri/bridge.js</code></td></tr>
+<tr><td><code>CodeBridgeProject.EXT / FORMAT_VERSION</code></td><td>副檔名 <code>.cbg</code> 與格式版本的單一常數來源。</td><td><code>ui/src/lib/project/project-store.js</code></td></tr>
+<tr><td><code>CodeBridgeProject.serialize(xml, meta)</code></td><td>把 <code>cbp:</code> metadata 注入 Blockly XML 根元素（冪等）。</td><td><code>ui/src/lib/project/project-store.js</code></td></tr>
+<tr><td><code>CodeBridgeProject.parse(xml)</code></td><td>解析 <code>.cbg</code>，回傳 <code>{ meta, body }</code>（body 為移除 metadata 的乾淨 XML）。</td><td><code>ui/src/lib/project/project-store.js</code></td></tr>
+<tr><td><code>CodeBridgeProject.isSupported(meta)</code></td><td>格式版本過新時回 false，呼叫端須拒絕開啟。</td><td><code>ui/src/lib/project/project-store.js</code></td></tr>
+<tr><td><code>CodeBridgeProject.createStore({ storage })</code></td><td>建立專案狀態：<code>getState / isDirty / refresh / markSaved / markUntitled / getSnapshot / subscribe</code>。</td><td><code>ui/src/lib/project/project-store.js</code></td></tr>
+<tr><td><code>store.addRecent / getRecents / removeRecent / clearRecents</code></td><td>最近專案清單（上限 <code>RECENTS_LIMIT = 10</code>，依路徑去重）。</td><td><code>ui/src/lib/project/project-store.js</code></td></tr>
+<tr><td><code>store.setDraft / getDraft</code></td><td>未儲存草稿（localStorage），供重載後還原並標記 dirty。</td><td><code>ui/src/lib/project/project-store.js</code></td></tr>
+<tr><td><code>CodeBridgePlainCode.strip(code)</code></td><td>去除 ID 標記得到可寫檔／可貼 Arduino IDE 的 plain code；保留原結尾換行。</td><td><code>ui/src/lib/project/plain-code.js</code></td></tr>
+<tr><td><code>CodeBridgePlainCode.buildPatterns() / extractIds(line) / stripLine(line)</code></td><td>程式碼預覽的標記解析與去除（與 strip 共用同一套 regex）。</td><td><code>ui/src/lib/project/plain-code.js</code></td></tr>
+<tr><td><code>CodeBridgeProjectIO.init({...})</code></td><td>注入專案流程依賴：<code>store / getWorkspace / getCode / injectDefaultBlocks / onWorkspaceReloaded</code>。</td><td><code>ui/src/lib/project/project-io.js</code></td></tr>
+<tr><td><code>CodeBridgeProjectIO.save / newProject / openProjectDialog / openPath / openExample / copyCode</code></td><td>專案與複製流程的編排，含未儲存變更確認。</td><td><code>ui/src/lib/project/project-io.js</code></td></tr>
+<tr><td><code>CodeBridgeProjectIO.serializeWorkspace() / loadWorkspaceXml(xml)</code></td><td>工作區 ↔ XML 的雙向轉換。</td><td><code>ui/src/lib/project/project-io.js</code></td></tr>
+<tr><td><code>CodeBridgeToolbarUI.init({ store })</code></td><td>綁定 <code>data-action</code>、渲染最近清單與範例、同步 dirty 指示、<code>beforeunload</code> 攔截。</td><td><code>ui/src/lib/ui/toolbar.js</code></td></tr>
+<tr><td><code>CodeBridgeToolbar.actions</code></td><td>按鈕 registry：<code>{ id, implemented, handledBy, labelKey }</code>。</td><td><code>ui/src/lib/ui/toolbar-registry.js</code></td></tr>
+<tr><td><code>CodeBridgeConfirm.askUnsaved(name)</code></td><td>未儲存變更三選一（儲存／不儲存／取消），回傳 <code>'save' | 'discard' | null</code>。</td><td><code>ui/src/lib/ui/confirm-dialog.js</code></td></tr>
+<tr><td><code>CodeBridgeClipboard.copy(text)</code></td><td>複製到剪貼簿，<code>navigator.clipboard</code> 失敗時退回 <code>execCommand('copy')</code>。</td><td><code>ui/src/lib/ui/clipboard.js</code></td></tr>
+<tr><td><code>CodeBridgeToast.show(text, { type, duration }) / showKey(key)</code></td><td>短暫提示（已儲存／已複製／錯誤）。</td><td><code>ui/src/lib/ui/toast.js</code></td></tr>
+</table>
+<h2>Rust command</h2>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>Command</th><th>說明</th></tr>
+<tr><td><code>project_read(path)</code></td><td>讀取 <code>.cbg</code>；非 <code>.cbg</code> 或不存在時回 <code>PROJECT_ERROR_INVALID_EXTENSION|</code>／<code>PROJECT_ERROR_NOT_FOUND|</code>。容忍 UTF-8 BOM。</td></tr>
+<tr><td><code>project_save(path, contents)</code></td><td>寫入 UTF-8 無 BOM、LF 行尾；副檔名白名單阻擋誤覆寫其他檔案。</td></tr>
+<tr><td><code>project_exists(path)</code></td><td>檢查檔案是否存在（過濾失效的最近清單）。</td></tr>
+</table>
+<h2>持久化鍵</h2>
+<ul>
+<li><code>codebridgeProject</code>：目前專案路徑、檔名、最後儲存的工作區 XML 快照與 metadata。</li>
+<li><code>codebridgeProjectDraft</code>：未儲存草稿（每次變更 debounce 150ms 寫入）。</li>
+<li><code>codebridgeRecentProjects</code>：最近專案清單 JSON 陣列。</li>
+</ul>
+<h2>按鈕契約</h2>
+<ul>
+<li><code>index.html</code> 每個 <code>.toolbar-btn</code>／<code>.terminal-tool-btn</code> 都必須有 <code>data-action</code> 且在 registry 有對應項。</li>
+<li>未實作按鈕在 HTML 必須帶 <code>disabled</code>，並列入 <code>toolbar-buttons.test.js</code> 的 <code>FROZEN_UNIMPLEMENTED_IDS</code>。</li>
+<li>目前凍結清單：<code>btn-refresh-serial</code>、<code>btn-run</code>、<code>btn-stop</code>、<code>btn-terminal</code>、<code>btn-pause-terminal</code>、<code>btn-clear-terminal</code>、<code>btn-close-terminal</code>。</li>
+</ul>
+<h2>.cbg 檔案格式</h2>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;xml xmlns="https://developers.google.com/blockly/xml"
+     xmlns:cbp="https://codebridge.app/xml"
+     cbp:format="1" cbp:name="Blink"
+     cbp:fqbn="arduino:avr:uno" cbp:port="COM3" cbp:baud="9600"&gt;
+  &lt;block type="initializes_setup" id="..." x="20" y="20"&gt;...&lt;/block&gt;
+&lt;/xml&gt;</code></pre>
+<ul>
+<li>積木 XML 是唯一真實來源；<code>.ino</code> 永遠是產物，不落地。</li>
+<li>ID 標記（<code>// __BLOCKLY_ID:&lt;id&gt;__</code>、<code>/* // __BLOCKLY_ID:&lt;id&gt;__ */</code>）只存在於記憶體中的 marked code，絕不寫入磁碟。</li>
+</ul>
+</body>
+</html>

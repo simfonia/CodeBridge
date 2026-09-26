@@ -5,6 +5,11 @@
     --cb-surface: #121b2b;
     --cb-surface-raised: #182438;
     --cb-surface-hover: #203149;
+    /* 下拉選單 hover：必須與 --cb-surface-raised 有明顯對比，否則深色主題下看起來沒有 hover */
+    --cb-menu-hover: #2c4363;
+    /* 未儲存變更指示 */
+    --cb-dirty-surface: #123a4d;
+    --cb-dirty-ring: #d68c1d;
     --cb-text: #e8f0f9;
     --cb-text-muted: #9aabc0;
     --cb-border: #30445f;
@@ -37,6 +42,9 @@
     --cb-surface: #ffffff;
     --cb-surface-raised: #fff0f7;
     --cb-surface-hover: #ffe1ef;
+    --cb-menu-hover: #ffd0e4;
+    --cb-dirty-surface: #ffe1ef;
+    --cb-dirty-ring: #e94f91;
     --cb-text: #35324a;
     --cb-text-muted: #70677c;
     --cb-border: #e8ccd9;
@@ -144,12 +152,40 @@
     border-color: var(--cb-border);
 }
 
+/* 下拉項目 hover：面板本身不可跟著變色，否則項目與面板同色等於沒有 hover。 */
 .toolbar-btn:hover,
 .dropdown-item:hover,
-.dropdown-content:hover,
+.recent-item:hover,
 .toolbar-toggle:hover,
 .switch:hover {
-    background: var(--cb-surface-hover);
+    background: var(--cb-menu-hover, var(--cb-surface-hover));
+}
+
+/* 下拉標題列與空狀態訊息跟隨主題 */
+.dropdown-header {
+    color: var(--cb-text-muted);
+    border-bottom-color: var(--cb-border);
+}
+
+.dropdown-header img {
+    width: 13px;
+    height: 13px;
+    margin-right: 5px;
+    vertical-align: -2px;
+}
+
+.dropdown-message {
+    color: var(--cb-text-muted);
+}
+
+/* 未儲存變更：背景 + 內嵌 ring，確保在深色與淺色主題都明顯 */
+.toolbar-btn.is-dirty {
+    background: var(--cb-dirty-surface);
+    box-shadow: inset 0 0 0 2px var(--cb-dirty-ring);
+}
+
+.toolbar-btn.is-dirty img {
+    opacity: 1;
 }
 
 .toolbar-separator,
@@ -268,14 +304,30 @@
     color: var(--cb-text) !important;
 }
 
+/* 圖示來源為黑色 PNG（1F1F1F），在 Engineer 深色主題需反白，否則幾乎看不見。 */
 [data-codebridge-preset='engineer'] .toolbar-btn img,
-[data-codebridge-preset='engineer'] #file-breadcrumb img {
+[data-codebridge-preset='engineer'] #file-breadcrumb img,
+[data-codebridge-preset='engineer'] .dropdown-item img,
+[data-codebridge-preset='engineer'] .dropdown-header img,
+[data-codebridge-preset='engineer'] .toolbar-caret img,
+[data-codebridge-preset='engineer'] .terminal-tool-btn img {
     filter: brightness(0) saturate(100%) invert(92%) sepia(10%) saturate(450%) hue-rotate(175deg) brightness(95%) contrast(90%);
 }
 
 [data-codebridge-preset='engineer'] .toolbar-btn:hover img,
-[data-codebridge-preset='engineer'] .toolbar-btn.active img {
+[data-codebridge-preset='engineer'] .toolbar-btn.active img,
+[data-codebridge-preset='engineer'] .dropdown-item:hover img,
+[data-codebridge-preset='engineer'] .terminal-tool-btn:hover img {
     filter: brightness(0) saturate(100%) invert(77%) sepia(45%) saturate(850%) hue-rotate(130deg) brightness(90%) contrast(88%);
+}
+
+/* 移除鈕是文字符號（非圖示），以 token 確保對比 */
+.recent-remove {
+    color: var(--cb-text-muted);
+}
+
+.recent-remove:hover {
+    color: var(--cb-primary);
 }
 
 [data-codebridge-preset='angel'] .toolbar-btn:hover img,

@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "npm run test:blockly:assets && npm run test:blockly",
+    "test": "npm run test:unit && npm run test:blockly",
     "test:blockly": "playwright test",
     "test:blockly:runtime": "playwright test tests/e2e/blockly-runtime.spec.js",
     "test:blockly:fixtures": "playwright test tests/e2e/blockly-migration.spec.js",
+    "test:unit": "vitest run tests/unit",
     "test:blockly:assets": "vitest run tests/unit/blockly-assets.test.js"
   },
   "devDependencies": {

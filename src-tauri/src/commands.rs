@@ -4,7 +4,7 @@
 //! 與 operation 串流，會另行加入，避免在此放置未完成的可被呼叫路徑。
 
 use std::time::Duration;
-use tauri::State;
+use tauri::{State, Window};
 
 use crate::arduino::command::{self, GlobalFlags};
 use crate::arduino::parser::{
@@ -69,6 +69,15 @@ pub fn run_arduino_code(_code: String) -> Result<String, String> {
 #[tauri::command]
 pub fn get_version() -> Result<String, String> {
     Ok(env!("CARGO_PKG_VERSION").to_string())
+}
+
+/// 真正關閉主視窗。
+///
+/// `on_window_event` 會攔截所有 `CloseRequested`，因此前端在使用者確認
+/// （儲存／不儲存）之後呼叫本命令繞過攔截；`destroy()` 不再觸發 CloseRequested。
+#[tauri::command]
+pub fn app_close(window: Window) -> Result<(), String> {
+    window.destroy().map_err(|error| error.to_string())
 }
 
 /// 建立含隔離旗標的全域配置。

@@ -17,6 +17,8 @@ CodeBridge/
 │       ├── main.rs      # 主入口
 │       ├── lib.rs       # 應用程式邏輯、AppState、工具鏈 facade、事件名稱
 │       ├── commands.rs  # Tauri 指令 (serial, toolchain, board, library, operation)
+│       ├── project.rs     # .cbg 專案檔讀寫（副檔名白名單、UTF-8 無 BOM、BOM 容忍）
+│       ├── capabilities/  # Tauri 2 權限宣告（core / dialog 最小權限）
 │       └── arduino/     # Arduino CLI 整合（B 方案：外部依賴 + 引導安裝）
 │           ├── mod.rs           # 公開 facade：CodeBridgeToolchain、ToolchainStatus
 │           ├── paths.rs         # CLI 路徑解析（使用者設定 → 系統 PATH）與隔離目錄
@@ -101,6 +103,18 @@ CodeBridge/
 │   │       │   ├── style/        # 跨模組風格
 │   │       │   │   └── engineer.js # Engineer 風格覆寫（C++ 語法）
 │   │       │   └── loader.js     # 模組載入器（語系選擇 + 風格切換）
+│   │       ├── tauri/           # Tauri IPC 橋接層
+│   │       │   └── bridge.js    # invoke / 選檔對話框 / 錯誤正規化 / 環境降級
+│   │       ├── project/         # .cbg 專案層（唯一真實來源為 Blockly XML）
+│   │       │   ├── plain-code.js    # 去除 ID marker 取得可寫檔與可貼 IDE 的 plain code
+│   │       │   ├── project-store.js # .cbg metadata 序列化、dirty 狀態、最近專案與草稿
+│   │       │   └── project-io.js    # New/Open/Save/Save As/範例/複製 的流程編排
+│   │       ├── ui/              # 工具列 UI 元件
+│   │       │   ├── toolbar-registry.js # 按鈕 registry（id / implemented / handledBy）
+│   │       │   ├── toolbar.js         # data-action 派發、dirty 指示、最近清單與範例
+│   │       │   ├── confirm-dialog.js  # 可翻譯確認對話框（未儲存變更三選一）
+│   │       │   ├── toast.js           # 短暫提示
+│   │       │   └── clipboard.js       # 剪貼簿複製（含 execCommand fallback）
 │   │       ├── practice/         # 練習模式（程式碼撰寫導航員）
 │   │       │   └── practice-mode.js # 練習模式核心（比對引擎 + 提示系統）
 │   │       ├── i18n/             # UI 翻譯（獨立於積木訊息）
@@ -112,6 +126,7 @@ CodeBridge/
 │   │           └── core_manifest.json # 模組載入清單
 │   └── public/
 │       ├── favicon.ico      # 網站圖示（複製自 src-tauri/icons/icon.ico）
+│       ├── examples/       # 內建範例 .cbg 與 manifest.json（範例下拉清單）
 │       └── blockly/         # Blockly v13.3.0 靜態資源（core、msg、plugins）
 │
 ├── resources/           # 應用資源
@@ -130,6 +145,8 @@ CodeBridge/
 │   │   └── ... (其他計畫)
 │   ├── work/            # 工作日誌
 │   └── mappings/        # 知識庫
+│   │   ├── ThemeModule.html # 體驗主題與 palette contract 用法
+│   │   └── Toolbar.html    # 工具列、.cbg 專案與 bridge 公開 API 用法
 ├── temp/                # 暫存檔案（僅供開發暫用，不得寫入外部工具目錄）
 ├── backup/              # 備份資料夾
 └── .git/              # Git 倉庫
@@ -145,9 +162,10 @@ CodeBridge/
 - **序列功能**：Rust serialport 提供 Serial Monitor；Plot Data Parser 與圖表 renderer 提供 Serial Plotter
 
 ## 測試與 CI
+- `ui/tests/support/`：`classic-script.js`（以 vm 載入 classic script 的單元測試幫手）與 `tauri-mock.js`（Tauri runtime 與記憶體檔案系統 stub）。
 - `ui/playwright.config.mjs`：system Edge Playwright 配置，自動啟動 Vite。
-- `ui/tests/e2e/`：Engineer／Angel theme、Blockly runtime、v12 XML migration 與 generator golden tests。
+- `ui/tests/e2e/`：Engineer／Angel theme、Blockly runtime、v12 XML migration 與 generator golden tests、工具列與 .cbg 專案流程（`toolbar.spec.js`）。
 - `ui/tests/fixtures/blockly-v12/`：可由 Blockly 13.3.0 載入的 setup/loop、controls、text、variables、array、functions 與 workspace comment fixtures。
-- `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試。
+- `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試、plain code 去除 marker、.cbg 專案狀態與 dirty、工具列按鈕契約測試。
 - `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI。
 - `log/plan/BlocklyTesting.md`：測試 seam、命令與維護規則。

@@ -238,7 +238,10 @@ test('keeps the settings dropdown above the Blockly toolbox', async ({ page }) =
   await page.locator('#btn-settings-root').click();
 
   const result = await page.evaluate(() => {
-    const dropdown = document.querySelector('.dropdown-content');
+    // 以設定按鈕所在的 dropdown 為準，不依賴文件中的第一個 .dropdown-content
+    const dropdown = document.getElementById('btn-settings-root')
+      .closest('.toolbar-dropdown')
+      .querySelector('.dropdown-content');
     const rect = dropdown.getBoundingClientRect();
     const hit = document.elementFromPoint(rect.left + 20, rect.top + 20);
     return {
