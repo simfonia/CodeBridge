@@ -1,143 +1,87 @@
 # CodeBridge 任務進度
 
-## 已完成任務
+## 目錄
 
-### 2026-07-20：piBlockly 積木移植 - 架構重構與 Phase 1
-- [x] 分析 piBlockly 模組載入機制與架構
-- [x] 確立 Locale + Style Overlay 雙風格方案
-- [x] 完成訊息系統、積木定義、產生器移植
-- [x] 建立主題、工具箱、模組載入系統
+- [目前待辦](#目前待辦)
+- [2026-09-26](#2026-09-26)
+- [2026-09-25](#2026-09-25)
+- [2026-07](#2026-07)
 
-### 2026-07-22：模組化重構（方案 A）
-- [x] blocks.js 拆分為 modules/arduino/ 結構
-- [x] generators.js 拆分為 modules/arduino/
-- [x] i18n 三層架構：UI 翻譯（lib/i18n/）vs 積木訊息（modules/*/）
-- [x] 建立 loader.js + style/engineer.js
-- [x] 建立 modules/common/ 存放暫置分類名稱
+---
 
-### 2026-07-24：補上 setup()/loop() Angel 風格文字
-- [x] 確認風格切換 localStorage 保留機制正常（main.js 第 124/141 行）
-- [x] zh-hant.js: `INITIALIZES_SETUP_APPENDTEXT` → '初始化設定 (void setup)'
-- [x] zh-hant.js: `INITIALIZES_LOOP_APPENDTEXT` → '重複執行 (void loop)'
-- [x] en.js: `INITIALIZES_SETUP_APPENDTEXT` → 'Setup (void setup)'
-- [x] en.js: `INITIALIZES_LOOP_APPENDTEXT` → 'Loop (void loop)'
-- [x] engineer.js 無需修改，保留 void setup() / void loop()
+## 目前待辦
 
+> 本節為**彙整視圖**，集結各日期章節中所有未完成項目。
+> 各章節內仍保留原始清單以維持歷史紀錄，兩者若有差異以本章節為準。
 
-### 2026-07-25：程式碼預覽修復 + 預設積木 + 風格切換 + 孤兒積木 + 程式碼定位
-- [x] 建立 `_core.js`（Blockly.Arduino generator 核心）
-- [x] 修改 `generators.js`（setup/loop 對齊 piBlockly 程式碼籃子）
-- [x] 修改 `index.html`（載入 _core.js）
-- [x] 修改 `main.js`（預設積木、renderCode、syncSelection、孤兒積木）
-- [x] 修改 `loader.js`（setBlockStyle 工作區重新載入）
-- [x] 修改 `style.css`（高亮行樣式）
+### 下一階段主線：Arduino CLI 工具鏈 Phase T2
+- [ ] compile / upload 的草稿寫入（plain code 落地、marker 不寫入磁碟）
+- [ ] operation 事件串流與 compiler diagnostics 雙向定位
+- [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
+- [ ] 補明確 CSP（`tauri.conf.json` 目前仍為 `csp: null`，啟用 CLI 串流前必須處理）
 
-## 待辦任務
-### 積木移植（下一優先）
-- [x] 移植 Coding 積木 → `modules/coding/`
-- [x] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
-- [ ] 移植迴圈積木（for, while, repeat）→ `modules/loops/`
-- [ ] 移植數學積木（constrain, map, random）→ `modules/math/`
-- [ ] 移植變數積木 → `modules/variables/`
-- [ ] 移植文字積木 → `modules/text/`
-- [ ] 移植陣列積木 → `modules/array/`
-- [ ] 移植函式積木 → `modules/functions/`
+### 主題架構後續（2026-09-26 palette contract）
+- [ ] 第三方模組若要加入 palette contract，目前需自行宣告 `blockTypes` / `typePrefix`；可考慮併入 `core_manifest.json` 由 loader 自動呼叫 `registerModule()`
+- [ ] 評估是否保留 piBlockly v12 XML migration（`ui/src/lib/blockly/xml-migration.js`）
 
-### 注意事項
-> **⚠️ 移植上述模組時，務必同步清理 `modules/common/zh-hant.js` 與 `modules/common/en.js`**
->
-> 例如移植 logic 模組時：
-> 1. 從 `modules/common/zh-hant.js` 移除 `LOGIC_CATEGORY`
-> 2. 從 `modules/common/en.js` 移除 `LOGIC_CATEGORY`
-> 3. 加入 `modules/logic/zh-hant.js` + `en.js` 定義該分類
-> 4. 更新 `index.html` 載入順序
+### 模組匯入
+- [ ] 從網路匯入感測器與致動器模組（對齊 #piBlockly 匯入的 #pbm）
 
-#### 縮排處理規範（2026-07-26 更新）
-> **✅ 已統一使用 Blockly INDENT 功能，未來移植無需額外處理縮排**
+### 待驗證（2026-07 Loops 模組）
+- [ ] 所有 3 個 Loops 積木可拖入工作區（while / for / break/continue）
+- [ ] 程式碼生成正確（while, for, break/continue）
+- [ ] 風格切換後分類名稱與積木文字正常
+- [ ] 孤兒積木檢測正常
 
-**自動處理（無需擔心）：**
-- setup() 和 loop() 內的程式碼：已透過 `finish()` 統一縮排
-- 一般陳述式積木（如 pinMode、digitalWrite）：返回單行 + `\n`，不涉及縮排
+### 待驗證（2026-07 Blockly 工作區註解）
+- [ ] 工作區註解功能在瀏覽器中正常運作
+- [ ] 工作區註解的保存／載入（XML 序列化）
 
-**遵循 Blockly 標準模式：**
-- **容器型積木**（if/else、for、while、自定義函式）：
-  - 使用 `statementToCode(block, 'INPUT_NAME')` 取得子積木程式碼
-  - Blockly 會自動加入縮排，**不要**手動處理
-  ```javascript
-  var statements = Blockly.Arduino.statementToCode(block, 'DO');  // ✅ 正確
-  ```
+### 品質與測試
+- [ ] 將目前一次性的 Edge smoke test 納入長期 CI fixture
+- [ ] 隨新模組增加更多 v12 XML 與 generator golden fixtures
+- [ ] marked code 與 plain code 分離後，golden tests 改驗正式輸出不含 ID marker
+- [ ] 若未來 Blockly 支援可安全建立 headless temporary block，可移除 `controls_for` 的暫時實例化 skip，改為更完整的欄位文字索引
+- [ ] 若 Variables dynamic category 需要被搜尋，可新增 definition adapter，不直接掃描所有全域 block types
+- [ ] 若需要真正的 runtime 整合測試，可考慮以 `arduino-cli` 官方 binary 作為 CI fixture，或維持目前的 `FakeProcessRunner` 純單元測試策略
 
-- **數值/字串積木**：
-  - 使用 `valueToCode(block, 'INPUT_NAME', ORDER)` 取得表達式
-  - 返回陣列 `[code, order]`
-  ```javascript
-  var value = Blockly.Arduino.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_ATOMIC);
-  return ['digitalRead(' + value + ')', Blockly.Arduino.ORDER_ATOMIC];  // ✅ 正確
-  ```
+---
 
-**關鍵區別：**
-| 方法 | 用途 | 縮排處理 |
-|-----|------|---------|
-| `statementToCode()` | 容器積木的陳述式輸入 | ✅ 自動加入縮排 |
-| `blockToCode()` | 取得單一積木的原始程式碼 | ❌ 不含縮排 |
-| `valueToCode()` | 取得表達式/數值 | ❌ 不含縮排 |
+# 2026-09-26
 
-**移植檢查清單：**
-1. ✅ 是否為 setup/loop 內容？→ 會自動縮排（已統一處理）
-2. ✅ 是否為容器型積木（if/for/while/函式）？→ 使用 `statementToCode()`
-3. ✅ 是否為數值/字串積木？→ 使用 `valueToCode()`
-4. ❌ **不需要**在產生器中手動處理縮排（除非有特殊需求）
+## 2026-09-26：CodeBridge Modules 語意積木 palette contract
 
-**參考實作：**
-- `modules/arduino/generators.js` 第 11-22 行（setup/loop 使用 `blockToCode`）
-- `modules/arduino/generators.js` 第 25-110 行（一般積木使用 `valueToCode`）
+### 已完成
+- [x] 新增 `ui/src/theme/block-palette.js`，以 13 個語意角色取代 18 個 `*_HUE` message key 作為模組色碼唯一來源。
+- [x] `blockly-adapter.js` 改為依 `block.type` 查語意角色取色，移除執行期色碼反查。
+- [x] 新增 `CATEGORY_ROLES`，讓 Variables dynamic 分類也能對齊 Engineer／Angel palette。
+- [x] 提供 `registerModule({id, role, typePrefix?, blockTypes?, colours})`，第三方模組可加入語意 palette contract。
+- [x] 新增 4 個公開行為 contract：語意 manifest 覆蓋 toolbox 全部 block type、依 block type 重新著色、語系檔不再殘留 CodeBridge 專屬 `*_HUE`、第三方模組註冊。
+### 相容層移除（專案未發佈，不保留 legacy）
+- [x] 48 處 block 定義的 `colour: '%{BKY_XXX_HUE}'` 改為 `this.setColour(CodeBridgeBlockPalette.getColourForRole(role))`。
+- [x] 刪除 9 個模組語系檔共 36 行 `*_HUE` 色碼 key 與「顏色」註解。
+- [x] 刪除 `LEGACY_HUE_ROLES`、`syncLegacyHueMessages()`、`getRoleForMessageKey()`。
+- [x] 刪除 `codebridgeTheme` 遷移與 `codebridgeBlockStyle` 第二鍵，持久化僅留 `codebridgeExperiencePreset`。
+- [x] 刪除 toolbox XML 中 13 處硬編碼 `colour` 屬性，一律由 adapter 依語意角色設定。
+- [x] `main.js` 主題切換移除 fallback 分支與雙鍵寫入。
+### 技術深挖 (Technical Deep Dive)
+- colour 是執行期狀態而非識別碼。舊色碼反查在 block 被手動改色後會染成錯誤角色；改用 `block.type` 後，顏色成為 block 的純函式結果。
+- `jsonInit()` 只接受字串，無法在參數物件內呼叫函式取得色碼，因此顏色必須在 `jsonInit()` 之後以 `setColour()` 設定。
+- Blockly 官方 `msg/en.js`、`msg/zh-hant.js` 自帶 `LOGIC_HUE`、`MATH_HUE`、`VARIABLES_HUE`（值為數字色碼），與 CodeBridge 模組的 `*_HUE` 無關，刪除模組定義後仍會存在。
+- `getRoleForBlockType()` 依序檢查第三方註冊 → 精確 `TYPE_ROLES` → 第三方前綴 → 內建前綴，讓 `controls_for`（loops）之類例外不需特例程式碼。
 
-### 2026-07-26：程式碼撰寫導航員 - 實作 Phase 1~3
-- [x] 審核並更新 pilot.md 為 v1.1
-- [x] 建立 `ui/src/lib/practice/practice-mode.js`（比對引擎 + 提示系統）
-- [x] 修改 `index.html`（加入練習模式 UI + script 載入）
-- [x] 修改 `style.css`（加入練習模式樣式）
-- [x] 修改 `main.js`（加入 initPracticeMode 呼叫）
-- [x] 修改 `i18n/zh-hant.js` + `en.js`（加入 PRACTICE_xxx key）
-- [x] 更新 `FILE_STRUCTURE.md`
+### 驗證結果
+- Theme suite：18 passed。
+- 完整 `npm test`：35 passed。
+- `npm run build`：成功。
+- 備份：`backup/block_palette_20260926_090516`、`backup/remove_legacy_20260926_100401`。
 
-### 2026-07-27：程式碼撰寫導航員 - 除錯與優化
-- [x] 修正 F2 提示行號錯位問題（註解行處理）
-- [x] 加入括號間距寬容處理（`setup( )` → `setup()`）
-- [x] 加入 token 空白標準化（逗號、運算子、關鍵字）
-- [x] 作弊窗改為可拖曳全域浮動視窗
-- [x] 作弊窗內容改為保留縮排的原始程式碼
-- [x] 作弊按鈕 tooltip 狀態切換
-- [x] 移除程式碼預覽面板左上角重複的關閉按鈕
-- [x] 進入練習模式時鎖定工作區（多層防護：readOnly + setEnabled + 灰色遮罩）
-- [x] 行號 tooltip 顯示警告訊息
-- [x] 修正 F2 提示邏輯（使用比對結果計算 currentLineIndex）
+### 下次啟動方向 (Next Steps)
+> 當日已結案。以下項目已轉入文首「目前待辦」追蹤。
 
-### 後續任務
-- [ ] 從網路匯入感測器與致動器模組（對齊#piBlockly匯入的#pbm）
+---
 
-### 2026-07-26：啟用 Blockly 工作區註解
-- [x] 診斷右鍵工作區缺少 'Add comment' 選項
-- [x] 在  的  中加入  和 
-- [ ] 驗證工作區註解功能在瀏覽器中正常運作
-- [ ] 考慮工作區註解的保存/載入 (XML 序列化)
-
-### 2026-07-27：移植 Loops 模組 (Engineer 風格對齊 piBlockly)
-- [x] 建立 `modules/loops/zh-hant.js`（Angel 風格基底訊息）
-- [x] 建立 `modules/loops/en.js`（Angel 風格基底訊息）
-- [x] 建立 `modules/loops/blocks.js`（3 個自訂積木：controls_while, controls_for, controls_flow_statements）
-- [x] 建立 `modules/loops/generators.js`（3 個 Arduino 產生器）
-- [x] 從 `modules/common/zh-hant.js` 移除 `LOOPS_CATEGORY`
-- [x] 從 `modules/common/en.js` 移除 `LOOPS_CATEGORY`
-- [x] 更新 `style/engineer.js`（3 個 loops key 對齊 piBlockly Engineer 風格）
-- [x] 更新 `index.html`（加入 loops 模組 script 標籤）
-- [x] 更新 `loader.js`（加入 LOOPS_ZH/LOOPS_EN 註冊）
-- [x] 更新 `FILE_STRUCTURE.md`（加入 loops/ 目錄說明）
-- [x] 待驗證：toolbox 分類名稱正確顯示
-- [ ] 待驗證：所有 3 個積木可拖入工作區
-- [ ] 待驗證：程式碼生成正確 (while, for, break/continue)
-- [ ] 待驗證：風格切換後分類名稱與積木文字正常
-- [ ] 待驗證：孤兒積木檢測正常
+# 2026-09-25
 
 ## 2026-09-25：產品方向調整(參考#piBlockly 及 #pbm)
 
@@ -236,7 +180,6 @@
 - 待完成：完整 `npm test` 與 production build 驗證。
 
 - [x] 完整 `npm test --prefix ui` 與 `npm run build --prefix ui` 驗證通過。
-- [x] 完整 `npm test --prefix ui` 與 `npm run build --prefix ui` 驗證通過。
 
 ## 2026-09-25：新增 Array 與 Functions 模組
 
@@ -263,7 +206,7 @@
 - 手動呼叫積木依自身 mutation 產生參數，不依賴 Blockly 內建 Procedures 自動更新；compose 時以參數名稱保留既有 value connection。
 - `custom_functions_return` 產生器不再手動加入兩個空格，函式本體縮排統一由 `statementToCode()` 處理。
 
-## 下次啟動方向 (Next Steps)
+### 下次啟動方向 (Next Steps)
 1. 評估是否將 marked code 與 plain code 分离，讓 golden tests 直接驗證正式 `.ino` 不含 ID marker。
 2. 後續新增自動同步型客製函式呼叫時，應先定義 Blockly 13 Procedures integration contract，不直接複製 piBlockly v12 API。
 
@@ -295,7 +238,7 @@
 - `npm run build --prefix ui`：成功；僅有既有非 module UMD script bundling warnings。
 - 新增 toolbox search runtime contract 無 browser console error／warning。
 
-## 下次啟動方向 (Next Steps)
+### 下次啟動方向 (Next Steps)
 1. 若未來 Blockly 支援可安全建立 headless temporary block，可移除 `controls_for` 的暫時實例化 skip，改為更完整的欄位文字索引。
 2. 若 Variables dynamic category 需要被搜尋，可新增 Blockly Variables dynamic dropdown 的 definition adapter，不直接掃描所有全域 block types。
 
@@ -347,43 +290,10 @@
 - 合計 29 tests passed。
 - `npm run build --prefix ui`：成功；僅有既有非 module UMD script bundling warnings。
 
-## 下次啟動方向 (Next Steps)
-1. 將模組 `*_HUE` 從 locale message 正式抽離到 CodeBridge Modules palette contract，讓遠端模組不需在 zh-hant／en 重複色碼。
-2. 評估把 Blockly palette 依 block type 映射取代執行期色碼反查，提升第三方模組的自訂主題彈性。
-3. 未來新增 preset 時，只需擴充 preset registry、CSS tokens、Blockly visual adapter 與公開行為測試。
-
-## 2026-09-26：CodeBridge Modules 語意積木 palette contract
-
-### 已完成
-- [x] 新增 `ui/src/theme/block-palette.js`，以 13 個語意角色取代 18 個 `*_HUE` message key 作為模組色碼唯一來源。
-- [x] `blockly-adapter.js` 改為依 `block.type` 查語意角色取色，移除執行期色碼反查。
-- [x] 新增 `CATEGORY_ROLES`，讓 Variables dynamic 分類也能對齊 Engineer／Angel palette。
-- [x] 提供 `registerModule({id, role, typePrefix?, blockTypes?, colours})`，第三方模組可加入語意 palette contract。
-- [x] 新增 4 個公開行為 contract：語意 manifest 覆蓋 toolbox 全部 block type、依 block type 重新著色、語系檔不再殘留 CodeBridge 專屬 `*_HUE`、第三方模組註冊。
-### 相容層移除（專案未發佈，不保留 legacy）
-- [x] 48 處 block 定義的 `colour: '%{BKY_XXX_HUE}'` 改為 `this.setColour(CodeBridgeBlockPalette.getColourForRole(role))`。
-- [x] 刪除 9 個模組語系檔共 36 行 `*_HUE` 色碼 key 與「顏色」註解。
-- [x] 刪除 `LEGACY_HUE_ROLES`、`syncLegacyHueMessages()`、`getRoleForMessageKey()`。
-- [x] 刪除 `codebridgeTheme` 遷移與 `codebridgeBlockStyle` 第二鍵，持久化僅留 `codebridgeExperiencePreset`。
-- [x] 刪除 toolbox XML 中 13 處硬編碼 `colour` 屬性，一律由 adapter 依語意角色設定。
-- [x] `main.js` 主題切換移除 fallback 分支與雙鍵寫入。
-### 技術深挖 (Technical Deep Dive)
-- colour 是執行期狀態而非識別碼。舊色碼反查在 block 被手動改色後會染成錯誤角色；改用 `block.type` 後，顏色成為 block 的純函式結果。
-- `jsonInit()` 只接受字串，無法在參數物件內呼叫函式取得色碼，因此顏色必須在 `jsonInit()` 之後以 `setColour()` 設定。
-- Blockly 官方 `msg/en.js`、`msg/zh-hant.js` 自帶 `LOGIC_HUE`、`MATH_HUE`、`VARIABLES_HUE`（值為數字色碼），與 CodeBridge 模組的 `*_HUE` 無關，刪除模組定義後仍會存在。
-- `getRoleForBlockType()` 依序檢查第三方註冊 → 精確 `TYPE_ROLES` → 第三方前綴 → 內建前綴，讓 `controls_for`（loops）之類例外不需特例程式碼。
-
-### 驗證結果
-- Theme suite：18 passed。
-- 完整 `npm test`：35 passed。
-- `npm run build`：成功。
-- 備份：`backup/block_palette_20260926_090516`、`backup/remove_legacy_20260926_100401`。
-
 ### 下次啟動方向 (Next Steps)
-1. 主題相關待辦已清空；下一階段回到 Arduino CLI 工具鏈 Phase T2（compile／upload 草稿寫入、operation 事件串流、compiler diagnostics 雙向定位）。
-2. 第三方模組仍需自行宣告 `blockTypes`／`typePrefix`；可考慮併入 `core_manifest.json` 由 loader 自動呼叫 `registerModule()`。
-3. 新增 preset 只需擴充 `presets.js`、`presets.css`、`block-palette.js` 與 contract tests，不需修改 `main.js`。
+> 全部 3 項已於 2026-09-26 完成（見上方 2026-09-26 章節）。
 
+---
 ## 2026-09-25：Arduino CLI 工具鏈 Phase T1（B 方案）
 
 ### 決策摘要
@@ -431,8 +341,153 @@
 - `npx vitest run tests/unit/blockly-assets.test.js`：4 tests passed，無回歸。
 - 中英 i18n key 數量一致（80 = 80），Rust 引用的 15 個 key 皆存在於語系檔。
 
-## 下次啟動方向 (Next Steps)
+### 下次啟動方向 (Next Steps)
 1. 進入 Phase T2：compile / upload 的草稿寫入（plain code 落地、marker 不寫入磁碟）、operation 事件串流與 compiler diagnostics 雙向定位。
 2. Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定），讓 T1 的查詢命令有 UI 消費者。
 3. `tauri.conf.json` 仍為 `csp: null`，啟用 CLI 串流前需補明確 CSP。
 4. 若需要真正的 runtime 整合測試，可考慮以 `arduino-cli` 官方 binary 作為 CI fixture，或維持目前的 `FakeProcessRunner` 純單元測試策略。
+
+---
+
+# 2026-07
+
+初期開發階段：架構建立、模組移植與練習模式。
+所有模組移植均已完成；Loops 與工作區註解的待驗證項目已彙整至文首「目前待辦」。
+
+### 2026-07-20：piBlockly 積木移植 - 架構重構與 Phase 1
+- [x] 分析 piBlockly 模組載入機制與架構
+- [x] 確立 Locale + Style Overlay 雙風格方案
+- [x] 完成訊息系統、積木定義、產生器移植
+- [x] 建立主題、工具箱、模組載入系統
+
+### 2026-07-22：模組化重構（方案 A）
+- [x] blocks.js 拆分為 modules/arduino/ 結構
+- [x] generators.js 拆分為 modules/arduino/
+- [x] i18n 三層架構：UI 翻譯（lib/i18n/）vs 積木訊息（modules/*/）
+- [x] 建立 loader.js + style/engineer.js
+- [x] 建立 modules/common/ 存放暫置分類名稱
+
+### 2026-07-24：補上 setup()/loop() Angel 風格文字
+- [x] 確認風格切換 localStorage 保留機制正常（main.js 第 124/141 行）
+- [x] zh-hant.js: `INITIALIZES_SETUP_APPENDTEXT` → '初始化設定 (void setup)'
+- [x] zh-hant.js: `INITIALIZES_LOOP_APPENDTEXT` → '重複執行 (void loop)'
+- [x] en.js: `INITIALIZES_SETUP_APPENDTEXT` → 'Setup (void setup)'
+- [x] en.js: `INITIALIZES_LOOP_APPENDTEXT` → 'Loop (void loop)'
+- [x] engineer.js 無需修改，保留 void setup() / void loop()
+
+
+### 2026-07-25：程式碼預覽修復 + 預設積木 + 風格切換 + 孤兒積木 + 程式碼定位
+- [x] 建立 `_core.js`（Blockly.Arduino generator 核心）
+- [x] 修改 `generators.js`（setup/loop 對齊 piBlockly 程式碼籃子）
+- [x] 修改 `index.html`（載入 _core.js）
+- [x] 修改 `main.js`（預設積木、renderCode、syncSelection、孤兒積木）
+- [x] 修改 `loader.js`（setBlockStyle 工作區重新載入）
+- [x] 修改 `style.css`（高亮行樣式）
+
+---
+
+### 積木移植清單（2026-07 當時規劃，現已全部完成）
+- [x] 移植 Coding 積木 → `modules/coding/`
+- [x] 移植邏輯積木（if/else, compare, operation, boolean）→ `modules/logic/`
+- [x] 移植迴圈積木（for, while, repeat）→ `modules/loops/`
+- [x] 移植數學積木（constrain, map, random）→ `modules/math/`
+- [x] 移植變數積木 → `modules/variables/`
+- [x] 移植文字積木 → `modules/text/`
+- [x] 移植陣列積木 → `modules/array/`
+- [x] 移植函式積木 → `modules/functions/`
+
+### 注意事項
+> **⚠️ 移植上述模組時，務必同步清理 `modules/common/zh-hant.js` 與 `modules/common/en.js`**
+>
+> 例如移植 logic 模組時：
+> 1. 從 `modules/common/zh-hant.js` 移除 `LOGIC_CATEGORY`
+> 2. 從 `modules/common/en.js` 移除 `LOGIC_CATEGORY`
+> 3. 加入 `modules/logic/zh-hant.js` + `en.js` 定義該分類
+> 4. 更新 `index.html` 載入順序
+
+#### 縮排處理規範（2026-07-26 更新）
+> **✅ 已統一使用 Blockly INDENT 功能，未來移植無需額外處理縮排**
+
+**自動處理（無需擔心）：**
+- setup() 和 loop() 內的程式碼：已透過 `finish()` 統一縮排
+- 一般陳述式積木（如 pinMode、digitalWrite）：返回單行 + `\n`，不涉及縮排
+
+**遵循 Blockly 標準模式：**
+- **容器型積木**（if/else、for、while、自定義函式）：
+  - 使用 `statementToCode(block, 'INPUT_NAME')` 取得子積木程式碼
+  - Blockly 會自動加入縮排，**不要**手動處理
+  ```javascript
+  var statements = Blockly.Arduino.statementToCode(block, 'DO');  // ✅ 正確
+  ```
+
+- **數值/字串積木**：
+  - 使用 `valueToCode(block, 'INPUT_NAME', ORDER)` 取得表達式
+  - 返回陣列 `[code, order]`
+  ```javascript
+  var value = Blockly.Arduino.valueToCode(block, 'VALUE', Blockly.Arduino.ORDER_ATOMIC);
+  return ['digitalRead(' + value + ')', Blockly.Arduino.ORDER_ATOMIC];  // ✅ 正確
+  ```
+
+**關鍵區別：**
+| 方法 | 用途 | 縮排處理 |
+|-----|------|---------|
+| `statementToCode()` | 容器積木的陳述式輸入 | ✅ 自動加入縮排 |
+| `blockToCode()` | 取得單一積木的原始程式碼 | ❌ 不含縮排 |
+| `valueToCode()` | 取得表達式/數值 | ❌ 不含縮排 |
+
+**移植檢查清單：**
+1. ✅ 是否為 setup/loop 內容？→ 會自動縮排（已統一處理）
+2. ✅ 是否為容器型積木（if/for/while/函式）？→ 使用 `statementToCode()`
+3. ✅ 是否為數值/字串積木？→ 使用 `valueToCode()`
+4. ❌ **不需要**在產生器中手動處理縮排（除非有特殊需求）
+
+**參考實作：**
+- `modules/arduino/generators.js` 第 11-22 行（setup/loop 使用 `blockToCode`）
+- `modules/arduino/generators.js` 第 25-110 行（一般積木使用 `valueToCode`）
+
+### 2026-07-26：程式碼撰寫導航員 - 實作 Phase 1~3
+- [x] 審核並更新 pilot.md 為 v1.1
+- [x] 建立 `ui/src/lib/practice/practice-mode.js`（比對引擎 + 提示系統）
+- [x] 修改 `index.html`（加入練習模式 UI + script 載入）
+- [x] 修改 `style.css`（加入練習模式樣式）
+- [x] 修改 `main.js`（加入 initPracticeMode 呼叫）
+- [x] 修改 `i18n/zh-hant.js` + `en.js`（加入 PRACTICE_xxx key）
+- [x] 更新 `FILE_STRUCTURE.md`
+
+### 2026-07-27：程式碼撰寫導航員 - 除錯與優化
+- [x] 修正 F2 提示行號錯位問題（註解行處理）
+- [x] 加入括號間距寬容處理（`setup( )` → `setup()`）
+- [x] 加入 token 空白標準化（逗號、運算子、關鍵字）
+- [x] 作弊窗改為可拖曳全域浮動視窗
+- [x] 作弊窗內容改為保留縮排的原始程式碼
+- [x] 作弊按鈕 tooltip 狀態切換
+- [x] 移除程式碼預覽面板左上角重複的關閉按鈕
+- [x] 進入練習模式時鎖定工作區（多層防護：readOnly + setEnabled + 灰色遮罩）
+- [x] 行號 tooltip 顯示警告訊息
+- [x] 修正 F2 提示邏輯（使用比對結果計算 currentLineIndex）
+
+### 2026-07-26：啟用 Blockly 工作區註解
+- [x] 診斷右鍵工作區缺少 'Add comment' 選項
+- [x] 在 Blockly v13 的 `ContextMenuItems.registerCommentOptions()` 中加入工作區註解選項
+- [ ] 驗證工作區註解功能在瀏覽器中正常運作
+- [ ] 考慮工作區註解的保存／載入（XML 序列化）
+
+### 2026-07-27：移植 Loops 模組 (Engineer 風格對齊 piBlockly)
+- [x] 建立 `modules/loops/zh-hant.js`（Angel 風格基底訊息）
+- [x] 建立 `modules/loops/en.js`（Angel 風格基底訊息）
+- [x] 建立 `modules/loops/blocks.js`（3 個自訂積木：controls_while, controls_for, controls_flow_statements）
+- [x] 建立 `modules/loops/generators.js`（3 個 Arduino 產生器）
+- [x] 從 `modules/common/zh-hant.js` 移除 `LOOPS_CATEGORY`
+- [x] 從 `modules/common/en.js` 移除 `LOOPS_CATEGORY`
+- [x] 更新 `style/engineer.js`（3 個 loops key 對齊 piBlockly Engineer 風格）
+- [x] 更新 `index.html`（加入 loops 模組 script 標籤）
+- [x] 更新 `loader.js`（加入 LOOPS_ZH/LOOPS_EN 註冊）
+- [x] 更新 `FILE_STRUCTURE.md`（加入 loops/ 目錄說明）
+- [x] 待驗證：toolbox 分類名稱正確顯示
+- [ ] 待驗證：所有 3 個積木可拖入工作區
+- [ ] 待驗證：程式碼生成正確 (while, for, break/continue)
+- [ ] 待驗證：風格切換後分類名稱與積木文字正常
+- [ ] 待驗證：孤兒積木檢測正常
+
+### 2026-07-27：後續任務
+- [ ] 從網路匯入感測器與致動器模組（對齊 #piBlockly 匯入的 #pbm）
