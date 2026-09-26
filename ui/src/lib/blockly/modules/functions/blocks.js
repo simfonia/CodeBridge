@@ -155,6 +155,25 @@
     }
   };
 
+  function appendMessageFields(inputRow, message, hasReturnType) {
+    var tokens = message.split(/(%[123])/g);
+    tokens.forEach(function(token) {
+      if (token === '%1') {
+        inputRow.appendField(hasReturnType
+          ? new Blockly.FieldDropdown(typeOptions)
+          : new Blockly.FieldTextInput('myFunction'), hasReturnType ? 'TYPE' : 'NAME');
+      } else if (token === '%2') {
+        inputRow.appendField(hasReturnType
+          ? new Blockly.FieldTextInput('myFunction')
+          : new Blockly.FieldLabel(''), hasReturnType ? 'NAME' : 'PARAMS');
+      } else if (token === '%3') {
+        inputRow.appendField(new Blockly.FieldLabel(''), 'PARAMS');
+      } else if (token) {
+        inputRow.appendField(token);
+      }
+    });
+  }
+
   function definitionMixin(hasReturnType) {
     var definition = mutationMixin();
     definition.init = function() {
@@ -162,14 +181,7 @@
         ? 'CUSTOM_FUNCTIONS_DEFRETURN_MESSAGE'
         : 'CUSTOM_FUNCTIONS_DEFNORETURN_MESSAGE'];
       var inputRow = this.appendDummyInput('TOPROW');
-      if (hasReturnType) {
-        inputRow.appendField(new Blockly.FieldDropdown(typeOptions), 'TYPE');
-      }
-      inputRow.appendField(message.split('%1')[0]);
-      inputRow.appendField(new Blockly.FieldTextInput('myFunction'), 'NAME');
-      inputRow.appendField(' (');
-      inputRow.appendField('', 'PARAMS');
-      inputRow.appendField(') {');
+      appendMessageFields(inputRow, message, hasReturnType);
       this.appendStatementInput('STACK');
       this.appendDummyInput('BOTTOMROW').appendField('}');
       this.setColour('%{BKY_FUNCTIONS_HUE}');

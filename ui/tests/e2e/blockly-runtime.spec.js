@@ -286,3 +286,38 @@ test('refreshes toolbox search after switching block styles', async ({ page }) =
   )).toContain('array_declare_global');
   await expect(page.locator('.blocklyToolboxFlyout')).toBeVisible();
 });
+
+test('does not leave function message placeholders after switching back to Chinese', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('codebridgeLang', 'en'));
+  await page.goto('/');
+  await page.waitForFunction(() => window.Blockly?.getMainWorkspace?.());
+
+  const englishText = await page.evaluate(() => {
+    const workspace = window.Blockly.getMainWorkspace();
+    const block = workspace.newBlock('custom_functions_defreturn');
+    block.initSvg();
+    block.setFieldValue('temperature', 'NAME');
+    block.setFieldValue('int value', 'PARAMS');
+    sessionStorage.setItem('codebridgeWorkspaceXml', Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace)));
+    return block.getSvgRoot().getAttribute('aria-label') || '';
+  });
+
+  expect(englishText).not.toContain('%1');
+  expect(englishText).not.toContain('%2');
+  expect(englishText).not.toContain('%3');
+
+  await page.evaluate(() => {
+    localStorage.setItem('codebridgeLang', 'zh-hant');
+    location.reload();
+  });
+  await page.waitForFunction(() => window.Blockly?.getMainWorkspace?.());
+
+  const chineseText = await page.evaluate(() => {
+    const block = window.Blockly.getMainWorkspace().getBlocksByType('custom_functions_defreturn', false)[0];
+    return block ? block.getSvgRoot().getAttribute('aria-label') || '' : '';
+  });
+
+  expect(chineseText).not.toContain('%1');
+  expect(chineseText).not.toContain('%2');
+  expect(chineseText).not.toContain('%3');
+});

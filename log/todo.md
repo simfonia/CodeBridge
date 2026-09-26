@@ -351,3 +351,56 @@
 1. 將模組 `*_HUE` 從 locale message 正式抽離到 CodeBridge Modules palette contract，讓遠端模組不需在 zh-hant／en 重複色碼。
 2. 評估把 Blockly palette 依 block type 映射取代執行期色碼反查，提升第三方模組的自訂主題彈性。
 3. 未來新增 preset 時，只需擴充 preset registry、CSS tokens、Blockly visual adapter 與公開行為測試。
+
+## 2026-09-25：Arduino CLI 工具鏈 Phase T1（B 方案）
+
+### 決策摘要
+1. 授權決策採 **B 方案**：CodeBridge **不內嵌打包** `arduino-cli` 執行檔。`arduino-cli` 為 GPL-3.0，官方 README 明載商業情境需購買授權；內嵌分發會使 CodeBridge 承擔 GPL 義務並阻礙未來閉源商業化。改採「外部依賴 + 自動引導安裝」。
+2. CLI 路徑解析優先序：使用者設定路徑 → 系統 PATH → 回報 `CLI_ERROR_NOT_FOUND` 並附安裝指令與官方網址。使用者設定的路徑若失效，**不靜默 fallback**，直接回報設定錯誤。
+3. 設定隔離：所有 CLI 呼叫一律帶 `--config-dir <app_data>/arduino`，資料置於 `arduino/data`、使用者目錄 `arduino/user`、下載 `arduino/downloads`，草稿暫存於 `app_data/sketches`。不污染使用者的 `%LOCALAPPDATA%\Arduino15`。
+4. 不使用 `tauri-plugin-shell` 執行 CLI，改用 `std::process::Command`（對齊 cocoya `mcu.rs`），以取得 stderr 管線、逐行解析與 `kill()` 取消能力。
+5. `ProcessRunner` 抽為 trait，讓 command → 執行 → 解析全流程可在未安裝 arduino-cli 的環境下測試。
+6. 編譯器診斷支援 gcc 的冒號式（`<path>:<line>:<col>:`）與括號式（`<path>(<line>,<col>)`）兩種格式，Windows 磁碟機冒號不會被誤判。
+
+### 新增檔案
+- `src-tauri/src/arduino/mod.rs`：公開 facade、`ToolchainStatus`、`InstallHint`、`CodeBridgeToolchain`。
+- `src-tauri/src/arduino/paths.rs`：`CliHandle` / `CliSource` / `CliError` / `ToolchainDirs` 與 `resolve_cli`。
+- `src-tauri/src/arduino/command.rs`：純函式 command builder，覆蓋 `version` / `board list|listall|search|details|attach` / `core list|search|install|uninstall|update-index` / `lib search|list|install|uninstall` / `compile` / `upload` / `monitor` / `config init|dump`。
+- `src-tauri/src/arduino/parser.rs`：`--json` 回應解析，欄位依 CLI 實際的 snake_case 命名。
+- `src-tauri/src/arduino/runner.rs`：`ProcessRunner` trait、`StdProcessRunner`、`RunRequest` / `RunResult`、雙管線背景讀取與 `try_wait` 輪詢逾時。
+- `src-tauri/src/arduino/diagnostics.rs`：`Diagnostic` / `DiagnosticSeverity` 與行號解析。
+- `src-tauri/src/arduino/operations.rs`：`OperationRegistry`（狀態、取消旗標、prune）。
+
+### 修改檔案
+- `src-tauri/src/lib.rs`：`AppState` 擴充（cli_path_override、board_manager_urls、operations、toolchain_dirs），啟動時建立隔離目錄，新增 `toolchain()` / `resolve_cli_for()` 與 `events` 事件名稱。
+- `src-tauri/src/commands.rs`：改為唯讀查詢命令（`toolchain_detect`、`toolchain_set_cli_path`、`board_list_detected`、`board_list_all`、`board_details`、`core_list`、`lib_list`、`operation_status`、`operation_cancel`、`refresh_serial_ports`）。`run_arduino_code` / `open_serial_monitor` 改為明確回報未實作，避免留下可被呼叫的空殼。
+- `ui/src/lib/i18n/zh-hant.js` + `en.js`：新增 `CLI_*`、`SERIAL_MONITOR_NOT_IMPLEMENTED`、`COMPILE_NOT_IMPLEMENTED` 共 44 個 key，中英完全對齊。
+- `FILE_STRUCTURE.md`：補入 `src-tauri/src/arduino/` 結構與 B 方案說明。
+
+### 技術深挖 (Technical Deep Dive)
+#### arduino-cli 的 JSON 欄位是 snake_case
+最初為 parser 的 struct 加上 `#[serde(rename_all = "camelCase")]` 會導致全部欄位解析為空——CLI 實際輸出 `installed_version`、`build_path`、`tools_dependencies` 等 snake_case 鍵。最終移除 camelCase 改用預設 snake_case，並對 `VersionString`（大寫開頭的特殊命名）使用顯式 `rename`。Tauri 傳給前端的 payload 則在 `commands.rs` 內以 `serde_json::json!` 手動組成 camelCase，兩層職責分離：解析層貼合 CLI、輸出層貼合前端。
+
+#### gcc 行號解析不可由左往右掃描
+`C:\path\sketch.ino:7:3: error: ...` 的磁碟機冒號會讓 naive 的 `rsplitn(3, ':')` 誤判。正確作法是逐一檢查每個 `": "` 候選點（檔名不可能含「冒號＋空格」），判斷其前綴是否以 `:<line>:<col>` 結尾；這同時排除了 `C:\`（冒號後接反斜線）。
+
+#### 執行檔搜尋需同時接受目錄與檔案
+`resolve_cli` 的 `path_override` 語意統一為「待搜尋目錄」，交由 `search_in_dir` 處理，避免出現「傳入目錄卻被當成執行檔」的陷阱。Windows 下需同時嘗試 `arduino-cli.exe` 與無副檔名的 `arduino-cli`（部分安裝方式產生 shim）。
+
+#### 逾時採 try_wait 輪詢而非新 crate
+以 50ms 間隔 `try_wait` 輪詢，逾時時 `kill()` 子程序，不需引入 `wait-timeout` 等額外依賴。stdout 與 stderr 各由獨立執行緒讀乾淨，避免輸出量大時子程序阻塞於滿管線造成死鎖。
+
+#### 錯誤訊息對前端採 KEY|detail 格式
+`describe()` 統一輸出 `CLI_ERROR_XXX|詳細訊息`，前端以 `KEY` 查 i18n、`詳細訊息` 作為補充。`RunResult::error()` 為非消耗版本，可在仍需讀取 stdout 時安全呼叫（`into_error()` 會消耗 self）。
+
+### 驗證結果
+- `cargo test --lib`：85 tests passed、0 failed、0 warnings。
+- `npm run build --prefix ui`：成功（376ms）。
+- `npx vitest run tests/unit/blockly-assets.test.js`：4 tests passed，無回歸。
+- 中英 i18n key 數量一致（80 = 80），Rust 引用的 15 個 key 皆存在於語系檔。
+
+## 下次啟動方向 (Next Steps)
+1. 進入 Phase T2：compile / upload 的草稿寫入（plain code 落地、marker 不寫入磁碟）、operation 事件串流與 compiler diagnostics 雙向定位。
+2. Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定），讓 T1 的查詢命令有 UI 消費者。
+3. `tauri.conf.json` 仍為 `csp: null`，啟用 CLI 串流前需補明確 CSP。
+4. 若需要真正的 runtime 整合測試，可考慮以 `arduino-cli` 官方 binary 作為 CI fixture，或維持目前的 `FakeProcessRunner` 純單元測試策略。

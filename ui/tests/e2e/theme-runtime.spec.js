@@ -233,3 +233,84 @@ test('uses a distinct Blockly block palette for each visual theme', async ({ pag
   expect(engineerColour).toBe('#22a06b');
   expect(angelColour).toBe('#3fbf91');
 });
+
+test('keeps the settings dropdown above the Blockly toolbox', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.Blockly?.getMainWorkspace?.());
+  await page.locator('#btn-settings-root').click();
+
+  const result = await page.evaluate(() => {
+    const dropdown = document.querySelector('.dropdown-content');
+    const rect = dropdown.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.left + 20, rect.top + 20);
+    return {
+      dropdownVisible: getComputedStyle(dropdown).display !== 'none',
+      hitInsideDropdown: dropdown.contains(hit),
+      hitTag: hit?.tagName,
+      hitId: hit?.id ?? '',
+      hitClassName: typeof hit?.className === 'string' ? hit.className : ''
+    };
+  });
+
+  expect(result.dropdownVisible).toBe(true);
+  expect(result.hitInsideDropdown).toBe(true);
+});
+
+test('keeps Engineer toolbox, flyout, highlight and switch visually aligned', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    localStorage.setItem('codebridgeExperiencePreset', 'engineer');
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => window.Blockly?.getMainWorkspace?.());
+
+  const result = await page.evaluate(() => {
+    const workspace = window.Blockly.getMainWorkspace();
+    const hiddenCategories = Array.from(document.querySelectorAll('#toolbox-xml category'));
+    const visibleCategories = Array.from(document.querySelectorAll('.blocklyToolboxCategory'));
+    const categories = hiddenCategories.map((categoryNode, index) => {
+      const firstBlockNode = categoryNode.querySelector('block');
+      if (!firstBlockNode) return null;
+      const firstBlock = workspace.newBlock(firstBlockNode.getAttribute('type'));
+      const firstBlockColour = firstBlock.getColour();
+      firstBlock.dispose(false);
+      const swatch = getComputedStyle(visibleCategories[index]).borderLeftColor;
+      return { swatch, firstBlockColour };
+    }).filter(Boolean);
+    const flyout = document.querySelector('.blocklyFlyout');
+    const codeLine = document.querySelector('.code-line');
+    return {
+      categories,
+      flyout: flyout ? getComputedStyle(flyout).backgroundColor : null,
+      slider: document.querySelector('#themeToggle + .slider') ? getComputedStyle(document.querySelector('#themeToggle + .slider')).backgroundColor : null,
+      knob: document.querySelector('#themeToggle + .slider') ? getComputedStyle(document.querySelector('#themeToggle + .slider'), '::before').backgroundColor : null,
+      codeLineExists: Boolean(codeLine)
+    };
+  });
+  await page.waitForTimeout(100);
+  await page.evaluate(() => document.querySelector('#codeContent .code-line')?.classList.add('highlight-line'));
+  await page.waitForFunction(() => {
+    const line = document.querySelector('#codeContent .code-line.highlight-line');
+    return line && getComputedStyle(line).backgroundColor === 'rgba(53, 199, 212, 0.14)';
+  });
+  const highlightStyles = await page.evaluate(() => {
+    const codeLine = document.querySelector('#codeContent .code-line.highlight-line');
+    return {
+      background: getComputedStyle(codeLine).backgroundColor,
+      border: getComputedStyle(codeLine).borderLeftColor
+    };
+  });
+
+  const toRgb = (hex) => {
+    const value = hex.replace('#', '');
+    const full = value.length === 3 ? value.split('').map((part) => part + part).join('') : value;
+    return `rgb(${parseInt(full.slice(0, 2), 16)}, ${parseInt(full.slice(2, 4), 16)}, ${parseInt(full.slice(4, 6), 16)})`;
+  };
+  expect(result.categories.length).toBeGreaterThan(5);
+  expect(result.categories.every(({ swatch, firstBlockColour }) => swatch === toRgb(firstBlockColour))).toBe(true);
+  expect(result.flyout).toBe('rgb(18, 27, 43)');
+  expect(highlightStyles.background).toBe('rgba(53, 199, 212, 0.14)');
+  expect(highlightStyles.border).toBe('rgb(53, 199, 212)');
+  expect(result.slider).toBe('rgb(48, 68, 95)');
+  expect(result.knob).toBe('rgb(207, 232, 245)');
+});

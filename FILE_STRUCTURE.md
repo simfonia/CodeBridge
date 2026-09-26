@@ -15,8 +15,16 @@ CodeBridge/
 │   ├── icons/           # 應用圖示
 │   └── src/
 │       ├── main.rs      # 主入口
-│       ├── lib.rs       # 應用程式邏輯
-│       └── commands.rs  # Tauri 指令 (serial, arduino)
+│       ├── lib.rs       # 應用程式邏輯、AppState、工具鏈 facade、事件名稱
+│       ├── commands.rs  # Tauri 指令 (serial, toolchain, board, library, operation)
+│       └── arduino/     # Arduino CLI 整合（B 方案：外部依賴 + 引導安裝）
+│           ├── mod.rs           # 公開 facade：CodeBridgeToolchain、ToolchainStatus
+│           ├── paths.rs         # CLI 路徑解析（使用者設定 → 系統 PATH）與隔離目錄
+│           ├── command.rs       # 純函式 command builder（board/core/lib/compile/upload/monitor）
+│           ├── parser.rs        # arduino-cli --json 回應解析（snake_case）
+│           ├── runner.rs        # ProcessRunner trait + StdProcessRunner（逾時/取消/背壓管線）
+│           ├── diagnostics.rs   # compiler_err 行號解析（gcc 冒號式與括號式）
+│           └── operations.rs    # 長作業 registry（狀態、取消、prune）
 │
 ├── ui/                  # 前端 (TypeScript + Blockly)
 │   ├── package.json     # 前端 npm 配置
@@ -128,7 +136,7 @@ CodeBridge/
 ## 核心技術
 - **前端**：Svelte + TypeScript + Blockly v13.3.0 + Vite
 - **後端**：Rust + Tauri 2.0
-- **Arduino 整合**：Arduino CLI；負責 core、library、board discovery、compile 與 upload
+- **Arduino 整合**：Arduino CLI 採 **B 方案（外部依賴 + 引導安裝）**，不內嵌打包 GPL-3.0 執行檔；CodeBridge 負責 core、library、board discovery、compile 與 upload，並以 `--config-dir` 將資料隔離於 `<app_data>/arduino`
 - **模組責任**：CodeBridge 提供 C++、Coding 與 Arduino 基礎核心積木；新的 `codebridge-modules` repository 提供硬體、感測器、致動器、第三方 library 與教學模組
 - **舊 pbm 定位**：`C:\Workspace\piblockly-modules` 僅作為 migration source，不在原地升級為正式 CodeBridge repository
 - **遠端模組契約**：CodeBridge Module Runtime 與新 repository 共用版本化 manifest、compatibility、checksum 與 dependency 驗證

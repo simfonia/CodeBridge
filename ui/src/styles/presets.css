@@ -24,6 +24,10 @@
     --cb-code-string: #c3e88d;
     --cb-code-comment: #697a95;
     --cb-code-attribute: #ffcb6b;
+    --cb-code-highlight: rgba(53, 199, 212, 0.14);
+    --cb-code-highlight-border: #35c7d4;
+    --cb-switch-track: #30445f;
+    --cb-switch-thumb: #cfe8f5;
     color-scheme: dark;
 }
 
@@ -52,23 +56,23 @@
     --cb-code-string: #16825d;
     --cb-code-comment: #8b7b8e;
     --cb-code-attribute: #b45309;
+    --cb-code-highlight: rgba(233, 79, 145, 0.14);
+    --cb-code-highlight-border: #e94f91;
+    --cb-switch-track: #d9c4d0;
+    --cb-switch-thumb: #ffffff;
     color-scheme: light;
 }
 
 /* 應用程式表面：功能 CSS 透過語意 token 取得目前 preset 的色彩。 */
 #blocklyDiv,
 .blocklyToolbox,
-.blocklyFlyout,
-.blocklyToolboxCategory,
 .blocklyDropdownDiv {
     background: var(--cb-surface) !important;
     color: var(--cb-text) !important;
 }
 
-.blocklyToolboxDivider,
-.blocklyToolboxCategory,
-.blocklyFlyoutDivider {
-    border-color: var(--cb-border) !important;
+.blocklyToolboxCategory {
+    color: var(--cb-text) !important;
 }
 
 .blocklyToolboxCategory .blocklyToolboxCategoryLabel,
@@ -220,6 +224,48 @@
 .hint-complete,
 .cheat-content {
     color: var(--cb-text);
+}
+
+[data-codebridge-preset='engineer'] .blocklyFlyout,
+[data-codebridge-preset='engineer'] .blocklyToolboxFlyout,
+[data-codebridge-preset='engineer'] .blocklyFlyoutBackground,
+[data-codebridge-preset='engineer'] .blocklyFlyout .blocklyFlyoutBackground,
+[data-codebridge-preset='engineer'] #blocklyDiv > .blocklyFlyout,
+[data-codebridge-preset='engineer'] .injectionDiv > .blocklyFlyout,
+[data-codebridge-preset='engineer'] .blocklyFlyoutScrollbar,
+[data-codebridge-preset='engineer'] .blocklyFlyout .blocklyScrollbarThumb {
+    background: var(--cb-surface) !important;
+    background-color: var(--cb-surface) !important;
+}
+
+[data-codebridge-preset='engineer'] path.blocklyFlyoutBackground {
+    fill: var(--cb-surface) !important;
+    stroke: var(--cb-border) !important;
+}
+
+[data-codebridge-preset='engineer'] .blocklyFlyout * {
+    scrollbar-color: var(--cb-border) transparent;
+}
+
+[data-codebridge-preset='engineer'] .code-line.highlight-line {
+    background: rgba(53, 199, 212, 0.14) !important;
+    border-left: 3px solid #35c7d4 !important;
+}
+
+[data-codebridge-preset='engineer'] .slider {
+    background-color: var(--cb-switch-track) !important;
+}
+
+[data-codebridge-preset='engineer'] .slider:before {
+    background-color: var(--cb-switch-thumb) !important;
+}
+
+[data-codebridge-preset='engineer'] input:checked + .slider {
+    background-color: var(--cb-primary) !important;
+}
+
+[data-codebridge-preset='engineer'] .blocklyToolboxCategory .blocklyToolboxCategoryLabel {
+    color: var(--cb-text) !important;
 }
 
 [data-codebridge-preset='engineer'] .toolbar-btn img,

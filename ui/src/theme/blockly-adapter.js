@@ -106,6 +106,25 @@
                 var paletteColour = sourceColours[String(node.getAttribute('colour')).toLowerCase()];
                 if (paletteColour) node.setAttribute('colour', paletteColour);
             });
+
+            // 分類色塊對齊分類內第一個積木的實際 colour。
+            // 只處理含有 block 的分類；Variables dynamic 等無固定 block 的分類保持原色。
+            if (workspace) {
+                activeToolbox.querySelectorAll('category').forEach(function(categoryNode) {
+                    var firstBlockNode = categoryNode.querySelector('block');
+                    if (!firstBlockNode) return;
+                    var temporaryBlock = null;
+                    try {
+                        temporaryBlock = workspace.newBlock(firstBlockNode.getAttribute('type'));
+                        categoryNode.setAttribute('colour', temporaryBlock.getColour());
+                    } catch (error) {
+                        console.warn('[CodeBridge] Unable to align toolbox category colour:', error);
+                    } finally {
+                        if (temporaryBlock) temporaryBlock.dispose(false);
+                    }
+                });
+            }
+
             if (workspace && typeof workspace.updateToolbox === 'function') {
                 workspace.updateToolbox(activeToolbox);
             }
