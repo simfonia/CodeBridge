@@ -83,6 +83,22 @@ var UI_EN = {
     CLI_SIZE_FLASH: 'Program storage %1 bytes (%2%%)',
     CLI_SIZE_RAM: 'Dynamic memory %1 bytes (%2%%)',
     
+    // Board / serial auto-detection (T2-D)
+    TLB_SELECT_BOARD: 'Select Board',
+    TLB_BOARD_SEARCH: 'Search Boards',
+    TLB_BOARD_SEARCH_PLACEHOLDER: 'Search boards...',
+    TLB_BOARD_INSTALLED: 'Installed',
+    TLB_BOARD_ALL: 'All Boards',
+    TLB_BOARD_NO_CORE: 'No matching core found. Install the board core first.',
+    TLB_BOARD_NONE_SELECTED: 'No board selected',
+    TLB_BOARD_MANAGER: 'Board Manager',
+    CLI_DETECTING_BOARD: 'Detecting board...',
+    CLI_BOARD_DETECTED: 'Detected %1',
+    CLI_BOARD_UNKNOWN_PORT: 'Cannot identify a board for %1. Please choose one manually.',
+    CLI_ERROR_NO_BOARD_SELECTED: 'No board selected',
+    MSG_BOARD_MISMATCH: 'Detected board (%1) differs from the current setting (%2). Upload anyway?',
+    MSG_CONTINUE: 'Continue',
+
     // Compile diagnostics
     CLI_DIAGNOSTIC_ERROR: 'Error',
     CLI_DIAGNOSTIC_WARNING: 'Warning',

@@ -33,10 +33,10 @@ var CodeBridgeToolbar = (function() {
         'practice-cheat': { id: 'btn-cheat', implemented: true, handledBy: 'practice', labelKey: 'PRACTICE_CHEAT' },
 
         // 設定選單項目（`btn-diagnose` 等 dropdown-item）不在工具列 registry 契約範圍內，
-        // 由 T2-D 的 Board Manager／環境診斷一併實作。
+        // 留待 Phase 4 的 Board Manager／環境診斷實作。
         //
-        // 開發板自動偵測於 T2-D 實作（board-detector.js + serial-selector 綁定）。
-        'refresh-serial': { id: 'btn-refresh-serial', implemented: false, handledBy: 'none', labelKey: 'TLB_SERIAL_REFRESH' }
+        // 序列埠重新整理與開發板自動偵測已於 T2-D 上線（board-detector.js）。
+        'refresh-serial': { id: 'btn-refresh-serial', implemented: true, handledBy: 'board', labelKey: 'TLB_SERIAL_REFRESH' }
     };
 
     function findByElement(element) {

@@ -117,10 +117,10 @@
 
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
-                    <div class="toolbar-btn" id="btn-refresh-serial" data-action="refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}" disabled>
+                    <div class="toolbar-btn" id="btn-refresh-serial" data-action="refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
                         <img src="src/icons/connect_serial_24dp_1F1F1F.png" alt="">
                     </div>
-                    <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}" disabled>
+                    <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}">
                         <option value="">%{BKY_TLB_NO_PORT}</option>
                     </select>
                     <div class="toolbar-separator"></div>
@@ -612,6 +612,9 @@
 
     <!-- ====== Arduino CLI 編譯／上傳控制器（T2-C） ====== -->
     <script src="src/lib/arduino/compile-controller.js"></script>
+
+    <!-- ====== 板子／序列埠自動偵測（T2-D） ====== -->
+    <script src="src/lib/arduino/board-detector.js"></script>
 
     <!-- ====== 工具列按鈕 registry 與行為 ====== -->
     <script src="src/lib/ui/toolbar-registry.js"></script>

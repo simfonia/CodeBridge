@@ -682,6 +682,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 6. 板子／序列埠自動偵測（T2-D）
+    //    訂閱 Rust watcher 的熱插拔事件，維護工具列的序列埠下拉，
+    //    並在偵測到板子時填入專案的 fqbn（僅在使用者尚未選過板子時）。
+    if (window.CodeBridgeBoardDetector) {
+        window.CodeBridgeBoardDetector.init({ store: projectStore });
+    }
+
     var initialState = projectStore.getState();
     var savedSnapshot = projectStore.getSnapshot();
     var draft = projectStore.getDraft();

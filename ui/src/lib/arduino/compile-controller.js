@@ -307,6 +307,22 @@ var CodeBridgeCompile = (function() {
         });
     }
 
+    function boardDetector() { return window.CodeBridgeBoardDetector; }
+
+    /// 上傳前確認板子無誤。
+    ///
+    /// 偵測到的硬體與專案設定不一致時請使用者確認 —— 直接上傳會把程式寫進
+    /// 錯誤的晶片，事後難以察覺。偵測端不可用（純瀏覽器、無對應 core）時
+    /// 照常放行，後端的 `verify_build` 仍會擋下 FQBN 不符的 build。
+    function confirmBoard() {
+        var detector = boardDetector();
+        if (!detector || typeof detector.verifyBoardForUpload !== 'function') {
+            return Promise.resolve(true);
+        }
+        return Promise.resolve(detector.verifyBoardForUpload())
+            .catch(function() { return true; });
+    }
+
     /// 上傳最近一次編譯結果。
     function upload() {
         var stateStore = store();
@@ -323,10 +339,17 @@ var CodeBridgeCompile = (function() {
             reportError('CLI_ERROR_NO_PORT', '請先選擇序列埠');
             return Promise.resolve(false);
         }
-        if (terminal()) {
-            terminal().appendMessage('CLI_UPLOAD_STARTING', '開始上傳到 %1…', [port], 'command');
-        }
+        return confirmBoard().then(function(allowed) {
+            if (!allowed) return false;
+            if (terminal()) {
+                terminal().appendMessage('CLI_UPLOAD_STARTING', '開始上傳到 %1…', [port], 'command');
+            }
+            return doUpload(state, fqbn, port);
+        });
+    }
 
+    /// 實際送出 upload_start（已通過板子確認）。
+    function doUpload(state, fqbn, port) {
         return bridge().invoke('upload_start', {
             projectId: resolveProjectId(state),
             fqbn: fqbn,

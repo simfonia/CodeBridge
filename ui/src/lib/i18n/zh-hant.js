@@ -83,6 +83,22 @@ var UI_ZH_HANT = {
     CLI_SIZE_FLASH: '程式儲存空間 %1 位元組（%2%%）',
     CLI_SIZE_RAM: '動態記憶體 %1 位元組（%2%%）',
     
+    // 板子／序列埠自動偵測（T2-D）
+    TLB_SELECT_BOARD: '選擇開發板',
+    TLB_BOARD_SEARCH: '搜尋開發板',
+    TLB_BOARD_SEARCH_PLACEHOLDER: '搜尋開發板...',
+    TLB_BOARD_INSTALLED: '已安裝',
+    TLB_BOARD_ALL: '全部開發板',
+    TLB_BOARD_NO_CORE: '找不到對應的核心，請先安裝該開發板的核心套件',
+    TLB_BOARD_NONE_SELECTED: '未選擇開發板',
+    TLB_BOARD_MANAGER: '開發板管理員',
+    CLI_DETECTING_BOARD: '正在偵測開發板…',
+    CLI_BOARD_DETECTED: '已偵測到 %1',
+    CLI_BOARD_UNKNOWN_PORT: '%1 無法辨識對應的開發板，請手動選擇',
+    CLI_ERROR_NO_BOARD_SELECTED: '尚未選擇開發板',
+    MSG_BOARD_MISMATCH: '偵測到的開發板（%1）與目前的設定（%2）不同，確定要上傳嗎？',
+    MSG_CONTINUE: '繼續',
+
     // 編譯診斷
     CLI_DIAGNOSTIC_ERROR: '錯誤',
     CLI_DIAGNOSTIC_WARNING: '警告',
