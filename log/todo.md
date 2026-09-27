@@ -25,7 +25,7 @@
 
 | 計畫 | 檔案 | 狀態 |
 |---|---|---|
-| **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **已核准，尚未實作（2026-09-27）** ← 下一輪主線 |
+| **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-27）** —— 預設共用已上線 |
 | Arduino CLI 編譯與上傳（Phase T2） | [`log/plan/ArduinoCompileUpload.md`](plan/ArduinoCompileUpload.md) | 已完成（2026-09-27） |
 | 工具列實作與 .cbg 專案 | [`log/plan/ToolbarImplementation.md`](plan/ToolbarImplementation.md) | 已完成 |
 | Blockly v13 升級 | [`log/plan/BlocklyV13Upgrade.md`](plan/BlocklyV13Upgrade.md) | 已完成 |
@@ -59,11 +59,10 @@
 
 ### 下一階段主線：Phase T3 設定中心（計畫已核准）
 - [ ] **先讀計畫**：[`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md)
-- [ ] 階段 1：路徑可設定 + 預設共用（**解決「看不到已裝核心」的阻擋性問題**）
-  - `settings.json` 持久化、`arduino_cli_default_*()` 預設值探測
-  - `ToolchainDirs::from_settings()` 取代 `under()`（`data/downloads/config/user` 共用，`build_root` 維持隔離）
-  - `toolchain_get_dirs` / `toolchain_set_dirs`（回報當前值 + **來源**）
-  - 設定對話框「進階 › 路徑」頁，獨立開關預設關閉
+- [x] **階段 1（部分）**：路徑預設共用已上線 —— `ArduinoCliDirs::probe()` 以 `arduino-cli config get` 為權威來源，`ToolchainDirs::shared()` 預設共用系統目錄，產物（`build_root`）仍隔離；隔離模式 `under()` 保留待設定 UI 串接（**已於 2026-09-27 完成**）
+  - 真實 smoke 測試 `shared_toolchain_dirs_point_at_the_users_existing_cores` 實測通過
+  - 驗證：`cargo` 211 passed、`cargo --test arduino_cli_smoke` 7 passed
+- [ ] 階段 1（待做）：`settings.json` 持久化、`toolchain_get_dirs` / `set_dirs`（回報當前值 + **來源**）、設定對話框「進階 › 路徑」頁與獨立開關
 - [ ] 階段 2：開發板管理器（`core_remove`、`core_update_index`；把 `board-picker` 的臨時安裝按鈕升級）
 - [ ] 階段 3：函式庫管理器（`lib_search` / `lib_install` / `lib_remove`）
 - [ ] 範圍限制：只做 CodeBridge 用得到的設定，**不做**通用 Arduino 環境管理器（不提供 `additional_urls` 編輯等）

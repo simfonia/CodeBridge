@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use arduino::operations::OperationRegistry;
-use arduino::paths::ToolchainDirs;
+use arduino::paths::{resolve_cli, ArduinoCliDirs, ToolchainDirs};
 use arduino::pipeline::BuildRecord;
 use arduino::runner::StdProcessRunner;
 use arduino::CodeBridgeToolchain;
@@ -23,8 +23,15 @@ pub struct AppState {
     pub board_manager_urls: Arc<Mutex<Vec<String>>>,
     /// 長作業 registry。
     pub operations: OperationRegistry,
-    /// CodeBridge 隔離的 CLI 目錄；於啟動時建立。
+    /// CLI 目錄；於啟動時建立。
+    ///
+    /// **預設共用** `arduino-cli` 的系統目錄（見 [`ToolchainDirs`]）——
+    /// 隔離會讓使用者看不到自己已裝的核心。需要獨立環境時由設定面板切換。
     pub toolchain_dirs: ToolchainDirs,
+    /// 工具鏈是否使用 CodeBridge 專屬目錄（`true` = 隔離，預設 `false` = 共用）。
+    ///
+    /// 設定切換時會連同 [`toolchain_dirs`](Self::toolchain_dirs) 一起更新。
+    pub isolated_toolchain: Arc<Mutex<bool>>,
     /// 成功編譯紀錄（`projectId` → build 資訊），上傳時作為前置依據。
     ///
     /// **後端權威**：前端上傳時只送 `projectId`／`fqbn`／`port`，
@@ -40,13 +47,27 @@ pub struct AppState {
 
 impl AppState {
     /// 建立狀態；`app_data_dir` 為應用程式資料根目錄。
+    ///
+    /// 預設**共用** `arduino-cli` 的系統目錄，讓使用者已安裝的核心直接可用；
+    /// 產物（草稿暫存）仍隔離在 `app_data` 之下。
     pub fn new(app_data_dir: std::path::PathBuf) -> Self {
+        Self::with_isolation(app_data_dir, false)
+    }
+
+    /// 建立狀態並指定是否使用 CodeBridge 專屬（隔離）目錄。
+    pub fn with_isolation(app_data_dir: std::path::PathBuf, isolated: bool) -> Self {
+        // CLI 的實際目錄以 `config get` 為準；CLI 不存在時退回平台預設值。
+        let defaults = resolve_cli(None, None)
+            .map(|cli| ArduinoCliDirs::probe(&cli.program))
+            .unwrap_or_else(|_| ArduinoCliDirs::platform_default());
+        let toolchain_dirs = ToolchainDirs::with_mode(&app_data_dir, &defaults, isolated);
         Self {
             serial_ports: Arc::new(Mutex::new(Vec::new())),
             cli_path_override: Arc::new(Mutex::new(None)),
             board_manager_urls: Arc::new(Mutex::new(Vec::new())),
             operations: OperationRegistry::new(),
-            toolchain_dirs: ToolchainDirs::under(&app_data_dir),
+            toolchain_dirs,
+            isolated_toolchain: Arc::new(Mutex::new(isolated)),
             last_builds: Arc::new(Mutex::new(HashMap::new())),
             port_lease: Arc::new(Mutex::new(None)),
         }

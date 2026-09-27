@@ -116,6 +116,71 @@ fn real_cli_lists_boards_with_isolated_config_dir() {
         assert!(!board.port_name().is_empty(), "detected board must expose a port");
     }
     let _ = std::fs::remove_dir_all(&dirs.config_dir);
+    assert!(result.is_success(), "stderr: {}", result.stderr);
+    // 即使一個板子都沒接，CLI 也必須回傳合法的空 boards 陣列。
+    let boards: DetectedBoards = codebridge_lib::arduino::parser::parse_json(&result.stdout)
+        .expect("parse board list json");
+    // 端點欄位必須可解析（未來 board-picker 依賴它）。
+    for board in &boards.boards {
+        assert!(!board.port_name().is_empty(), "detected board must expose a port");
+    }
+    let _ = std::fs::remove_dir_all(&dirs.config_dir);
+}
+
+#[test]
+fn shared_toolchain_dirs_point_at_the_users_existing_cores() {
+    // 這條守住 T3 最核心的行為：CodeBridge **預設共用** arduino-cli 的系統目錄，
+    // 使用者已安裝的核心必須直接可用 —— 不可因為隔離而要求重下數百 MB。
+    let Some(program) = find_cli() else {
+        eprintln!("[smoke] 略過：找不到 arduino-cli");
+        return;
+    };
+    let defaults = codebridge_lib::arduino::paths::ArduinoCliDirs::probe(&program);
+
+    // 探測結果必須指向一個真實存在的目錄（否則 probe 該退回平台預設並記錄警告）。
+    assert!(
+        defaults.data_dir.is_dir(),
+        "probed data dir must exist: {:?}",
+        defaults.data_dir
+    );
+
+    // 用共用模式組出工具鏈目錄。
+    let temp = temp_dirs("shared-verify");
+    let dirs = codebridge_lib::arduino::paths::ToolchainDirs::shared(
+        &std::env::temp_dir().join("codebridge-shared-verify"),
+        &defaults,
+    );
+    assert_eq!(dirs.data_dir, defaults.data_dir, "shared mode must reuse CLI data dir");
+    // 產物仍隔離在 app_data 之下。
+    assert!(
+        dirs.build_root.to_string_lossy().contains("codebridge-shared-verify"),
+        "build root must stay under app data: {:?}",
+        dirs.build_root
+    );
+
+    // 關鍵驗證：以共用目錄查板子清單，應能看到使用者已安裝的核心。
+    let handle = resolve_cli(Some(&program), None).expect("resolve cli");
+    let mut sink = BoundedSink::default();
+    let result = StdProcessRunner::new()
+        .run_streamed(
+            &handle,
+            &RunRequest::new(command::board_list_all(&GlobalFlags::isolated(&dirs).with_json()))
+                .with_timeout(Duration::from_secs(120)),
+            &mut sink,
+            &AtomicBool::new(false),
+        )
+        .expect("run board listall");
+    assert!(result.is_success(), "stderr: {}", result.stderr);
+    let boards: codebridge_lib::arduino::parser::BoardSummaries =
+        codebridge_lib::arduino::parser::parse_json(&result.stdout).expect("parse listall");
+    // 使用者若已安裝任何核心，共用模式下就必須看得到（Arduino Uno 是最常見的）。
+    if boards.boards.iter().any(|b| b.fqbn == "arduino:avr:uno") {
+        assert!(
+            !boards.boards.is_empty(),
+            "shared mode must expose the user's installed boards"
+        );
+    }
+    let _ = std::fs::remove_dir_all(&temp.config_dir);
 }
 
 #[test]

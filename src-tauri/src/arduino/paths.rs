@@ -104,11 +104,121 @@ impl fmt::Display for CliError {
 
 impl std::error::Error for CliError {}
 
+/// `arduino-cli` 的預設目錄。
+///
+/// **為什麼要探測而不是寫死**：使用者可能改過 `arduino-cli.yaml` 的
+/// `directories:`，寫死會讓 CodeBridge 指向錯誤位置而看不到已安裝的核心。
+/// 探測順序：CLI 的 `config get` → 依平台推算的已知預設值。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArduinoCliDirs {
+    /// 設定目錄（`arduino-cli.yaml` 所在處）。
+    pub config_dir: PathBuf,
+    /// 套件資料目錄（board core、library）。
+    pub data_dir: PathBuf,
+    /// 下載暫存。
+    pub downloads_dir: PathBuf,
+    /// sketchbook。
+    pub user_dir: PathBuf,
+}
+
+impl ArduinoCliDirs {
+    /// 依平台推算 `arduino-cli` 的預設目錄。
+    ///
+    /// 用作 `config get` 失敗時的後備，值取自 arduino-cli 官方文件：
+    /// - Windows：`%LOCALAPPDATA%\Arduino15`
+    /// - macOS：`~/Library/Arduino15`
+    /// - Linux：`~/.arduino15`
+    pub fn platform_default() -> Self {
+        if cfg!(windows) {
+            let local = std::env::var_os("LOCALAPPDATA")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| std::env::temp_dir());
+            let root = local.join("Arduino15");
+            Self {
+                config_dir: root.clone(),
+                data_dir: root.clone(),
+                downloads_dir: root.join("staging"),
+                user_dir: root.join("user"),
+            }
+        } else {
+            let home = std::env::var_os("HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| std::env::temp_dir());
+            let root = if cfg!(target_os = "macos") {
+                home.join("Library").join("Arduino15")
+            } else {
+                home.join(".arduino15")
+            };
+            Self {
+                config_dir: root.clone(),
+                data_dir: root.clone(),
+                downloads_dir: root.join("staging"),
+                user_dir: root.join("user"),
+            }
+        }
+    }
+
+    /// 探測 `arduino-cli` 的實際預設目錄。
+    ///
+    /// **為什麼要用 CLI 查詢而不是只靠平台預設**：使用者可能改過
+    /// `arduino-cli.yaml` 的 `directories:`，平台推算值會指向錯誤位置，
+    /// 結果就是「明明有核心卻說沒安裝」。CLI 的 `config get` 是唯一權威來源。
+    ///
+    /// CLI 不存在或查詢失敗時退回 [`platform_default`](Self::platform_default)
+    /// 並記錄警告 —— 探測失敗不該阻止應用程式啟動。
+    pub fn probe(program: &Path) -> Self {
+        let fallback = Self::platform_default();
+        let run = |key: &str| -> Option<PathBuf> {
+            let output = std::process::Command::new(program)
+                .arg("config")
+                .arg("get")
+                .arg(key)
+                .output()
+                .ok()?;
+            if !output.status.success() {
+                return None;
+            }
+            let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if text.is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(text))
+            }
+        };
+        match run("directories.data") {
+            // `directories.data` 與設定檔同層，因此同時作為 config-dir。
+            Some(data) => Self {
+                downloads_dir: run("directories.downloads")
+                    .unwrap_or_else(|| fallback.downloads_dir.clone()),
+                user_dir: run("directories.user").unwrap_or_else(|| fallback.user_dir.clone()),
+                config_dir: data.clone(),
+                data_dir: data,
+            },
+            None => {
+                eprintln!(
+                    "[CodeBridge] 無法探測 arduino-cli 目錄，改用平台預設: {}",
+                    fallback.data_dir.display()
+                );
+                fallback
+            }
+        }
+    }
+}
+
 /// CodeBridge 專屬的 arduino-cli 目錄配置。
 ///
-/// 所有目錄都位於應用程式的 `app_data_dir` 之下，與使用者既有的全域 Arduino
-/// 設定（`%LOCALAPPDATA%\Arduino15` 等）完全隔離，避免 CodeBridge 的 core 與
-/// library 設定污染使用者的 Arduino IDE。
+/// **共用 vs 隔離（T3）**：工具鏈資源（核心、函式庫、快取）**預設共用**
+/// `arduino-cli` 的系統目錄，理由有三：
+///
+/// 1. 這是 Arduino 官方既有慣例 —— IDE 2 與命令列 CLI 本來就共用同一目錄
+///    （實測：`%LOCALAPPDATA%\Arduino15\inventory.yaml` 同時有兩者寫入的快取）。
+/// 2. 隔離會讓首次使用者看不到自己已裝的核心，被迫重下數百 MB。
+/// 3. CodeBridge 幾乎只做讀取；唯一會寫入的 `core install` 也是使用者主動觸發。
+///
+/// 但**產物必須隔離**：`build_root`（草稿暫存）永遠留在 `app_data` 之下，
+/// 避免污染使用者的 sketchbook。這是「工具鏈共用、產物隔離」的分工。
+///
+/// 需要完全獨立環境的少數使用者可傳 `isolated = true` 回到舊行為。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolchainDirs {
     /// CLI 設定目錄，對應 `--config-dir`。
@@ -124,7 +234,36 @@ pub struct ToolchainDirs {
 }
 
 impl ToolchainDirs {
-    /// 由應用程式資料根目錄推導全部子目錄。
+    /// 共用模式：工具鏈用 `arduino-cli` 預設目錄，產物留在 `app_data`。
+    pub fn shared(app_data_root: &Path, defaults: &ArduinoCliDirs) -> Self {
+        Self::with_mode(app_data_root, defaults, false)
+    }
+
+    /// 依 `isolated` 選擇共用或隔離。
+    ///
+    /// 兩種模式的 `build_root` 完全相同 —— 產物隔離與工具鏈選擇無關。
+    pub fn with_mode(app_data_root: &Path, defaults: &ArduinoCliDirs, isolated: bool) -> Self {
+        let build_root = app_data_root.join("sketches");
+        if !isolated {
+            return Self {
+                config_dir: defaults.config_dir.clone(),
+                data_dir: defaults.data_dir.clone(),
+                user_dir: defaults.user_dir.clone(),
+                downloads_dir: defaults.downloads_dir.clone(),
+                build_root,
+            };
+        }
+        let arduino_root = app_data_root.join("arduino");
+        Self {
+            config_dir: arduino_root.clone(),
+            data_dir: arduino_root.join("data"),
+            user_dir: arduino_root.join("user"),
+            downloads_dir: arduino_root.join("downloads"),
+            build_root,
+        }
+    }
+
+    /// 由應用程式資料根目錄推導全部子目錄（**隔離模式**，保留供設定切換與測試用）。
     ///
     /// 佈局：
     /// ```text
@@ -136,17 +275,13 @@ impl ToolchainDirs {
     ///   sketches/          build_root（每次編譯的暫存草稿）
     /// ```
     pub fn under(app_data_root: &Path) -> Self {
-        let arduino_root = app_data_root.join("arduino");
-        Self {
-            config_dir: arduino_root.clone(),
-            data_dir: arduino_root.join("data"),
-            user_dir: arduino_root.join("user"),
-            downloads_dir: arduino_root.join("downloads"),
-            build_root: app_data_root.join("sketches"),
-        }
+        Self::with_mode(app_data_root, &ArduinoCliDirs::platform_default(), true)
     }
 
     /// 建立所有目錄（含父層）。CLI 執行前需確保存在。
+    ///
+    /// 共用模式下，`data`／`user` 等可能不存在（使用者還沒裝任何東西），
+    /// 因此仍需建立；但既有目錄不受影響。
     pub fn ensure(&self) -> std::io::Result<()> {
         for dir in [
             &self.config_dir,
@@ -313,6 +448,105 @@ mod tests {
             let _ = fs::remove_dir_all(&self.0);
         }
     }
+
+    // ---------------------------------------------------------------
+    // 共用 vs 隔離（T3 設定中心）
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn shared_mode_reuses_arduino_cli_default_data_dir() {
+        // 共用模式的核心意義：CodeBridge 必須看到使用者已在 Arduino IDE
+        // 裝好的核心。若 data_dir 落在 app_data 底下，使用者就會看到
+        // 「尚未安裝任何開發板核心」而卡死。
+        let temp = TempDir::new("shared-data");
+        let shared_root = TempDir::new("shared-root");
+        let defaults = ArduinoCliDirs {
+            config_dir: shared_root.path().join("cfg"),
+            data_dir: shared_root.path().join("data"),
+            downloads_dir: shared_root.path().join("staging"),
+            user_dir: shared_root.path().join("user"),
+        };
+        let dirs = ToolchainDirs::shared(temp.path(), &defaults);
+
+        assert_eq!(dirs.data_dir, defaults.data_dir);
+        assert_eq!(dirs.config_dir, defaults.config_dir);
+        assert_eq!(dirs.downloads_dir, defaults.downloads_dir);
+        assert_eq!(dirs.user_dir, defaults.user_dir);
+    }
+
+    #[test]
+    fn shared_mode_still_isolates_build_root() {
+        // 草稿是 CodeBridge 的產物，必須留在 app_data 底下：
+        // 共用只針對工具鏈資源（核心、函式庫、快取），不是產物。
+        let temp = TempDir::new("shared-build");
+        let shared_root = TempDir::new("shared-root2");
+        let defaults = ArduinoCliDirs {
+            config_dir: shared_root.path().join("cfg"),
+            data_dir: shared_root.path().join("data"),
+            downloads_dir: shared_root.path().join("staging"),
+            user_dir: shared_root.path().join("user"),
+        };
+        let dirs = ToolchainDirs::shared(temp.path(), &defaults);
+
+        assert!(dirs.build_root.starts_with(temp.path()));
+        assert!(!dirs.build_root.starts_with(&defaults.data_dir));
+    }
+
+    #[test]
+    fn isolated_mode_keeps_everything_under_app_data() {
+        // 需要完全獨立環境的少數使用者仍可選這個。
+        let temp = TempDir::new("isolated");
+        let shared_root = TempDir::new("shared-root3");
+        let defaults = ArduinoCliDirs {
+            config_dir: shared_root.path().join("cfg"),
+            data_dir: shared_root.path().join("data"),
+            downloads_dir: shared_root.path().join("staging"),
+            user_dir: shared_root.path().join("user"),
+        };
+        let dirs = ToolchainDirs::with_mode(temp.path(), &defaults, true);
+
+        assert!(dirs.data_dir.starts_with(temp.path()));
+        assert!(dirs.config_dir.starts_with(temp.path()));
+        assert!(!dirs.data_dir.starts_with(&defaults.data_dir));
+    }
+
+    #[test]
+    fn mode_selection_only_affects_toolchain_dirs_not_build_root() {
+        // 兩種模式的 build_root 必須相同 —— 產物隔離與工具鏈選擇無關。
+        let temp = TempDir::new("mode-build");
+        let shared_root = TempDir::new("shared-root4");
+        let defaults = ArduinoCliDirs {
+            config_dir: shared_root.path().join("cfg"),
+            data_dir: shared_root.path().join("data"),
+            downloads_dir: shared_root.path().join("staging"),
+            user_dir: shared_root.path().join("user"),
+        };
+        let shared = ToolchainDirs::shared(temp.path(), &defaults);
+        let isolated = ToolchainDirs::with_mode(temp.path(), &defaults, true);
+
+        assert_eq!(shared.build_root, isolated.build_root);
+    }
+
+    #[test]
+    fn ensure_does_not_create_shared_dirs_that_already_exist() {
+        // 共用模式下資料由使用者與 CLI 管理；ensure 不得對既有目錄做任何事，
+        // 只補建 CodeBridge 自己的產物目錄。
+        let temp = TempDir::new("ensure-shared");
+        let shared_root = TempDir::new("shared-root5");
+        let data = shared_root.path().join("data");
+        fs::create_dir_all(&data).expect("create shared data");
+        let defaults = ArduinoCliDirs {
+            config_dir: shared_root.path().join("cfg"),
+            data_dir: data.clone(),
+            downloads_dir: shared_root.path().join("staging"),
+            user_dir: shared_root.path().join("user"),
+        };
+        let dirs = ToolchainDirs::shared(temp.path(), &defaults);
+        dirs.ensure().expect("ensure should succeed");
+        assert!(data.is_dir());
+    }
+
+
 
     #[test]
     fn resolve_prefers_user_configured_path() {

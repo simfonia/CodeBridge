@@ -1,11 +1,21 @@
 # 設定中心與核心目錄共用化（Phase T3）
 
 ## 文件資訊
-- 狀態：已核准，尚未實作（2026-09-27）
+- 狀態：**階段 1 已完成（2026-09-27）** —— 預設共用已上線，可實測上傳；設定 UI 與階段 2／3 待做
 - 對應程式碼：`src-tauri/src/arduino/paths.rs`、`src-tauri/src/commands.rs`、`src-tauri/src/lib.rs`、`ui/src/lib/arduino/*`、`ui/src/lib/ui/*`、`ui/index.html`
 - 前置：Phase T2 已完成編譯／上傳、板子自動偵測、開發板選擇面板
 - 範圍限制：**只做 CodeBridge 自己用得到的設定**，不做通用 Arduino 環境管理器（不提供 `additional_urls` 編輯、代理設定等對高中生無意義的選項）
 - 相容性前提：**CodeBridge 尚未發佈，目前沒有使用者**，因此可直接改變預設行為，不需遷移舊設定
+
+### 階段 1 已完成的部分（2026-09-27）
+- [x] `ArduinoCliDirs` + `platform_default()`（依 OS 推算預設值）
+- [x] `ArduinoCliDirs::probe(program)`：以 `arduino-cli config get directories.*` 為**權威來源**，失敗才退回平台預設
+- [x] `ToolchainDirs::shared()` / `with_mode(app_root, defaults, isolated)` / `under()`（保留隔離）
+- [x] `AppState::with_isolation()`，預設 `false`（共用）；新增 `isolated_toolchain` 旗標供後續設定切換
+- [x] 測試：`paths.rs` +5 項（共用取系統目錄、產物仍隔離、隔離模式不變、`build_root` 兩模式相同）
+- [x] 真實 smoke 測試：`shared_toolchain_dirs_point_at_the_users_existing_cores`（實測通過）
+- [ ] **待做**：`settings.json` 持久化、`toolchain_get_dirs` / `set_dirs`、設定對話框「進階 › 路徑」頁
+
 
 ---
 
