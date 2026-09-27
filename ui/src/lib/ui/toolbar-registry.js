@@ -21,17 +21,22 @@ var CodeBridgeToolbar = (function() {
         'save-project-as': { id: 'btn-save-as', implemented: true, handledBy: 'toolbar', labelKey: 'TLB_SAVE_AS', requiresDesktop: true },
         'save-project': { id: 'btn-save', implemented: true, handledBy: 'toolbar', labelKey: 'TLB_SAVE', requiresDesktop: true },
         'copy-code': { id: 'btn-copy-code', implemented: true, handledBy: 'toolbar', labelKey: 'TLB_COPY_CODE' },
+        'run-program': { id: 'btn-run', implemented: true, handledBy: 'compile', labelKey: 'TLB_RUN' },
+        'stop-program': { id: 'btn-stop', implemented: true, handledBy: 'compile', labelKey: 'TLB_STOP_PROGRAM' },
+        // 終端機收合鈕已改為面板上方的三角 toggle（`#terminal-toggle`），
+        // 與 `#code-toggle` 同一套互動；此處只保留 id 契約。
+        'toggle-terminal': { id: 'terminal-toggle', implemented: true, handledBy: 'terminal', labelKey: 'TLB_TOGGLE_TERMINAL' },
+        'terminal-pause': { id: 'btn-pause-terminal', implemented: true, handledBy: 'terminal', labelKey: 'TLB_PAUSE_SCROLL' },
+        'terminal-clear': { id: 'btn-clear-terminal', implemented: true, handledBy: 'terminal', labelKey: 'TLB_CLEAR_CONSOLE' },
+        'terminal-close': { id: 'btn-close-terminal', implemented: true, handledBy: 'terminal', labelKey: 'TLB_CLOSE_PANEL' },
         'practice-mode': { id: 'btn-practice', implemented: true, handledBy: 'practice', labelKey: 'PRACTICE_ENTER' },
         'practice-cheat': { id: 'btn-cheat', implemented: true, handledBy: 'practice', labelKey: 'PRACTICE_CHEAT' },
 
-        // 以下按鈕本輪不實作（Serial／Terminal／Compile 依賴 Arduino CLI T2、T3）
-        'refresh-serial': { id: 'btn-refresh-serial', implemented: false, handledBy: 'none', labelKey: 'TLB_SERIAL_REFRESH' },
-        'run-program': { id: 'btn-run', implemented: false, handledBy: 'none', labelKey: 'TLB_RUN' },
-        'stop-program': { id: 'btn-stop', implemented: false, handledBy: 'none', labelKey: 'TLB_STOP_PROGRAM' },
-        'toggle-terminal': { id: 'btn-terminal', implemented: false, handledBy: 'none', labelKey: 'TLB_TERMINAL' },
-        'terminal-pause': { id: 'btn-pause-terminal', implemented: false, handledBy: 'none', labelKey: 'TLB_PAUSE_SCROLL' },
-        'terminal-clear': { id: 'btn-clear-terminal', implemented: false, handledBy: 'none', labelKey: 'TLB_CLEAR_CONSOLE' },
-        'terminal-close': { id: 'btn-close-terminal', implemented: false, handledBy: 'none', labelKey: 'TLB_CLOSE_PANEL' }
+        // 設定選單項目（`btn-diagnose` 等 dropdown-item）不在工具列 registry 契約範圍內，
+        // 由 T2-D 的 Board Manager／環境診斷一併實作。
+        //
+        // 開發板自動偵測於 T2-D 實作（board-detector.js + serial-selector 綁定）。
+        'refresh-serial': { id: 'btn-refresh-serial', implemented: false, handledBy: 'none', labelKey: 'TLB_SERIAL_REFRESH' }
     };
 
     function findByElement(element) {

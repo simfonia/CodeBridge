@@ -62,10 +62,31 @@ function initBlockly() {
         theme: blocklyTheme,
         renderer: 'thrasos',
         sounds: false,
+        // Blockly 13 的媒體路徑選項是 `media`（不是舊版的 `pathToMedia`，
+        // 後者在此版本已被忽略，選項解析處硬寫 `this.pathToMedia = "https://static.blockly.com/media/"`）。
+        // 縮放鈕、垃圾桶、註記摺疊與縮放把手都是從這裡載入 SVG。
+        // 依賴外網 CDN 代表離線環境（校園教學常見）會整組圖示失效，
+        // 因此改為指向 public/blockly/media/ 的本機備份。
+        // media/ 內容取自與 Blockly 13.3.0 同一份 CDN，sprite 座標與
+        // blockly.js 內的 x:-32 / x:-64 / y:-92 偏移完全對應。
+        media: './blockly/media/',
         scrollbars: true,
         trashcan: true,
         comments: true,
         workspaceComments: true,
+        // 滾輪行為：預設垂直捲動，Ctrl（或 macOS 的 Cmd）+ 滾輪才縮放。
+        //
+        // Blockly `onMouseWheel` 的判斷是
+        //   `zoomWheel && (ctrlKey || metaKey || !moveWheel)` → zoom，否則 scroll。
+        // 只開 `zoom.wheel` 時 `moveWheel` 為 undefined，`!moveWheel` 恆為真，
+        // 於是**任何**滾輪都會縮放，無法捲動工作區。
+        // 同時開 `move.wheel: true` 後，`!moveWheel` 為假，
+        // Blockly 只在按住 Ctrl / Cmd 時才縮放，其餘走 scroll 分支。
+        move: {
+            wheel: true,
+            drag: true,
+            scrollbars: true
+        },
         zoom: {
             controls: true,
             wheel: true,
@@ -434,6 +455,132 @@ function initCodeToggle() {
 }
 
 // ============================================================
+// 終端機面板高度拖曳調整（對齊 #panel-resizer 的互動模式）
+// ============================================================
+
+/// 終端機面板高度的上下限。
+/// 下限要能容納標題列與數行輸出，上限保留至少 140px 給 Blockly 工作區，
+/// 否則把終端機拉到最大會讓積木完全沒有可見範圍。
+const TERMINAL_MIN_HEIGHT = 90;
+const TERMINAL_MAX_MARGIN = 140;
+
+function initTerminalResizer() {
+    const resizer = document.getElementById('terminal-resizer');
+    const terminalArea = document.getElementById('terminalArea');
+    const blocklyDiv = document.getElementById('blocklyDiv');
+    if (!resizer || !terminalArea) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+    let startBlocklyHeight = 0;
+
+    function onMouseDown(e) {
+        // 收合鈕位於調整棒內部，點它只該切換面板，不該進入拖曳模式。
+        if (e.target.closest && e.target.closest('#terminal-toggle')) return;
+
+        if (terminalArea.classList.contains('collapsed')) {
+            // 收合時沒有高度可調，直接展開即可，語意與程式預覽面板一致。
+            // 展開時會自動套回使用者上次拖曳的高度。
+            if (window.CodeBridgeTerminalPanel) {
+                window.CodeBridgeTerminalPanel.open();
+            }
+            return;
+        }
+
+        isDragging = true;
+        startY = e.clientY;
+        startHeight = terminalArea.offsetHeight;
+        startBlocklyHeight = blocklyDiv ? blocklyDiv.offsetHeight : 0;
+        resizer.classList.add('is-dragging');
+        // 用獨立的 class：既有的 `resizing-panel` 是 `cursor: col-resize`（給程式預覽面板），
+        // 終端機是垂直拖曳，共用會讓游標方向顯示錯誤。
+        document.body.classList.add('resizing-terminal');
+        e.preventDefault();
+    }
+
+    function onMouseMove(e) {
+        if (!isDragging) return;
+        // 終端機在下方，往上拖（dy 為負）代表變高。
+        const dy = startY - e.clientY;
+        // 上限由「拖曳起點的工作區高度」推導，而不是 #blocklyArea 的總高：
+        // blocklyArea 還包含標題列與調整棒，直接用它會把工作區擠得比預期更小。
+        //   blocklyDiv_new = startBlockly + startHeight - newHeight >= TERMINAL_MAX_MARGIN
+        const maxHeight = Math.max(
+            TERMINAL_MIN_HEIGHT,
+            startBlocklyHeight + startHeight - TERMINAL_MAX_MARGIN
+        );
+        const newHeight = Math.max(TERMINAL_MIN_HEIGHT, Math.min(maxHeight, startHeight + dy));
+        // 交由終端機面板記住高度：它會在收合時自動移除 inline style，
+        // 若這裡直接寫 terminalArea.style.height，收合鈕就會失效。
+        if (window.CodeBridgeTerminalPanel) {
+            window.CodeBridgeTerminalPanel.setHeight(newHeight);
+        } else {
+            terminalArea.style.height = newHeight + 'px';
+        }
+    }
+
+    function onMouseUp() {
+        if (!isDragging) return;
+        isDragging = false;
+        resizer.classList.remove('is-dragging');
+        document.body.classList.remove('resizing-terminal');
+        // 終端機位於 #blocklyArea 內部，改變高度會影響 Blockly 的可視範圍。
+        if (typeof Blockly !== 'undefined') {
+            Blockly.svgResize(Blockly.getMainWorkspace());
+        }
+    }
+
+    resizer.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+}
+
+// ============================================================
+// 啟動時的暫存還原詢問
+// ============================================================
+
+/// 詢問使用者是否要載入前一次未存檔的暫存。
+///
+/// 三個選項：
+/// - 載入暫存（restore）：保留上次的未存檔進度。
+/// - 改用已存檔版本（discard）：丟棄暫存，載入該專案最後存檔的內容。
+/// - 開空白專案（blank）：注入預設積木。
+///
+/// 預設聚焦在「載入暫存」，因為那是唯一會損失進度的選項；
+/// Esc／點遮罩等同「載入暫存」，避免誤丟進度。
+///
+/// 沒有對話框元件時一律開空白專案 —— 絕不自動還原任何內容。
+function askRestoreDraft(savedSnapshot) {
+    var confirm = window.CodeBridgeConfirm;
+    if (!confirm || typeof confirm.ask !== 'function') {
+        return Promise.resolve('blank');
+    }
+    var message = getI18n
+        ? getI18n('MSG_RESTORE_DRAFT', '上次關閉前有尚未存檔的變更，要載入嗎？')
+        : 'Found unsaved changes from the last session. Restore them?';
+    if (savedSnapshot) {
+        message += '\n' + (getI18n
+            ? getI18n('MSG_RESTORE_DRAFT_ALT', '也可以改用該專案最後存檔的內容，或開一個空白專案。')
+            : 'You can also use the last saved version, or start a blank project.');
+    }
+    return confirm.ask({
+        titleKey: 'TLB_RESTORE_DRAFT_TITLE',
+        message: message,
+        options: [
+            { value: 'restore', labelKey: 'MSG_RESTORE', variant: 'primary' },
+            { value: 'discard', labelKey: 'MSG_RESTORE_DISCARD' },
+            { value: 'blank', labelKey: 'MSG_RESTORE_BLANK' }
+        ]
+    }).then(function(answer) {
+        // 關閉對話框（Esc／點遮罩）一律視為「載入暫存」，避免誤丟進度。
+        if (answer === 'discard') return 'discard';
+        if (answer === 'blank') return 'blank';
+        return 'restore';
+    });
+}
+
+// ============================================================
 // 面板拖曳調整
 // ============================================================
 function initPanelResizer() {
@@ -507,6 +654,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.CodeBridgeBlockSearch) {
         window.CodeBridgeBlockSearch.init(workspace);
     }
+    // 4b. 縮放至符合內容控制項（附加於 Blockly 縮放群組下方）
+    if (window.CodeBridgeZoomFit) {
+        window.CodeBridgeZoomFit.init(workspace);
+    }
     
     // 4. 專案狀態（.cbg）與工作區還原
     //    還原優先序：未儲存草稿 > 最後儲存的工作區快照 > 預設 setup + loop 積木。
@@ -520,53 +671,89 @@ document.addEventListener('DOMContentLoaded', function() {
         onWorkspaceReloaded: function() { updateCode(workspace); }
     });
 
+    // 5. 編譯／上傳控制器（T2-C）
+    //    與 ProjectIO 共用同一組依賴，差別在於送出前會 strip 掉 ID marker，
+    //    並依 plain code 建立草稿以維持診斷行號契約。
+    if (window.CodeBridgeCompile) {
+        window.CodeBridgeCompile.init({
+            store: projectStore,
+            getWorkspace: function() { return workspace; },
+            getCode: function() { return currentMarkedCode; }
+        });
+    }
+
     var initialState = projectStore.getState();
     var savedSnapshot = projectStore.getSnapshot();
     var draft = projectStore.getDraft();
-    var restoreText = draft || savedSnapshot;
 
-    if (restoreText) {
-        CodeBridgeBlocklyXml.textToWorkspace(restoreText, workspace);
-        workspace.updateAriaLabel();
-    } else {
-        injectDefaultBlocks(workspace);
-    }
+    // 啟動一律從「空白的新專案」開始，不會自動開啟上次開啟的專案。
+    //
+    // 唯一例外是有未存檔的暫存時詢問使用者 —— 那代表上次是在修改到一半的狀態
+    // 離開的，直接靜默丟掉可能造成進度損失，因此交由使用者決定要還原還是重來。
+    // 「改用已存檔版本」是使用者的明確選擇，不是自動行為。
+    var restoreChoice = draft
+        ? askRestoreDraft(savedSnapshot)
+        : Promise.resolve('blank');
 
-    // 建立乾淨基準（有路徑則沿用，路徑為空代表未命名專案），再比對現況標記 dirty。
-    projectStore.markSaved({
-        path: initialState.path,
-        name: initialState.name,
-        snapshot: savedSnapshot || window.CodeBridgeProjectIO.serializeWorkspace(),
-        meta: initialState.meta
+    restoreChoice.then(function(choice) {
+        // 'restore' 用暫存、'discard' 用最後存檔的快照、'blank' 注入預設積木。
+        var text = null;
+        if (choice === 'restore') text = draft;
+        else if (choice === 'discard') text = savedSnapshot;
+
+        if (text) {
+            CodeBridgeBlocklyXml.textToWorkspace(text, workspace);
+            workspace.updateAriaLabel();
+            // 還原的是「某個專案」，沿用它的路徑／名稱／metadata。
+            projectStore.markSaved({
+                path: initialState.path,
+                name: initialState.name,
+                snapshot: window.CodeBridgeProjectIO.serializeWorkspace(),
+                meta: initialState.meta
+            });
+            // 暫存已被消費，下次啟動不再詢問。
+            projectStore.setDraft(null);
+        } else {
+            injectDefaultBlocks(workspace);
+            // 開空白專案：必須同時把 store 歸零，否則工具列仍會顯示上次的
+            // 專案名稱與路徑，與畫面上的空白內容不一致。
+            projectStore.markUntitled(
+                window.CodeBridgeProjectIO.serializeWorkspace(),
+                window.CodeBridgeProject.emptyMeta()
+            );
+            // 使用者既已選擇重來，下次啟動不該再被詢問。
+            projectStore.setDraft(null);
+        }
+
+        projectStore.refresh(window.CodeBridgeProjectIO.serializeWorkspace());
     });
-    projectStore.refresh(window.CodeBridgeProjectIO.serializeWorkspace());
     
-    // 5. 程式碼更新監聽 + dirty 判斷（debounce 150ms）
+    // 6. 程式碼更新監聽 + dirty 判斷（debounce 150ms）
     workspace.addChangeListener(function(event) {
         if (event && event.isUiEvent) return;
         updateCode(workspace);
         scheduleDirtyCheck(workspace);
     });
     
-    // 6. 孤兒積木檢測
+    // 7. 孤兒積木檢測
     workspace.addChangeListener(updateOrphanBlocks);
     
-    // 7. 程式碼定位監聽
+    // 8. 程式碼定位監聽
     workspace.addChangeListener(function(event) {
         if (event.type === Blockly.Events.SELECTED) {
             syncSelection(event.newElementId);
         }
     });
     
-    // 8. 初始程式碼生成
+    // 9. 初始程式碼生成
     updateCode(workspace);
     
-    // 9. 練習模式初始化
+    // 10. 練習模式初始化
     if (typeof initPracticeMode === 'function') {
         initPracticeMode(workspace);
     }
     
-    // 10. UI 功能
+    // 11. UI 功能
     initLangToggle();
     initThemeToggle();
     if (window.CodeBridgeTheme) {
@@ -574,8 +761,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     initCodeToggle();
     initPanelResizer();
+    initTerminalResizer();
     
-    // 11. 工具列（.cbg 專案 I/O、dirty 指示、最近專案與範例）
+    // 12. 工具列（.cbg 專案 I/O、dirty 指示、最近專案與範例）
     if (window.CodeBridgeToolbarUI) {
         window.CodeBridgeToolbarUI.init({ store: projectStore });
     }

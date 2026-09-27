@@ -22,6 +22,16 @@ export async function installTauriMock(page, options = {}) {
     window.__MOCK_CLOSED__ = false;
     window.__MOCK_REVEALED__ = [];
     window.__MOCK_EVENT_HANDLERS__ = {};
+    // Arduino CLI 工具鏈（T2-C）：記錄前端送出的 command 與 payload，
+    // 讓 E2E 測試能驗證 compile/upload 流程而不需要真實硬體。
+    window.__MOCK_CLI_CALLS__ = [];
+    window.__MOCK_CLI__ = Object.assign({
+      compileStart: 'op-compile',
+      uploadReady: true,
+      uploadStart: 'op-upload',
+      cancelResult: true,
+      errors: {}
+    }, config.cli || {});
 
     window.__TAURI__ = {
       core: {
@@ -47,6 +57,17 @@ export async function installTauriMock(page, options = {}) {
           if (command === 'app_close') {
             window.__MOCK_CLOSED__ = true;
             return respond(null);
+          }
+          if (command === 'compile_start' || command === 'upload_start' ||
+              command === 'upload_ready' || command === 'operation_cancel') {
+            window.__MOCK_CLI_CALLS__.push({ command, args: payload });
+            const cli = window.__MOCK_CLI__;
+            const forced = cli.errors[command];
+            if (forced) return fail(forced, '');
+            if (command === 'compile_start') return respond(cli.compileStart);
+            if (command === 'upload_start') return respond(cli.uploadStart);
+            if (command === 'upload_ready') return respond(cli.uploadReady);
+            return respond(cli.cancelResult);
           }
           return fail('MSG_UNKNOWN_ERROR', command);
         }
@@ -107,4 +128,26 @@ export async function setUiLocale(page, locale = 'zh-hant') {
 /** 讀取 mock 檔案系統的內容。 */
 export async function readMockFiles(page) {
   return page.evaluate(() => Object.assign({}, window.__MOCK_CBG_FILES__));
+}
+
+/** 讀取前端送給 Arduino CLI 工具鏈的所有 invoke 呼叫。 */
+export async function readCliCalls(page) {
+  return page.evaluate(() => (window.__MOCK_CLI_CALLS__ || []).map((call) => ({
+    command: call.command,
+    args: call.args
+  })));
+}
+
+/** 調整 CLI mock 的回傳值（例如讓 upload_ready 回 false）。 */
+export async function setCliResponse(page, overrides) {
+  await page.evaluate((patch) => {
+    Object.assign(window.__MOCK_CLI__, patch);
+  }, overrides);
+}
+
+/** 讓某個 CLI command 以指定的 `KEY|detail` 錯誤失敗。 */
+export async function setCliError(page, command, errorKey) {
+  await page.evaluate((payload) => {
+    window.__MOCK_CLI__.errors[payload.command] = payload.errorKey;
+  }, { command, errorKey });
 }

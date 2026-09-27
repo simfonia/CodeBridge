@@ -15,13 +15,7 @@ const indexPath = join(uiDirectory, 'index.html');
  * 新增未實作按鈕時必須明確更新本清單，讓取捨是 conscious decision。
  */
 const FROZEN_UNIMPLEMENTED_IDS = [
-  'btn-clear-terminal',
-  'btn-close-terminal',
-  'btn-pause-terminal',
-  'btn-refresh-serial',
-  'btn-run',
-  'btn-stop',
-  'btn-terminal'
+  'btn-refresh-serial'
 ];
 
 const IMPLEMENTED_ACTIONS = [
@@ -31,9 +25,15 @@ const IMPLEMENTED_ACTIONS = [
   'open-project',
   'practice-cheat',
   'practice-mode',
+  'run-program',
   'save-project',
   'save-project-as',
-  'settings-menu'
+  'settings-menu',
+  'stop-program',
+  'terminal-clear',
+  'terminal-close',
+  'terminal-pause',
+  'toggle-terminal'
 ];
 
 function readAttribute(tag, name) {
@@ -41,9 +41,15 @@ function readAttribute(tag, name) {
   return match ? match[1] : null;
 }
 
-/** 取出工具列與終端機工具列按鈕（不含下拉選單項目與練習模式文字按鈕）。 */
+/**
+ * 取出工具列與終端機工具列按鈕（不含下拉選單項目與練習模式文字按鈕）。
+ *
+ * `#terminal-toggle` 是終端機面板上方的三角收合鈕，沒有 `toolbar-btn` class
+ * （它刻意不屬於工具列，與 `#code-toggle` 同一套互動），因此單獨納入比對，
+ * 確保它不會變成「有 data-action 卻不在 registry」的幽靈項目。
+ */
 function parseToolbarButtons(html) {
-  const pattern = /<(?:div|button)\s[^>]*class="[^"]*\b(?:toolbar-btn|terminal-tool-btn)\b[^"]*"[^>]*>/g;
+  const pattern = /<(?:div|button)\s[^>]*class="[^"]*\b(?:toolbar-btn|terminal-tool-btn)\b[^"]*"[^>]*>|<div\s[^>]*id="terminal-toggle"[^>]*>/g;
   return Array.from(html.matchAll(pattern)).map((match) => ({
     tag: match[0],
     id: readAttribute(match[0], 'id'),
@@ -139,7 +145,20 @@ describe('工具列按鈕契約', () => {
       'TLB_DESKTOP_ONLY',
       'MSG_SAVE_CHANGES',
       'MSG_COPIED',
-      'MSG_COPY_FAILED'
+      'MSG_COPY_FAILED',
+      // 編譯／上傳流程（T2-C）
+      'TLB_STOP_HINT',
+      'TLB_SCROLL_RESUMED',
+      'CLI_COMPILE_STARTING',
+      'CLI_UPLOAD_STARTING',
+      'CLI_ERROR_NO_FQBN',
+      'CLI_ERROR_NO_PORT',
+      'CLI_ERROR_COMPILE_FAILED',
+      'CLI_STREAM_STDOUT',
+      'CLI_STREAM_STDERR',
+      'DRAFT_ERROR_EMPTY_CODE',
+      // 終端機高度調整棒
+      'TLB_DRAG_RESIZE_HEIGHT'
     ];
     expect(required.filter((key) => !zhKeys.has(key))).toEqual([]);
     expect(required.filter((key) => !enKeys.has(key))).toEqual([]);

@@ -39,6 +39,9 @@ body {
     flex: 1;
     min-height: 0;
     background: #fff;
+    /* 「縮放至符合內容」控制項以 absolute 定位於此，
+       需 position 基準才會隨工作區（而非視窗）定位。 */
+    position: relative;
 }
 
 #toolbar {
@@ -279,6 +282,16 @@ body.resizing-panel #codeArea {
 body.resizing-panel {
     cursor: col-resize;
     user-select: none;
+}
+
+/* 終端機垂直拖曳：游標方向與程式預覽面板不同，因此獨立一個 class */
+body.resizing-terminal {
+    cursor: row-resize;
+    user-select: none;
+}
+
+body.resizing-terminal #terminalArea {
+    transition: none !important;
 }
 
 #terminalArea {

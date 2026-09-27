@@ -20,6 +20,16 @@ var CodeBridgeToolbarUI = (function() {
         return window.CodeBridgeProjectIO;
     }
 
+    /// 編譯／上傳控制器（T2-C 起存在；未載入時視為不可用）。
+    function compile() {
+        return window.CodeBridgeCompile;
+    }
+
+    /// 終端機面板（T2-C 起存在）。
+    function terminal() {
+        return window.CodeBridgeTerminalPanel;
+    }
+
     function text(key, fallback) {
         if (typeof getI18n === 'function') return getI18n(key, fallback);
         return fallback || key;
@@ -58,10 +68,28 @@ var CodeBridgeToolbarUI = (function() {
             breadcrumb.classList.toggle('is-linked', Boolean(state.canReveal));
         }
 
+        // 儲存按鈕的提示責任：
+        // - 已存檔（有路徑）的專案：dirty 時高亮 save，因為它真的會寫回原檔。
+        // - 未命名專案（內建範例、新專案）：dirty 提示改由 save-as 承擔。
+        //   此時按 save 其實也會開存檔對話框，把提示放在 save 上會誤導使用者
+        //   以為「只是存檔」，而實際上正要選擇一個位置。
         var save = document.getElementById('btn-save');
+        var saveAs = document.getElementById('btn-save-as');
         if (save) {
-            save.classList.toggle('is-dirty', state.isDirty);
-            save.title = state.isDirty ? text('TLB_UNSAVED_TITLE', 'Unsaved changes') : text('TLB_SAVE', 'Save');
+            save.classList.toggle('is-dirty', state.isDirty && !state.isUntitled);
+            if (state.isUntitled) {
+                save.title = text('TLB_SAVE_FIRST', 'Not saved yet — choose a location');
+            } else {
+                save.title = state.isDirty
+                    ? text('TLB_UNSAVED_TITLE', 'Unsaved changes')
+                    : text('TLB_SAVE', 'Save');
+            }
+        }
+        if (saveAs) {
+            saveAs.classList.toggle('is-dirty', state.isDirty && state.isUntitled);
+            if (state.isUntitled && state.isDirty) {
+                saveAs.title = text('TLB_SAVE_AS_NEEDED', 'Choose where to save this project');
+            }
         }
 
         // 儲存／開啟後最近清單會變動，因此狀態每次變化都重繪。
@@ -200,7 +228,17 @@ var CodeBridgeToolbarUI = (function() {
         'clear-recents': function() {
             store().clearRecents();
             renderRecents();
-        }
+        },
+        // 編譯／上傳：委派給 compile controller（單飛由該模組負責）。
+        'run-program': function() { return compile().run(); },
+        // 「停止」的語意是**取消目前的編譯或上傳作業**；上傳完成後沒有常駐
+        // 程序可停（序列監視器屬 T3）。tooltip 由 TLB_STOP_HINT 說明。
+        'stop-program': function() { return compile().stop(); },
+        // 終端機面板
+        'toggle-terminal': function() { return terminal().toggle(); },
+        'terminal-pause': function() { return terminal().togglePaused(); },
+        'terminal-clear': function() { return terminal().clear(); },
+        'terminal-close': function() { return terminal().close(); }
     };
 
     function onClick(event) {

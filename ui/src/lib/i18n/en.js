@@ -15,15 +15,20 @@ var UI_EN = {
     TLB_SERIAL_PORT: 'Serial Port',
     TLB_NO_PORT: 'No serial port detected',
     TLB_RUN: 'Run',
+    TLB_ZOOM_FIT: 'Zoom to fit content',
     TLB_STOP_PROGRAM: 'Stop Program',
+    TLB_STOP_HINT: 'Cancel the running compile or upload',
     TLB_TERMINAL: 'Terminal',
+    TLB_TOGGLE_TERMINAL: 'Expand / collapse terminal',
     TLB_TERMINAL_TITLE: 'Serial Monitor',
     TLB_PAUSE_SCROLL: 'Pause Scroll',
+    TLB_SCROLL_RESUMED: 'Resume Scroll',
     TLB_CLEAR_CONSOLE: 'Clear Console',
     TLB_CLOSE_PANEL: 'Close Panel',
     TLB_TOGGLE_CODE: 'Toggle Code',
     TLB_ARDUINO_PREVIEW: 'Arduino Code Preview',
     TLB_DRAG_RESIZE: 'Drag to Resize',
+    TLB_DRAG_RESIZE_HEIGHT: 'Drag to resize terminal height',
     TLB_COPY_CODE: 'Copy Code',
     TLB_EXAMPLES: 'Examples',
     TLB_THEME_TOGGLE: 'Switch Experience (Engineer/Angel)',
@@ -55,6 +60,28 @@ var UI_EN = {
     CLI_ERROR_SPAWN_FAILED: 'Failed to launch Arduino CLI',
     CLI_ERROR_COMMAND_FAILED: 'Arduino CLI command failed',
     CLI_ERROR_INVALID_JSON: 'Could not parse the Arduino CLI response',
+    CLI_ERROR_INVALID_FQBN: 'Invalid board configuration',
+    CLI_ERROR_COMPILE_FAILED: 'Compilation failed',
+    CLI_ERROR_UPLOAD_FAILED: 'Upload failed',
+    CLI_ERROR_NO_FQBN: 'No board selected',
+    CLI_ERROR_NO_PORT: 'No serial port selected',
+    CLI_ERROR_PORT_BUSY: 'Serial port is busy',
+    CLI_ERROR_BUILD_STALE: 'Build result is stale, please compile again',
+    
+    // Draft materialization (T2-A)
+    DRAFT_ERROR_INVALID_PROJECT_ID: 'Invalid project identifier',
+    DRAFT_ERROR_EMPTY_CODE: 'The code is empty, nothing to compile',
+    DRAFT_ERROR_WRITE_FAILED: 'Could not write the compilation draft',
+    
+    // Output streams (T2-A)
+    CLI_STREAM_STDOUT: 'Standard output',
+    CLI_STREAM_STDERR: 'Standard error',
+    
+    // Compile / upload flow (T2-C)
+    CLI_COMPILE_STARTING: 'Compiling %1...',
+    CLI_UPLOAD_STARTING: 'Uploading to %1...',
+    CLI_SIZE_FLASH: 'Program storage %1 bytes (%2%%)',
+    CLI_SIZE_RAM: 'Dynamic memory %1 bytes (%2%%)',
     
     // Compile diagnostics
     CLI_DIAGNOSTIC_ERROR: 'Error',
@@ -105,6 +132,16 @@ var UI_EN = {
 
     // Projects (.cbg)
     TLB_UNSAVED_TITLE: 'Unsaved changes',
+    TLB_SAVE_FIRST: 'Not saved yet — choose a location',
+    TLB_SAVE_AS_NEEDED: 'Choose where to save this project',
+    TLB_RESTORE_DRAFT_TITLE: 'Restore unsaved changes?',
+    
+    // Draft restore on startup
+    MSG_RESTORE_DRAFT: 'There were unsaved changes when you last closed. Restore them?',
+    MSG_RESTORE_DRAFT_ALT: 'You can also use that project\'s last saved version, or start a blank project.',
+    MSG_RESTORE: 'Restore draft',
+    MSG_RESTORE_DISCARD: 'Use saved version',
+    MSG_RESTORE_BLANK: 'Start blank',
     TLB_RECENT_PROJECTS: 'Recent projects',
     TLB_RECENT_EMPTY: 'No recent projects yet',
     TLB_CLEAR_RECENTS: 'Clear recent list',

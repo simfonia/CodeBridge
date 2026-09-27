@@ -15,15 +15,20 @@ var UI_ZH_HANT = {
     TLB_SERIAL_PORT: '序列埠',
     TLB_NO_PORT: '未偵測到序列埠',
     TLB_RUN: '執行',
+    TLB_ZOOM_FIT: '縮放至符合內容',
     TLB_STOP_PROGRAM: '停止程式',
+    TLB_STOP_HINT: '取消編譯或上傳作業',
     TLB_TERMINAL: '終端機',
+    TLB_TOGGLE_TERMINAL: '展開／收合終端機',
     TLB_TERMINAL_TITLE: '序列監視器',
     TLB_PAUSE_SCROLL: '暫停捲動',
+    TLB_SCROLL_RESUMED: '繼續捲動',
     TLB_CLEAR_CONSOLE: '清除主控台',
     TLB_CLOSE_PANEL: '關閉面板',
     TLB_TOGGLE_CODE: '切換程式碼',
     TLB_ARDUINO_PREVIEW: 'Arduino 程式碼預覽',
     TLB_DRAG_RESIZE: '拖曳調整大小',
+    TLB_DRAG_RESIZE_HEIGHT: '拖曳調整終端機高度',
     TLB_COPY_CODE: '複製程式碼',
     TLB_EXAMPLES: '範例',
     TLB_THEME_TOGGLE: '切換體驗風格（Engineer／Angel）',
@@ -55,6 +60,28 @@ var UI_ZH_HANT = {
     CLI_ERROR_SPAWN_FAILED: '無法啟動 Arduino CLI',
     CLI_ERROR_COMMAND_FAILED: 'Arduino CLI 執行失敗',
     CLI_ERROR_INVALID_JSON: '無法解析 Arduino CLI 回應',
+    CLI_ERROR_INVALID_FQBN: '開發板設定不正確',
+    CLI_ERROR_COMPILE_FAILED: '編譯失敗',
+    CLI_ERROR_UPLOAD_FAILED: '上傳失敗',
+    CLI_ERROR_NO_FQBN: '尚未選擇開發板',
+    CLI_ERROR_NO_PORT: '尚未選擇序列埠',
+    CLI_ERROR_PORT_BUSY: '序列埠忙碌中',
+    CLI_ERROR_BUILD_STALE: '編譯結果已失效，請重新編譯',
+    
+    // 草稿落地（T2-A）
+    DRAFT_ERROR_INVALID_PROJECT_ID: '專案識別不合法',
+    DRAFT_ERROR_EMPTY_CODE: '程式碼為空，無法編譯',
+    DRAFT_ERROR_WRITE_FAILED: '無法寫入編譯草稿',
+    
+    // 輸出管線（T2-A）
+    CLI_STREAM_STDOUT: '標準輸出',
+    CLI_STREAM_STDERR: '標準錯誤',
+    
+    // 編譯／上傳流程（T2-C）
+    CLI_COMPILE_STARTING: '開始編譯 %1…',
+    CLI_UPLOAD_STARTING: '開始上傳到 %1…',
+    CLI_SIZE_FLASH: '程式儲存空間 %1 位元組（%2%%）',
+    CLI_SIZE_RAM: '動態記憶體 %1 位元組（%2%%）',
     
     // 編譯診斷
     CLI_DIAGNOSTIC_ERROR: '錯誤',
@@ -105,6 +132,16 @@ var UI_ZH_HANT = {
 
     // 專案（.cbg）
     TLB_UNSAVED_TITLE: '尚未儲存的變更',
+    TLB_SAVE_FIRST: '尚未存檔 — 點此選擇存檔位置',
+    TLB_SAVE_AS_NEEDED: '選擇這個專案的存檔位置',
+    TLB_RESTORE_DRAFT_TITLE: '載入未存檔的內容？',
+    
+    // 啟動時的暫存還原
+    MSG_RESTORE_DRAFT: '上次關閉前有尚未存檔的變更，要載入嗎？',
+    MSG_RESTORE_DRAFT_ALT: '也可以改用該專案最後存檔的內容，或開一個空白專案。',
+    MSG_RESTORE: '載入暫存',
+    MSG_RESTORE_DISCARD: '改用已存檔版本',
+    MSG_RESTORE_BLANK: '開空白專案',
     TLB_RECENT_PROJECTS: '最近開啟的專案',
     TLB_RECENT_EMPTY: '尚無最近開啟的專案',
     TLB_CLEAR_RECENTS: '清除最近清單',

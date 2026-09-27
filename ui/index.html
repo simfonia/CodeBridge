@@ -90,7 +90,7 @@
                             <div class="dropdown-separator"></div>
                             <!-- 雙風格切換開關 (移入選單) -->
                             <div class="dropdown-item theme-toggle-menuitem" id="btn-theme-toggle" title="%{BKY_TLB_THEME_TOGGLE}">
-                                <img src="src/icons/lego-duotone.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <img src="src/icons/astyle.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                 <span class="theme-text-label" id="themeTextLeft">Engineer</span>
                                 <label class="switch" style="pointer-events: none;">
                                     <input type="checkbox" id="themeToggle">
@@ -124,14 +124,11 @@
                         <option value="">%{BKY_TLB_NO_PORT}</option>
                     </select>
                     <div class="toolbar-separator"></div>
-                    <div class="toolbar-btn" id="btn-run" data-action="run-program" title="%{BKY_TLB_RUN}" disabled>
+                    <div class="toolbar-btn" id="btn-run" data-action="run-program" title="%{BKY_TLB_RUN}">
                         <img src="src/icons/run_blocks_24dp_75FB4C.png" alt="">
                     </div>
-                    <div class="toolbar-btn" id="btn-stop" data-action="stop-program" title="%{BKY_TLB_STOP_PROGRAM}" disabled>
+                    <div class="toolbar-btn" id="btn-stop" data-action="stop-program" title="%{BKY_TLB_STOP_PROGRAM}">
                         <img src="src/icons/stop_24dp_EA3323.png" alt="">
-                    </div>
-                    <div class="toolbar-btn" id="btn-terminal" data-action="toggle-terminal" title="%{BKY_TLB_TERMINAL}" disabled>
-                        <img src="src/icons/terminal_24dp_1F1F1F.png" alt="">
                     </div>
                 </div>
             </div>
@@ -388,25 +385,32 @@
     
     <div id="blocklyDiv"></div>
     <!-- 整合式終端機面板 -->
-            <div id="terminalArea" class="collapsed">
+            <div id="terminal-wrapper">
+                <div id="terminal-resizer" title="%{BKY_TLB_DRAG_RESIZE_HEIGHT}">
+                    <div id="terminal-toggle" class="panel-toggle" data-action="toggle-terminal" title="%{BKY_TLB_TOGGLE_TERMINAL}" role="button" tabindex="0" aria-expanded="false">
+                        <span class="arrow">▲</span>
+                    </div>
+                </div>
+                <div id="terminalArea" class="collapsed">
                 <div id="terminalHeader">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <img src="src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
                         <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <button class="terminal-tool-btn" id="btn-pause-terminal" data-action="terminal-pause" title="%{BKY_TLB_PAUSE_SCROLL}" disabled>
+                        <button class="terminal-tool-btn" id="btn-pause-terminal" data-action="terminal-pause" title="%{BKY_TLB_PAUSE_SCROLL}">
                             <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;" alt="">
                         </button>
-                        <button class="terminal-tool-btn" id="btn-clear-terminal" data-action="terminal-clear" title="%{BKY_TLB_CLEAR_CONSOLE}" disabled>
+                        <button class="terminal-tool-btn" id="btn-clear-terminal" data-action="terminal-clear" title="%{BKY_TLB_CLEAR_CONSOLE}">
                             <img src="src/icons/brush-3-ai-line_ff007c.png" style="width: 16px; height: 16px;" alt="">
                         </button>
-                        <button class="terminal-tool-btn" id="btn-close-terminal" data-action="terminal-close" title="%{BKY_TLB_CLOSE_PANEL}" disabled>
+                        <button class="terminal-tool-btn" id="btn-close-terminal" data-action="terminal-close" title="%{BKY_TLB_CLOSE_PANEL}">
                             <span style="font-size: 16px; font-weight: bold;">×</span>
                         </button>
                     </div>
                 </div>
                 <div id="terminalContent"></div>
+                </div>
             </div>
         </div>
         <div id="panel-resizer" title="%{BKY_TLB_DRAG_RESIZE}"></div>
@@ -587,6 +591,9 @@
     <!-- Toolbox 搜尋引擎（需在 main.js 前載入） -->
     <script src="src/lib/blockly/toolbox-search.js"></script>
 
+    <!-- 縮放至符合內容（附加於 Blockly 右下角縮放群組） -->
+    <script src="src/lib/blockly/zoom-fit.js"></script>
+
     <!-- ====== Tauri IPC 橋接層（瀏覽器環境自動降級） ====== -->
     <script src="src/lib/tauri/bridge.js"></script>
 
@@ -599,6 +606,12 @@
     <script src="src/lib/ui/clipboard.js"></script>
     <script src="src/lib/ui/confirm-dialog.js"></script>
     <script src="src/lib/ui/toast.js"></script>
+
+    <!-- ====== 終端機面板（T2-C） ====== -->
+    <script src="src/lib/ui/terminal-panel.js"></script>
+
+    <!-- ====== Arduino CLI 編譯／上傳控制器（T2-C） ====== -->
+    <script src="src/lib/arduino/compile-controller.js"></script>
 
     <!-- ====== 工具列按鈕 registry 與行為 ====== -->
     <script src="src/lib/ui/toolbar-registry.js"></script>

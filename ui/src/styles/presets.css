@@ -100,9 +100,24 @@
     border-radius: 6px;
 }
 
-.blocklyWorkspaceSelectionRing,
 .blocklyHighlightedConnection {
     stroke: var(--cb-focus) !important;
+}
+
+/* Blockly 的工作區選取環（`.blocklyWorkspaceSelectionRing`）是給鍵盤／螢幕閱讀器
+   使用者看的「焦點框」，預設就常駐繪製。它框的是**整個工作區可見範圍**，
+   而不是任何可操作的邊界，卻容易被誤讀成「積木不該超過這條線」——
+   但 Blockly 本來就允許積木擺在工作區外（無限畫布）。
+   因此一般狀態下完全隱藏，只在使用者真的以鍵盤操作時才顯示焦點環，
+   兼顧無障礙需求與畫面簡潔。 */
+.blocklyWorkspaceSelectionRing {
+    stroke: none;
+}
+
+.blocklyWorkspaceSelectionRing:focus,
+.blocklyWorkspaceSelectionRing:focus-visible {
+    stroke: var(--cb-focus);
+    stroke-width: 2px;
 }
 
 .blocklyCommentTextarea {
@@ -333,4 +348,254 @@
 [data-codebridge-preset='angel'] .toolbar-btn:hover img,
 [data-codebridge-preset='angel'] .toolbar-btn.active img {
     filter: brightness(0) saturate(100%) invert(46%) sepia(63%) saturate(2450%) hue-rotate(293deg) brightness(91%) contrast(87%);
+}
+
+/* ============================================================
+   終端機輸出（T2-C）
+   程式碼輸出可能含任意字元，因此以單一字文行渲染，
+   只用 token 標示類色，不式化内容（避免掁浮並不受控輸出影響）。
+   ============================================================ */
+.terminal-line {
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--cb-text);
+}
+
+.terminal-line--error {
+    color: var(--cb-danger);
+}
+
+.terminal-line--warn {
+    color: #d9a441;
+}
+
+[data-codebridge-preset='angel'] .terminal-line--warn {
+    color: #b37600;
+}
+
+.terminal-line--success {
+    color: var(--cb-success);
+}
+
+.terminal-line--command {
+    color: var(--cb-primary);
+    font-weight: 600;
+}
+
+/* 程式碼診斷標記：diag-error / diag-warning / diag-note */
+.code-line.diag-error {
+    background: rgba(217, 74, 92, 0.16) !important;
+    border-left: 3px solid var(--cb-danger) !important;
+}
+
+.code-line.diag-warning {
+    background: rgba(217, 164, 65, 0.16) !important;
+    border-left: 3px solid #d9a441 !important;
+}
+
+[data-codebridge-preset='angel'] .code-line.diag-warning {
+    background: rgba(179, 118, 0, 0.14) !important;
+    border-left: 3px solid #b37600 !important;
+}
+
+.code-line.diag-note {
+    background: rgba(53, 199, 212, 0.12) !important;
+    border-left: 3px solid var(--cb-primary) !important;
+}
+
+/* ============================================================
+   終端機面板與代碼面板切換鈞（小修改）
+   原本 #terminalArea / #terminalHeader 的背景寫死在 style.css 的深色
+   #1e1e1e / #2d2d30，preset 根本沒紁到，使 Angel 浅色主題下
+   終端機標題、「×」按鈞落在標題上看不清。
+   下面提供 token，讓兩套 preset 都自準。
+   ============================================================ */
+#terminalArea {
+    background: var(--cb-code-background);
+    border-top-color: var(--cb-border);
+    color: var(--cb-text);
+}
+
+#terminalHeader {
+    background: var(--cb-surface-raised);
+    border-bottom-color: var(--cb-border);
+    color: var(--cb-text);
+}
+
+#terminalContent {
+    background: var(--cb-code-background);
+    color: var(--cb-code-text);
+}
+
+/* 標題圖示與「×」都必須用 token，否則 Angel 下是黑字型底。 */
+#terminalTitle,
+#btn-close-terminal {
+    color: var(--cb-text);
+}
+
+#btn-close-terminal {
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.terminal-tool-btn:hover,
+#btn-close-terminal:hover {
+    background: var(--cb-surface-hover);
+}
+
+/* 自動捷動開啟時顯示按下狀態（默認即為按下） */
+.terminal-tool-btn.is-active {
+    background: color-mix(in srgb, var(--cb-primary) 22%, transparent);
+    box-shadow: inset 0 0 0 1px var(--cb-primary);
+    border-radius: 4px;
+}
+
+.terminal-tool-btn.is-active img {
+    opacity: 1;
+}
+
+/* 暫停時提醒用警誚色，讓使用者知道已舉掉自動捷動 */
+.terminal-tool-btn.is-paused {
+    background: color-mix(in srgb, var(--cb-dirty-ring) 24%, transparent);
+    box-shadow: inset 0 0 0 1px var(--cb-dirty-ring);
+    border-radius: 4px;
+}
+
+/* 代碼面板切換鈞（#code-toggle）：需要 hover 反馈 */
+#code-toggle {
+    background: var(--cb-surface-raised);
+    border-color: var(--cb-border);
+    color: var(--cb-primary);
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+#code-toggle:hover {
+    background: var(--cb-surface-hover);
+    color: var(--cb-primary-hover);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--cb-primary) 45%, transparent);
+}
+
+#code-toggle:active {
+    color: var(--cb-primary-hover);
+}
+
+/* 終端機高度調整棒（對齊 #panel-resizer 的配色與互動） */
+#terminal-resizer {
+    position: relative;
+    height: 6px;
+    background: transparent;
+    cursor: row-resize;
+    z-index: 100;
+    transition: background 0.2s;
+    margin-top: -3px;
+    margin-bottom: -3px;
+    flex-shrink: 0;
+}
+
+#terminal-resizer:hover,
+#terminal-resizer.is-dragging {
+    background: var(--cb-primary);
+}
+
+/* 終端機收合鈕（小三角）。
+   配色、hover 與 :active 全部對齊 `#code-toggle`，兩顆面板切換鈕視覺上是一組的。
+   差異只在方向：code-toggle 是垂直（貼左緣），terminal-toggle 是水平（貼上緣）。 */
+#terminal-toggle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 100%;
+    width: 40px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--cb-surface-raised);
+    color: var(--cb-primary);
+    border: 1px solid var(--cb-border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    font-size: 9px;
+    line-height: 1;
+    user-select: none;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    z-index: 100;
+}
+
+#terminal-toggle:hover {
+    background: var(--cb-surface-hover);
+    color: var(--cb-primary-hover);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--cb-primary) 45%, transparent);
+}
+
+#terminal-toggle:active {
+    color: var(--cb-primary-hover);
+}
+
+#terminal-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   「縮放至符合內容」控制項
+   Blockly 內建縮放群組只有 zoom in / out / reset，沒有 fit。
+   這顆放在工作區**右上角**：右下角已被 Blockly 的縮放群組與垃圾桶佔用。
+   位置完全交由 CSS（`#blocklyDiv` 為 position:relative 基準），
+   不需要 JS 量測 —— 程式預覽面板收合時 `#blocklyArea` 會變寬，
+   按鈕自然跟著往右移，不會脫離工作區右緣。
+   ============================================================ */
+.blockly-zoom-fit {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--cb-border);
+    border-radius: 4px;
+    background: var(--cb-surface-raised);
+    color: var(--cb-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    z-index: 80;
+}
+
+.blockly-zoom-fit:hover {
+    background: var(--cb-surface-hover);
+    color: var(--cb-primary-hover);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--cb-primary) 45%, transparent);
+}
+
+.blockly-zoom-fit:focus-visible {
+    outline: 2px solid var(--cb-focus);
+    outline-offset: 1px;
+}
+
+.blockly-zoom-fit svg {
+    display: block;
+    pointer-events: none;
+}
+
+/* ============================================================
+   移除 Blockly 工作區外圍的浅蓝細綻边框
+   Blockly 默認會圖 `.blocklyMainBackground` 把工作區可見區域的
+   邊維畫出一圃細綽（stroke: #c6c6c6）。雨圖是經過編換尺度
+   描述的工作區，不是任何可操作的邊界。
+   積本引中的移動與縭放可以讓積本畫到這圃框之外，
+   觀覺上像是「越界」，實際上只是工作區存在不可觀的
+   延絤（積本可以國在工作區任意處）。显著於平面只多一圃樣例外箱，
+   且接受“積本涒卡在框上”的誤律指導，因此取消。
+   若未来需要重新後上，只需把下面的 none 改回 stroke 即可。
+   ============================================================ */
+.blocklyMainBackground {
+    stroke: none !important;
 }
