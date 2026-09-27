@@ -113,6 +113,53 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 3. 板子選擇面板（搜尋 + 已安裝／全部分頁）仍待實作
 4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
 
+## 2026-09-27：T2-E 使用者回報修正（三項阻擋性缺陷）
+
+### 使用者回報的現象
+1. 插上板子，序列埠沒有自動輪詢偵測到 COM4
+2. 開發板對話框顯示「尚未安裝任何開發板核心」，常用開發板也是空的
+3. 插著板子時下拉清單有「未偵測到序列埠」；拔掉後反而不見了
+
+### 已完成
+- [x] **序列埠 watcher 被板子偵測阻塞**：`publish_detected_boards` 在 1500ms 輪詢迴圈裡同步呼叫 `arduino-cli board list`（逾時 60 秒），插拔板子時 UI 長時間無反應。改為獨立執行緒 + `BOARD_SCAN_INFLIGHT` 抑制 + 8 秒逾時
+- [x] **下拉清單邏輯顛倒**：有可用埠時顯示 placeholder、拔掉時反而隱藏。改為「有埠→只列實際埠；無埠→先列『未偵測到』再列已移除的原選擇」
+- [x] **首次使用無出路**：CodeBridge 隔離目錄沒有任何核心，面板只顯示提示。加入 `core_search`／`core_install` 後端命令、`core.js` 服務與「安裝核心」按鈕
+- [x] 測試：單元 126 passed（+8）、board-picker E2E 17 passed（+2）
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 根因一：watcher 被同步 CLI 呼叫卡住
+```rust
+loop {
+    let current = scan_ports_detailed();     // 掃描序列埠
+    if diff.change.should_emit() {
+        publish_detected_boards(&app, &current);  // ← 同步啟動 CLI，最長 60 秒
+    }
+    std::thread::sleep(1500ms);               // ← 這 1500ms 根本沒機會跑
+}
+```
+`board list` 要啟動子進程並掃描 USB。CLI 沒安裝／卡住時，序列埠掃描就整整停滯數十秒。修正為 `spawn_blocking` 獨立執行緒 + atomic in-flight 抑制 + 8 秒逾時（板子偵測是附帶功能，不該讓 UI 等）。
+
+#### 根因二：我在寫測試時就把錯的行為當成規格
+```javascript
+emitPorts(bridge, ['COM3', 'COM7']);
+expect(select.values()).toEqual(['', 'COM3', 'COM7']);  // ← 這行本身就不對
+```
+插著板子時清單裡不該有「未偵測到序列埠」。但因為我先寫了這行測試、再照著實作，於是**整條鏈路都建立在錯誤的規格上**，還加上了「保留原選擇」的合理化註解掩蓋問題。教訓：**TDD 的測試本身也必須被質疑** —— 尤其是把使用者可見的呈現形式（option 清單）寫成斷言時。
+
+#### 根因三：隔離設計的代價終於爆了
+CodeBridge 用 `%APPDATA%\com.codebridge.app\arduino\`（實測確認只有 `builtin` 工具，**零核心**），使用者裝在 `%LOCALAPPDATA%\Arduino15\` 的 3 個核心完全看不到。面板說「尚未安裝核心」是**正確診斷**，但沒有任何出路 —— 使用者卡死。加入安裝入口後，首次使用不再需要離開應用程式。
+
+### 驗證結果
+- `cargo test`：**206 passed** + 6 項真實 `arduino-cli` 測試
+- Vitest：**126 passed**
+- Playwright board-picker：**17 passed**
+
+### 下次啟動方向 (Next Steps)
+1. 執行全量 E2E
+2. 實機驗證：安裝核心後 CodeBridge 能否正確選板並燒錄到 COM4
+3. T2-E 其餘：preset 微調、cocoya 圖示搬遷
+
 ## 2026-09-27：T2-E 使用者回報修正（CH340 clone 無法自動辨識）
 
 ### 已完成
