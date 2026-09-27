@@ -3,7 +3,9 @@
 ## 目錄
 
 - [目前待辦](#目前待辦)
+- [2026-09-27](#2026-09-27)
 - [2026-09-26](#2026-09-26)
+  - [Arduino CLI 編譯與上傳（Phase T2-C：前端控制器與終端機）](#2026-09-26arduino-cli-編譯與上傳phase-t2-c前端控制器與終端機)
   - [工具列實作與 .cbg 專案](#2026-09-26工具列實作與-cbg-專案)
 - [2026-09-25](#2026-09-25)
 - [2026-07](#2026-07)
@@ -16,8 +18,8 @@
 > 各章節內仍保留原始清單以維持歷史紀錄，兩者若有差異以本章節為準。
 
 ### 工具列後續（2026-09-26 本輪凍結，需另開一輪）
-- [ ] Phase 3 Serial Monitor / Terminal：`btn-refresh-serial`、`serial-selector`、`btn-terminal`、`btn-pause/clear/close-terminal`、Rust `open_serial_monitor` 串流（port/baud/重連/HEX/時間戳待討論）
-- [ ] `btn-run` / `btn-stop`：等 Arduino CLI T2 compile/upload 完成後接 operation 事件串流
+- [ ] Phase 3 Serial Monitor：`btn-refresh-serial`、`serial-selector` 綁定、Rust `open_serial_monitor` 串流（port/baud/重連/HEX/時間戳待討論）；`btn-terminal` 與 `btn-pause/clear/close-terminal` 已於 T2-C 實作為**編譯輸出面板**，序列監視器仍待 T3
+- [ ] `btn-run` / `btn-stop` 已於 T2-C 上線；待 T2-D 補上板子／序列埠選擇後才具備完整上傳前置條件
 - [ ] Phase 4 `btn-diagnose` 與設定選單擴充（Board Manager / Library Manager / CLI 設定）
 - [ ] `.cbg` Windows 副檔名註冊與雙擊開檔（argv 解析、NSIS/WiX 自訂腳本）
 - [ ] 匯出 `.ino` 檔（選配；貼到 IDE 的需求已由「複製程式碼」滿足）
@@ -25,10 +27,12 @@
 - [ ] 總提供 `chevron-down` 與 `history` 圖示（下拉與最近專案圖示）
 
 ### 下一階段主線：Arduino CLI 工具鏈 Phase T2
-- [ ] compile / upload 的草稿寫入（plain code 落地、marker 不寫入磁碟）
-- [ ] operation 事件串流與 compiler diagnostics 雙向定位
+- [x] T2-C：前端 `compile-controller.js`（單飛、取消、診斷雙向定位）、`terminal-panel.js`、工具列 `btn-run`/`btn-stop`/`btn-terminal` 上線（詳見下方 2026-09-26 章節）
+- [ ] T2-D：前端 `board-detector.js`（對齊 cocoya 熱插拔輪詢 + 偏好埠恢復）、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH` 上傳前板子比對
+- [ ] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（`EventSink` 緩衝修正尚未完成，T2-D 的事件消費端依賴它）
+- [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調、桌機實機上傳驗證
+- [x] i18n 新 key：`CLI_ERROR_INVALID_FQBN`、`CLI_ERROR_COMPILE_FAILED`、`CLI_ERROR_UPLOAD_FAILED`、`CLI_ERROR_NO_FQBN`、`CLI_ERROR_NO_PORT`、`CLI_ERROR_PORT_BUSY`、`CLI_ERROR_BUILD_STALE`、`DRAFT_ERROR_*`、`CLI_STREAM_STDOUT/STDERR`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_SIZE_FLASH/RAM`、`TLB_STOP_HINT`、`TLB_SCROLL_RESUMED`（中英兩份已補齊）
 - [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
-- [ ] 補明確 CSP（`tauri.conf.json` 目前仍為 `csp: null`，啟用 CLI 串流前必須處理）
 
 ### 主題架構後續（2026-09-26 palette contract）
 - [ ] 第三方模組若要加入 palette contract，目前需自行宣告 `blockTypes` / `typePrefix`；可考慮併入 `core_manifest.json` 由 loader 自動呼叫 `registerModule()`
@@ -48,6 +52,8 @@
 - [ ] 工作區註解的保存／載入（XML 序列化）
 
 ### 品質與測試
+- [x] ~~`toolbar.spec.js`「內建範例可載入」失敗~~：**已於 2026-09-27 修正**。命名來源統一為範例檔內的 `cbp:name`（`blink.cbg` 改為 `Blink`），並以 `project-io.js` 的 `parsed.meta.name || nameFromPath(file)` 作為唯一回退，不再依賴檔名大小寫
+- [x] ~~`blockly-migration.spec.js` 的 `controls-for` 多 worker 偶發重複行~~：**已於 2026-09-27 驗證通過**。2026-09-27 以多 worker 全量執行 90 項 E2E 全部通過，未重現；若日後再出現，先以 `--workers=1` 對照並檢查 loops generator 的無狀態性
 - [ ] 將目前一次性的 Edge smoke test 納入長期 CI fixture
 - [ ] 隨新模組增加更多 v12 XML 與 generator golden fixtures
 - [ ] marked code 與 plain code 分離後，golden tests 改驗正式輸出不含 ID marker
@@ -57,7 +63,148 @@
 
 ---
 
+# 2026-09-27
+
+## 2026-09-27：T2-C/T2-B 工作區整理與全量驗證
+
+### 已完成
+- [x] 兩項「已知失敗」測試皆已修正並驗證（詳見文首「品質與測試」）
+  - 範例命名：命名來源統一為範例檔內 `cbp:name`，`blink.cbg` 改為 `Blink`
+  - `controls-for` 多 worker 偶發重複行：多 worker 全量 90 項全數通過，未重現
+- [x] 工作區 52 個檔案的未提交變更整理為 6 個語意化 commit：
+  1. `chore(release)` 版本號 0.1.0 → 0.2.0
+  2. `feat(arduino)` Rust compile/upload 管線與 Tauri 事件串流（T2-A／T2-B）
+  3. `feat(ui)` 前端編譯控制器與終端機面板（T2-C）
+  4. `feat(blockly)` 離線 media 備份、滾輪縮放與縮放至符合內容
+  5. `fix(project)` 開啟專案不再因 Blockly 註解正規化而誤判 dirty
+  6. `docs` 檔案結構與日誌更新
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 範例命名應該只有一個來源
+先前 `toolbar.spec.js` 失敗的診斷是「`cbp:name` 是小寫 `blink`」，但真正的結構性問題是**命名有兩個來源**：範例檔內的 `cbp:name` 與 `manifest.json` 的 `id`／`title`。只要 `manifest.title` 是「Blink（LED 閃爍）」這類顯示用字串，就不適合當檔名來源。`project-io.js` 現在一律採 `parsed.meta.name || nameFromPath(example.file)`，`manifest.json` 退為純顯示用途，衝突從此不可能發生。
+
+#### Blockly 註解正規化會讓「開檔即 dirty」
+Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=… x=… y=…`。這些屬性不是使用者的修改，卻會改變序列化結果 —— 直接字串比對會讓 save 按鈕在開檔瞬間就亮起。正規化時機不固定（實測 10ms～170ms，中間還有平靜期），靠 debounce 視窗收斂不可靠。解法是在**比對時**剝除易變屬性（`x` / `y` / `pinned`），基準快照本身保持完整（存檔與還原仍需要）。代價是單獨移動／縮放註解不會標記 dirty，註解屬呈現性質，可接受。
+
+實作注意：不可用單一全域 regex 掃 `x|y|pinned`，因為移除第一個屬性後掃描位置已越過 `<comment` 開標籤，同一標籤內其餘屬性會漏掉。必須先取出整個 `<comment ...>` 標籤再逐屬性移除。
+
+#### `git add` 與 `git commit` 併在同一命令列會互相交錯
+以 `git add <paths>; git commit -m ...` 一次執行時，先前的 staged 內容會被一併帶進第一個 commit，導致 commit 訊息與實際內容不符（本次先產生了 `chore(release)` 卻含 16 個 Rust 檔案）。處置方式是 `git reset --soft HEAD~1` 後**每個 commit 分成兩次獨立工具呼叫**執行，並在每次之後以 `git show --stat` 驗證。
+
+### 驗證結果
+- `npx vitest run tests/unit`：**78 passed**（6 個檔案）
+- `npx playwright test`（多 worker 全量）：**90 passed**（1.7 分鐘）
+- `cargo test`：**178 passed** + 4 個真實 `arduino-cli` 整合測試 passed
+- `npm run build`：成功（Vite 131ms）
+- `git status`：工作區乾淨，master 領先 origin/master 6 個 commit
+
+### 下次啟動方向 (Next Steps)
+1. **T2-D 前置**：修正 `EventSink` 緩衝（目前只保留一行且永遠 `take_flush(1)`，會遺失中間行、64 行門檻永遠不觸發）
+2. Rust 1500ms 序列埠／開發板 watcher 與 signature-diff 事件
+3. T2-D：`board-detector.js`、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH`
+4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
+
+---
+
 # 2026-09-26
+
+## 2026-09-26：Arduino CLI 編譯與上傳（Phase T2-C：前端控制器與終端機）
+
+### 已完成
+- [x] 新增 `ui/src/lib/arduino/compile-controller.js`（`window.CodeBridgeCompile`）
+  - `run()` / `upload()` / `stop()`、`isBusy()` / `getState()` / `onChange()`
+  - 單飛（single-flight）：作業進行中忽略後續 `run()`
+  - 流程：`compile_start` → `upload_ready` →（有舊 build 且有序列埠）`upload_start`
+  - 送出前以 `CodeBridgePlainCode.strip()` 去除 ID marker，維持行號契約
+  - 訂閱 `codebridge://operation-status` 與 `codebridge://compile-diagnostics`
+  - `applyDiagnostics(inoFileName, diagnostics)` 雙向定位：1-based 行號 → 0-based `data-line-index`；只標記自己草稿（`<Stem>.ino`）的診斷
+  - `resolveProjectId()` 由專案路徑推導 `[A-Za-z0-9_-]{1,64}` 識別
+- [x] 新增 `ui/src/lib/ui/terminal-panel.js`（`window.CodeBridgeTerminalPanel`）
+  - `append` / `appendLines` / `appendMessage`（`textContent`，不解析 HTML）
+  - 自動捲動與暫停捲動、清除、開闔、`onChange` 通知
+  - `MAX_LINES = 2000` 上限，超過丟棄最舊的行
+- [x] 工具列上線：`btn-run` / `btn-stop` / `btn-terminal` / `btn-pause|clear|close-terminal` 移除 `disabled`；`toolbar-registry.js` 改為 `implemented: true`；`toolbar.js` 新增 6 個 `data-action`
+- [x] `index.html` 載入兩個新 script（置於 toolbar 之前，確保 `init()` 時機正確）
+- [x] `main.js` 以第 5 節初始化 `CodeBridgeCompile`（與 `ProjectIO` 共用 `store` / `getCode`）
+- [x] `presets.css` 新增 `.terminal-line*` 與 `.code-line.diag-*` 樣式（Engineer / Angel 皆用 token）
+- [x] i18n（zh-hant + en）補齊 15 個 key
+- [x] 測試：`terminal-panel.test.js`（13）、`compile-controller.test.js`（21）、`compile-flow.spec.js`（11 E2E）、`toolbar-buttons.test.js` 更新
+
+### 技術深挖 (Technical Deep Dive)
+- **按鈕責任歸屬**：`#btn-terminal` 與三顆終端機工具列按鈕都帶 `data-action`，點擊已由 `toolbar.js` 的 document 委派處理。因此 `terminal-panel.js` **刻意不綁定 click**，否則同一次點擊會「開→關」互相抵銷，按鈕看起來像壞掉。這是與初版計畫的刻意偏離，並以單元測試鎖定。
+- **`compileOperationId` 與 `activeOperationId` 分離**：`upload_start` 會覆寫 `activeOperationId`，但後端 `compile-diagnostics` 事件仍帶編譯作業的 id。若只比對 `activeOperationId`，上傳開始後回來的編譯診斷會被整個丟棄。`isOwnOperation()` 同時接受兩者。
+- **`projectId` 長度截斷**：後端正則為 `^[A-Za-z0-9_-]{1,64}$`，超長專案名稱會被 `DRAFT_ERROR_INVALID_PROJECT_ID` 拒絕。單元測試抓到未截斷的缺陷，已加入 `MAX_PROJECT_ID_LENGTH`。
+- **只標記自己草稿的診斷**：gcc 成功編譯時也會回報函式庫核心檔的警告，那些行號與使用者程式碼無關。依 `diagnostic.file === inoFileName` 過濾後才標記。
+- **`setBusy(false)` 時清掉 `compileOperationId`**：避免上一輪的識別被下一輪的無關事件命中。
+- **編輯工具的插入點陷阱**：`insert_line` 會插在該行「之前」，多次分塊建立檔案時容易吃掉原本的結尾大括號，造成語法仍合法但 `test()` 被巢狀在未閉合的函式內（vitest 顯示為 `No test found in suite`）。已用 `node --check` + 括號深度檢查逐檔驗證。
+
+### 驗證結果
+- `npx vitest run tests/unit`：**75 passed**（6 個檔案）
+- `npx playwright test tests/e2e/compile-flow.spec.js`：**11 passed**
+- `npm run build`：成功（Vite 183ms）
+- `node --check`：`terminal-panel.js` / `compile-controller.js` / `toolbar.js` / `toolbar-registry.js` / `main.js` 全部通過
+
+### 下次啟動方向 (Next Steps)
+- 先修正 Rust `EventSink` 的緩衝（目前只保留一行且永遠 `take_flush(1)`，會遺失中間行、64 行門檻永遠不觸發），再做 T2-D 的 watcher
+- T2-D：`board-detector.js`、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH`
+- T2-E：cocoya 圖示搬遷、preset 微調、桌機實機編譯／上傳驗證
+
+## 2026-09-26：Arduino CLI 編譯與上傳（Phase T2-B：Tauri 命令與事件串流）
+
+### 已完成
+- [x] 新增 `src-tauri/src/events.rs`：`FlushPolicy`（雙門檻 200ms／64 行，純函式）、`EventSink`（實作 `OutputSink` 並以 `emit_to` 推播）、`OperationProgress` payload、事件名稱集中管理。
+- [x] 新增非同步命令 `compile_start` / `upload_start`（`spawn_blocking`）與 `upload_ready`；移除 `run_arduino_code` stub。
+- [x] `AppState` 新增 `last_builds`（後端權威的 build 紀錄）與 `port_lease`（序列埠佔用鎖，T3 Monitor 沿用）。
+- [x] 移除 `Operation.child` 死碼；`Operation` 新增 `line_count` / `result` / `push_line()`。
+- [x] `RunResult` 新增 `line_count`；`StreamKind` 可序列化。
+- [x] `tauri.conf.json` 補 `csp` 與 `devCsp`，結束 `csp: null`。
+
+### 技術深挖 (Technical Deep Dive)
+- **後端權威的 build 路徑**：`upload_start` 只接受 `projectId` / `fqbn` / `port`；build 目錄一律從 `last_builds` 查出，避免惡意 webview 指定 `--input-dir`。
+- **死碼 `Operation.child` 是誘餌**：`Child` 無法安全跨執行緒共享，且會與串流 runner 內部的 kill 形成兩條路徑；正確做法是刪除而非接上。
+- **節流策略抽成純函式**：`FlushPolicy::take_flush()` 可在無 Tauri app 的情況下完整驗證，`EventSink` 只剩薄層 emit。
+- **事故與教訓**：曾以 `Get-Content | -replace | Set-Content -NoNewline` 批次取代字串，導致 `commands.rs` 的換行被完全抹除（334 行 → 1 行）。因該檔當時尚未被 git 追蹤修改，可用 `git checkout` 乾淨還原。**修改原始碼一律用 editor 工具或 Python `write_bytes()`。**
+
+### 驗證結果
+- `cargo test`：178 單元 + 4 整合測試全數通過（T2-A 為 163 + 4）。
+- `cargo build`：成功，無新增警告。
+- `npm run test:unit --prefix ui`：41 passed（前端未受影響）。
+
+### 下次啟動方向 (Next Steps)
+1. T2-C：`compile-controller.js`、`terminal-panel.js`、工具列執行／停止／終端機按鈕上線。
+2. T2-D：`board-detector.js`、板子選擇面板、`MSG_BOARD_MISMATCH`。
+3. T2-E：i18n 新 key、icon 複製、終端機面板 token 化。
+
+## 2026-09-26：Arduino CLI 編譯與上傳（Phase T2-A：Rust 核心）
+
+### 已完成
+- [x] 撰寫 `log/plan/ArduinoCompileUpload.md`（含 cp950 根治、板子自動偵測、preset、i18n、icon 對策）。
+- [x] 新增 `arduino/encoding.rs`：子進程輸出寬容解碼（UTF-8 → Big5/cp950 → GBK → windows-1252 → latin-1），根治 Windows webview 亂碼；對齊 #cocoya 的子進程編碼鐵律。
+- [x] 新增 `arduino/draft.rs`：編譯草稿落地（stem 轉換、project id 白名單防路徑穿越、UTF-8 無 BOM + LF、清除舊草稿避免殘留 `.h`/`.cpp`）。
+- [x] 改寫 `arduino/runner.rs` 為串流架構（`OutputSink`／`BoundedSink`／`run_streamed`），支援逐行進度、即時取消、逾時與管線背壓防護。
+- [x] 新增 `arduino/pipeline.rs`：`compile_pipeline` / `upload_pipeline` / `verify_build` / `parse_size_report`，對 runner 泛型化以便完整單元測試。
+- [x] 移除 `Operation.child` 死碼的準備（改由串流執行緒持有 `Child`）。
+- [x] 新增 `src-tauri/tests/arduino_cli_smoke.rs`：對真實 arduino-cli 的端對端整合測試。
+- [x] 修正 `command::version()` 遺漏子命令 token 的 T1 bug，並新增 `every_builder_passes_its_subcommand_token` 回歸保護。
+- [x] 更新 `FILE_STRUCTURE.md`、工作日誌與本檔。
+
+### 技術深挖 (Technical Deep Dive)
+- **compile／upload 不使用 `--json`**：實測 arduino-cli 1.2.0 發現 `--json` 模式下 stderr 完全為空（連進度都被包進 JSON），終端機面板會一片空白。改用非 JSON 模式後分工正好符合需求：stdout 是人類可讀摘要，stderr 是 gcc/avrdude 診斷（正是既有 `diagnostics.rs` 的格式）。成功判定改用結束碼。
+- **locale 會改變訊息文字**：`parse_size_report` 不比對「Sketch uses」等字面，改用「一行含數字緊接 `%`」的語言無關特徵。
+- **成功編譯時 stderr 仍有函式庫警告**：後端原樣保留並附檔名，由 UI 依 `diag.file !== inoFileName` 決定能否跳轉。
+- **整合測試抓到兩個單元測試抓不到的 bug**：`command::version()` 漏子命令 token（CLI 印 help 並 exit 0）；串流 runner 在子程序結束瞬間遺失在途的行（`version` 回傳空 stdout，`board list` 正常）。修法為結束前先 join reader 執行緒再抽乾。
+- **Rust `\` 續行會吞掉下一行前導空白**：內嵌 Python 腳本時會破壞縮排而讓測試失效，改用 `concat!`。
+
+### 驗證結果
+- `cargo test`：163 單元測試 + 4 整合測試全數通過（基準 T1 為 93）。
+- `cargo build`：成功，無新增警告。
+- 真機 smoke：對 `arduino-cli 1.2.0` 實際執行成功與失敗兩種 compile，確認輸出分工、結束碼、build 產物與 locale 本地化行為。
+
+### 下次啟動方向 (Next Steps)
+1. T2-B：非同步 Tauri command 與事件串流、`last_builds`／`port_lease`、移除 `Operation.child`、補 CSP。
+2. T2-C/T2-D：前端 compile controller、terminal 面板、板子自動偵測與選擇面板。
+3. T2-E：i18n、icon 複製、終端機面板 token 化。
 
 ## 2026-09-26：CodeBridge Modules 語意積木 palette contract
 

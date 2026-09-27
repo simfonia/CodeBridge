@@ -19,12 +19,16 @@ CodeBridge/
 │       ├── commands.rs  # Tauri 指令 (serial, toolchain, board, library, operation)
 │       ├── project.rs     # .cbg 專案檔讀寫（副檔名白名單、UTF-8 無 BOM、BOM 容忍）
 │       ├── capabilities/  # Tauri 2 權限宣告（core / dialog 最小權限）
-│       └── arduino/     # Arduino CLI 整合（B 方案：外部依賴 + 引導安裝）
+│       ├── tests/         # 整合測試（arduino_cli_smoke.rs：對真實 arduino-cli 端對端驗證）
+│       ├── arduino/     # Arduino CLI 整合（B 方案：外部依賴 + 引導安裝）
 │           ├── mod.rs           # 公開 facade：CodeBridgeToolchain、ToolchainStatus
 │           ├── paths.rs         # CLI 路徑解析（使用者設定 → 系統 PATH）與隔離目錄
 │           ├── command.rs       # 純函式 command builder（board/core/lib/compile/upload/monitor）
 │           ├── parser.rs        # arduino-cli --json 回應解析（snake_case）
-│           ├── runner.rs        # ProcessRunner trait + StdProcessRunner（逾時/取消/背壓管線）
+│           ├── runner.rs        # ProcessRunner trait + StdProcessRunner（串流/逾時/取消/背壓管線）
+│           ├── encoding.rs      # 子進程輸出寬容解碼（UTF-8 → Big5/cp950 → GBK → win1252）
+│           ├── draft.rs         # 編譯草稿落地（.ino 寫入、stem 轉換、路徑穿越防護）
+│           ├── pipeline.rs      # compile / upload 流程編排（泛型 runner，可完整單元測試）
 │           ├── diagnostics.rs   # compiler_err 行號解析（gcc 冒號式與括號式）
 │           └── operations.rs    # 長作業 registry（狀態、取消、prune）
 │
@@ -109,9 +113,12 @@ CodeBridge/
 │   │       │   ├── plain-code.js    # 去除 ID marker 取得可寫檔與可貼 IDE 的 plain code
 │   │       │   ├── project-store.js # .cbg metadata 序列化、dirty 狀態、最近專案與草稿
 │   │       │   └── project-io.js    # New/Open/Save/Save As/範例/複製 的流程編排
+│   │       ├── arduino/          # Arduino CLI 工具鏈（T2）
+│   │       │   └── compile-controller.js # 編譯／上傳狀態機、單飛、取消、診斷標記
 │   │       ├── ui/              # 工具列 UI 元件
 │   │       │   ├── toolbar-registry.js # 按鈕 registry（id / implemented / handledBy）
 │   │       │   ├── toolbar.js         # data-action 派發、dirty 指示、最近清單與範例
+│   │       │   ├── terminal-panel.js   # 終端機輸出面板（附加、捲動、暫停、清除、開闔）
 │   │       │   ├── confirm-dialog.js  # 可翻譯確認對話框（未儲存變更三選一）
 │   │       │   ├── toast.js           # 短暫提示
 │   │       │   └── clipboard.js       # 剪貼簿複製（含 execCommand fallback）
@@ -126,8 +133,8 @@ CodeBridge/
 │   │           └── core_manifest.json # 模組載入清單
 │   └── public/
 │       ├── favicon.ico      # 網站圖示（複製自 src-tauri/icons/icon.ico）
-│       ├── examples/       # 內建範例 .cbg 與 manifest.json（範例下拉清單）
-│       └── blockly/         # Blockly v13.3.0 靜態資源（core、msg、plugins）
+│       ├── examples/       # 內建範例 .cbg 與 manifest.json（manifest 僅供顯示，命名以 .cbg 內 cbp:name 為準）
+│       └── blockly/         # Blockly v13.3.0 靜態資源（core、msg、plugins、media 離線備份）
 │
 ├── resources/           # 應用資源
 ├── libraries/           # Arduino 函式庫快取
@@ -164,8 +171,10 @@ CodeBridge/
 ## 測試與 CI
 - `ui/tests/support/`：`classic-script.js`（以 vm 載入 classic script 的單元測試幫手）與 `tauri-mock.js`（Tauri runtime 與記憶體檔案系統 stub）。
 - `ui/playwright.config.mjs`：system Edge Playwright 配置，自動啟動 Vite。
-- `ui/tests/e2e/`：Engineer／Angel theme、Blockly runtime、v12 XML migration 與 generator golden tests、工具列與 .cbg 專案流程（`toolbar.spec.js`）。
+- `ui/tests/e2e/`：Engineer／Angel theme、Blockly runtime、v12 XML migration 與 generator golden tests、工具列與 .cbg 專案流程（`toolbar.spec.js`）、編譯／上傳流程（`compile-flow.spec.js`）、工作區滾輪與終端機面板外觀（`workspace-wheel.spec.js`）。
 - `ui/tests/fixtures/blockly-v12/`：可由 Blockly 13.3.0 載入的 setup/loop、controls、text、variables、array、functions 與 workspace comment fixtures。
-- `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試、plain code 去除 marker、.cbg 專案狀態與 dirty、工具列按鈕契約測試。
+- `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試、plain code 去除 marker、.cbg 專案狀態與 dirty、工具列按鈕契約、編譯控制器（`compile-controller.test.js`）與終端機面板（`terminal-panel.test.js`）。
+- `src-tauri/tests/arduino_cli_smoke.rs`：對**真實** `arduino-cli` 的端對端整合測試（找不到 CLI 時自動跳過；只呼叫不需網路的子命令）。
+- `cargo test`：Arduino CLI 模組單元測試（command builder、parser、diagnostics、encoding 寬容解碼、draft 落地、串流 runner、compile/upload pipeline）。
 - `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI。
 - `log/plan/BlocklyTesting.md`：測試 seam、命令與維護規則。
