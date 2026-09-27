@@ -3,7 +3,10 @@
 ## 目錄
 
 - [目前待辦](#目前待辦)
+- [計畫文件](#計畫文件)
 - [2026-09-27](#2026-09-27)
+  - [T3 設定中心與核心目錄共用化（計畫）](#2026-09-27t3-設定中心與核心目錄共用化計畫)
+  - [T2-E 使用者回報修正（三項阻擋性缺陷）](#2026-09-27t2-e-使用者回報修正三項阻擋性缺陷)
   - [T2-E 實機驗證（真實編譯）](#2026-09-27t2-e-實機驗證真實編譯--抓出每次編譯都失敗的嚴重缺陷)
   - [T2-E（開發板選擇面板）](#2026-09-27t2-e開發板選擇面板)
   - [T2-D（板子／序列埠自動偵測）](#2026-09-27t2-d板子序列埠自動偵測)
@@ -16,6 +19,21 @@
 
 ---
 
+## 計畫文件
+
+> **下一輪必讀**。動工前先讀對應計畫，避免重蹈覆轍。
+
+| 計畫 | 檔案 | 狀態 |
+|---|---|---|
+| **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **已核准，尚未實作（2026-09-27）** ← 下一輪主線 |
+| Arduino CLI 編譯與上傳（Phase T2） | [`log/plan/ArduinoCompileUpload.md`](plan/ArduinoCompileUpload.md) | 已完成（2026-09-27） |
+| 工具列實作與 .cbg 專案 | [`log/plan/ToolbarImplementation.md`](plan/ToolbarImplementation.md) | 已完成 |
+| Blockly v13 升級 | [`log/plan/BlocklyV13Upgrade.md`](plan/BlocklyV13Upgrade.md) | 已完成 |
+| 體驗主題架構 | [`log/plan/ExperienceThemeArchitecture.md`](plan/ExperienceThemeArchitecture.md) | 已完成 |
+| 程式碼視覺樣式 | [`log/plan/BlockStyles.md`](plan/BlockStyles.md) | 已完成 |
+
+---
+
 ## 目前待辦
 
 > 本節為**彙整視圖**，集結各日期章節中所有未完成項目。
@@ -24,7 +42,7 @@
 ### 工具列後續（2026-09-26 本輪凍結，需另開一輪）
 - [ ] Phase 3 Serial Monitor：`btn-refresh-serial`、`serial-selector` 綁定、Rust `open_serial_monitor` 串流（port/baud/重連/HEX/時間戳待討論）；`btn-terminal` 與 `btn-pause/clear/close-terminal` 已於 T2-C 實作為**編譯輸出面板**，序列監視器仍待 T3
 - [ ] `btn-run` / `btn-stop` 已於 T2-C 上線；待 T2-D 補上板子／序列埠選擇後才具備完整上傳前置條件
-- [ ] Phase 4 `btn-diagnose` 與設定選單擴充（Board Manager / Library Manager / CLI 設定）
+- [ ] Phase 4 `btn-diagnose` 與設定選單擴充（Board Manager / Library Manager / CLI 設定）→ **已併入 T3 設定中心計畫**，見下方章節
 - [ ] `.cbg` Windows 副檔名註冊與雙擊開檔（argv 解析、NSIS/WiX 自訂腳本）
 - [ ] 匯出 `.ino` 檔（選配；貼到 IDE 的需求已由「複製程式碼」滿足）
 - [ ] 工具列組態治理：讓 `btn-exit-practice`、`btn-cheat-close` 也經過 `data-action` 契約（目前由 practice-mode.js 自行綁定）
@@ -37,7 +55,18 @@
 - [x] 板子選擇面板：搜尋（名稱＋FQBN 同時比對）、手動選板、目前選用者標示（**已於 2026-09-27 完成**：`board-picker.js` + 工具列 `btn-select-board` + 面板骨架與 preset token 樣式）
 - [x] 桌機實機編譯驗證（**已於 2026-09-27 完成**：真實 `arduino-cli` 編譯成功，並抓出「草稿資料夾名 ≠ 主檔名」導致**每次編譯都失敗**的嚴重缺陷，已修正為 `build_root/<project_id>/<stem>/<stem>.ino`）
 - [ ] 實體上傳驗證：目前環境無序列埠、無開發板，需接硬體後才能驗證
-- [ ] 評估「匯入使用者既有核心」：隔離設計使 CodeBridge 看不到使用者已裝的 3 個核心，首次使用門檻偏高
+- [x] ~~評估「匯入使用者既有核心」~~：**已於 2026-09-27 決策，見 T3 計畫** —— 不做「匯入」，改為**預設共用** `arduino-cli` 系統目錄（官方慣例），保留獨立模式開關
+
+### 下一階段主線：Phase T3 設定中心（計畫已核准）
+- [ ] **先讀計畫**：[`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md)
+- [ ] 階段 1：路徑可設定 + 預設共用（**解決「看不到已裝核心」的阻擋性問題**）
+  - `settings.json` 持久化、`arduino_cli_default_*()` 預設值探測
+  - `ToolchainDirs::from_settings()` 取代 `under()`（`data/downloads/config/user` 共用，`build_root` 維持隔離）
+  - `toolchain_get_dirs` / `toolchain_set_dirs`（回報當前值 + **來源**）
+  - 設定對話框「進階 › 路徑」頁，獨立開關預設關閉
+- [ ] 階段 2：開發板管理器（`core_remove`、`core_update_index`；把 `board-picker` 的臨時安裝按鈕升級）
+- [ ] 階段 3：函式庫管理器（`lib_search` / `lib_install` / `lib_remove`）
+- [ ] 範圍限制：只做 CodeBridge 用得到的設定，**不做**通用 Arduino 環境管理器（不提供 `additional_urls` 編輯等）
 - [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調
 - [x] i18n 新 key：`CLI_ERROR_INVALID_FQBN`、`CLI_ERROR_COMPILE_FAILED`、`CLI_ERROR_UPLOAD_FAILED`、`CLI_ERROR_NO_FQBN`、`CLI_ERROR_NO_PORT`、`CLI_ERROR_PORT_BUSY`、`CLI_ERROR_BUILD_STALE`、`DRAFT_ERROR_*`、`CLI_STREAM_STDOUT/STDERR`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_SIZE_FLASH/RAM`、`TLB_STOP_HINT`、`TLB_SCROLL_RESUMED`（中英兩份已補齊）
 - [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
@@ -112,6 +141,46 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 2. ~~T2-D 主體~~：**已於 2026-09-27 完成**（`board-detector.js`、序列埠綁定、`btn-refresh-serial` 上線、`MSG_BOARD_MISMATCH`）
 3. 板子選擇面板（搜尋 + 已安裝／全部分頁）仍待實作
 4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
+
+## 2026-09-27：T3 設定中心與核心目錄共用化（計畫）
+
+### 狀態
+**計畫已核准，本輪只寫文件不動工。** 完整內容見
+**[`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md)** —— 下一輪必讀。
+
+### 決策摘要
+- **預設共用** `arduino-cli` 系統目錄（`%LOCALAPPDATA%\Arduino15`），保留獨立模式開關
+- 設定中心只做 CodeBridge 用得到的，**不做**通用 Arduino 環境管理器
+- 分層：常用（開發板／函式庫管理器、序列埠）＋ 進階（路徑、獨立開關、診斷）
+- 每欄位顯示**當前生效值 + 來源**
+- CodeBridge 尚未發佈，可直接改變預設行為，不需遷移
+
+### 關鍵依據（實機查證）
+- 實測確認 CodeBridge 隔離目錄**零核心**，使用者已裝的 3 個核心在 `%LOCALAPPDATA%\Arduino15`
+- 實測確認 IDE 2 與命令列 arduino-cli **本來就共用**同一目錄：`inventory.yaml` 同時有 IDE 2（2026-04-17）與 CLI（2026-09-27）寫入的 VID/PID 快取
+- 因此隔離是**偏離官方慣例**，且沒有換來實際好處
+
+### 核心設計：拆分「產物」與「工具鏈」
+| 資源 | 處置 |
+|---|---|
+| `data` / `downloads` / `config` / `user`（核心、函式庫、200MB+） | **共用**系統預設 |
+| `inventory.yaml`（VID/PID 快取） | **共用**（共用才有加速效果） |
+| `build_root`（草稿暫存） | **維持隔離**（CodeBridge 產物） |
+| `.cbg` 專案檔 | 本來就獨立 |
+
+### 三階段
+1. **階段 1**：路徑可設定 + 預設共用 —— 解決「看不到已裝核心」的阻擋性問題
+2. **階段 2**：開發板管理器（`core_remove`、`core_update_index`）
+3. **階段 3**：函式庫管理器（`lib_search` / `lib_install` / `lib_remove`）
+
+### 後端尚缺命令
+`toolchain_get_dirs`、`toolchain_set_dirs`、`core_remove`、`core_update_index`、
+`lib_search`、`lib_install`、`lib_remove`（目前 `lib_list` 只有列表）
+
+### 下次啟動方向 (Next Steps)
+1. 讀 [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md)
+2. 實作階段 1，先寫 `ToolchainDirs::from_settings()` 的單元測試
+3. 實機驗證：預設狀態下 `board_list_all` 能列出使用者已裝的 3 個核心
 
 ## 2026-09-27：T2-E 使用者回報修正（三項阻擋性缺陷）
 
