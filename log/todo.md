@@ -33,7 +33,10 @@
 - [x] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（**已於 2026-09-27 完成**：`LineBuffer` 修正 + `PortInfo` 簽章 diff + `serial-ports-changed` 事件與背景 watcher；`board-detected` 事件的板子層亦已於同日補上）
 - [x] T2-D 主體：前端 `board-detector.js`（熱插拔事件、偏好埠恢復、自動切板）、序列埠下拉與 `btn-refresh-serial` 綁定上線、`MSG_BOARD_MISMATCH` 上傳前板子比對（**已於 2026-09-27 完成**，詳見下方同日期章節）
 - [x] 板子選擇面板：搜尋（名稱＋FQBN 同時比對）、手動選板、目前選用者標示（**已於 2026-09-27 完成**：`board-picker.js` + 工具列 `btn-select-board` + 面板骨架與 preset token 樣式）
-- [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調、桌機實機上傳驗證
+- [x] 桌機實機編譯驗證（**已於 2026-09-27 完成**：真實 `arduino-cli` 編譯成功，並抓出「草稿資料夾名 ≠ 主檔名」導致**每次編譯都失敗**的嚴重缺陷，已修正為 `build_root/<project_id>/<stem>/<stem>.ino`）
+- [ ] 實體上傳驗證：目前環境無序列埠、無開發板，需接硬體後才能驗證
+- [ ] 評估「匯入使用者既有核心」：隔離設計使 CodeBridge 看不到使用者已裝的 3 個核心，首次使用門檻偏高
+- [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調
 - [x] i18n 新 key：`CLI_ERROR_INVALID_FQBN`、`CLI_ERROR_COMPILE_FAILED`、`CLI_ERROR_UPLOAD_FAILED`、`CLI_ERROR_NO_FQBN`、`CLI_ERROR_NO_PORT`、`CLI_ERROR_PORT_BUSY`、`CLI_ERROR_BUILD_STALE`、`DRAFT_ERROR_*`、`CLI_STREAM_STDOUT/STDERR`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_SIZE_FLASH/RAM`、`TLB_STOP_HINT`、`TLB_SCROLL_RESUMED`（中英兩份已補齊）
 - [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
 
@@ -107,6 +110,63 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 2. ~~T2-D 主體~~：**已於 2026-09-27 完成**（`board-detector.js`、序列埠綁定、`btn-refresh-serial` 上線、`MSG_BOARD_MISMATCH`）
 3. 板子選擇面板（搜尋 + 已安裝／全部分頁）仍待實作
 4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
+
+## 2026-09-27：T2-E 實機驗證（真實編譯）—— 抓出「每次編譯都失敗」的嚴重缺陷
+
+### 已完成
+- [x] 環境盤點：`arduino-cli 1.2.0`、已裝 `arduino:avr` / `esp32` / `rp2040` 三個核心，**但沒有接實體開發板**（`board list` 回報「沒找到開發板」，系統無序列埠）
+- [x] 新增真實編譯 smoke 測試（成功路徑 + 診斷行號契約），以 `CB_VERIFY_CONFIG_DIR` 啟用
+- [x] **修正草稿路徑缺陷**：`build_root/<project_id>/` → `build_root/<project_id>/<stem>/`
+- [x] 新增 2 條針對缺陷的回歸測試（ASCII 與中文專案名）
+- [x] 新增 `purge_stale_sketches()`：改名後清除舊 stem 目錄
+
+### 驗證結果
+- `cargo test`：**206 passed**（+2 條新回歸測試）
+- 真實編譯 smoke：**6 passed**（含真實 `arduino-cli` 編譯成功 884 bytes／2%）
+- Vitest：**118 passed**
+- `npm run build`：成功
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 嚴重缺陷：CodeBridge 的每次真實編譯都會失敗
+實機驗證第一個抓到的問題：草稿目錄用 `project_id`（`untitled`），主檔名用 sanitize 過的顯示名（`SmokeOk`），產出
+
+```text
+sketches/smoke_ok/SmokeOk.ino     ← 資料夾名 ≠ 主檔名
+```
+
+而 `arduino-cli` 有硬性規則「草稿資料夾名必須與主檔名完全相同」，因此回報
+`Can't open sketch: main file missing from sketch` —— **所有專案、所有板子都編譯失敗**。
+
+**為什麼 200+ 個單元測試全綠？** 既有測試只驗證 `ino_file_name() == stem`，**從未驗證資料夾名與檔名一致**。而假 runner 不檢查檔名規則，所以流程測試也抓不到。這是純邏輯測試的典型盲區：外部工具的**契約**必須用真實工具驗證。
+
+#### 修法：多一層，同時滿足三個約束
+直接把資料夾名改成 `stem` 會立刻打破兩項既有行為（都被測試抓到）：
+1. 兩個同名專案會共用草稿目錄而互相覆蓋
+2. 改名後舊目錄殘留，`build_path` 可能指到過期產物
+
+因此路徑改為 `build_root/<project_id>/<stem>/<stem>.ino`：
+- **最內層目錄名 == 主檔名** → 滿足 arduino-cli
+- **外層 `project_id`** → 維持專案隔離
+- **白名單驗證保留** → 安全邊界不變
+
+另加 `purge_stale_sketches()` 清理同專案底下的其他 stem 目錄，解決改名殘留。
+
+#### 隔離設計的代價
+CodeBridge 刻意用隔離的 config dir（不污染使用者的 Arduino IDE），代價是**看不到使用者已安裝的 3 個核心** —— 必須在 CodeBridge 內重裝。這不是 bug，是取捨，但對首次使用者的體驗成本很高，值得評估是否提供「匯入既有核心」的選項。
+
+#### `arduino-cli 1.2.0` 只有 `--config-dir`
+實測確認 1.2.0 **沒有** `--data-dir` / `--user-dir` 旗標。T2 的 `GlobalFlags::prefix()` 只產生 `--config-dir` 是正確的相容做法。目錄隔離需透過 `arduino-cli.yaml` 的 `directories:` 設定。
+
+### 無法驗證的部分（誠實記錄）
+- **實體上傳**：環境無序列埠、無開發板，`upload` 流程無法實測。仍由假 runner 單元測試覆蓋。
+- **板子偵測**：`board list` 回空，`board-detected` 事件在真實環境無法觸發。
+- **桌機 UI**：未啟動 Tauri 應用手動操作。
+
+### 下次啟動方向 (Next Steps)
+1. 有硬體時驗證上傳流程
+2. 評估「匯入使用者既有核心」以降低首次使用門檻
+3. T2-E 其餘：preset 微調、cocoya 圖示搬遷
 
 ## 2026-09-27：T2-E（開發板選擇面板）
 
