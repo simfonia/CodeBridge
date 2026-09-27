@@ -165,7 +165,7 @@ var CodeBridgeProject = (function() {
         function isDirtyFor(snapshot) {
             // 尚未建立基準快照時視為乾淨（新專案剛注入預設積木）
             if (state.snapshot === null) return false;
-            return snapshot !== state.snapshot;
+            return normalizeForCompare(snapshot) !== normalizeForCompare(state.snapshot);
         }
 
         function publicState() {
@@ -200,6 +200,31 @@ var CodeBridgeProject = (function() {
         function setSnapshotInternal(snapshot) {
             state.snapshot = snapshot;
             currentSnapshot = snapshot;
+        }
+
+        // Blockly 在載入工作區後會「正規化」註解：自動標記 pinned、補上絕對座標
+        // （`<comment pinned="true" h="87" w="242" x="-18" y="5">`）。這些屬性不是
+        // 使用者的修改，但它們會改變序列化結果 —— 若直接字串比對，開啟檔案的
+        // 瞬間就會被誤判為 dirty，save 按鈕馬上亮起。
+        //
+        // 正規化的時機並不固定（實測可在載入後 10ms 內，也可能延後到 170ms，
+        // 中間還會出現一段「內容不變」的平靜期），因此靠時間視窗或輪询收斂都不可靠。
+        // 這裡改為**只在比較時**剝除這些易變屬性：基準快照本身保持原樣（還原與
+        // 存檔仍需要完整內容），比對時雙方都正規化即可。
+        //
+        // 代價：單獨移動／縮放／固定註解不會標記 dirty。註解是呈現性質，
+        // 對「程式內容是否改變」這個判斷而言影響可接受。
+        // 先取出整個 <comment ...> 標籤，再於標籤內逐一移除易變屬性。
+        // （不可用單一全域 regex 直接掃：移除第一個屬性後掃描位置已越過 `<comment`，
+        //   同一標籤內其餘的屬性就會漏掉，比對仍會不一致。）
+        var COMMENT_TAG = /<comment\b[^>]*>/g;
+        var VOLATILE_COMMENT_ATTR = /\s+(?:x|y|pinned)="[^"]*"/g;
+
+        function normalizeForCompare(snapshot) {
+            if (typeof snapshot !== 'string') return snapshot;
+            return snapshot.replace(COMMENT_TAG, function(tag) {
+                return tag.replace(VOLATILE_COMMENT_ATTR, '');
+            });
         }
 
         var store = {

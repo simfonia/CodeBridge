@@ -146,6 +146,7 @@ var CodeBridgeProjectIO = (function() {
                     snapshot: serializeWorkspace(),
                     meta: parsed.meta
                 });
+                // Blockly 會在載入後正規化註解等屬性；讓載入後的第一次 refresh
                 store().setDraft(null);
                 store().addRecent({ path: path, name: parsed.meta.name || project().nameFromPath(path) });
                 refreshRecentsUi();
