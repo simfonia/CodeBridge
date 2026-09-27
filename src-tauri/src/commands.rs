@@ -82,11 +82,48 @@ fn scan_serial_ports() -> Vec<String> {
         .collect()
 }
 
+/// 把 `arduino-cli board list` 的回應轉為板子偵測結果。
+///
+/// 埠清單與 CLI 回應交叉比對：`board list` 只列出 CLI 看得懂的埠，兩邊的差集
+/// 就是「無法辨識」的埠（通常是沒安裝對應 core 的板子），交由前端提示手動選板。
+fn detect_boards(ports: &[crate::events::PortInfo], cli_stdout: &str) -> crate::events::BoardsDetected {
+    use crate::arduino::parser::DetectedBoards;
+
+    let Ok(parsed) = crate::arduino::parser::parse_json::<DetectedBoards>(cli_stdout) else {
+        return crate::events::BoardsDetected::from_matches(Vec::new())
+            .with_unknown(ports.iter().map(|p| p.port.clone()).collect());
+    };
+
+    let matches: Vec<crate::events::BoardMatch> = parsed
+        .boards
+        .into_iter()
+        .map(|board| {
+            let fqbn = board.fqbn.clone().unwrap_or_default();
+            let name = board.matching_board.clone().unwrap_or_default();
+            let port = board.port_name();
+            crate::events::BoardMatch::new(&port, &fqbn, &name)
+        })
+        .collect();
+
+    // CLI 對某個埠沒有給 FQBN → 該埠無法自動對應板子。
+    let detected = crate::events::BoardsDetected::from_matches(matches);
+    let unknown: Vec<String> = ports
+        .iter()
+        .map(|port| port.port.clone())
+        .filter(|port| detected.fqbn_for(port).is_empty())
+        .collect();
+    detected.with_unknown(unknown)
+}
+
 /// 啟動序列埠／開發板熱插拔 watcher。
 ///
 /// 每 `PORT_POLL_INTERVAL_MS`（1500ms）掃描一次序列埠，與上一輪結果做**簽章
 /// diff**（`port|vid|pid`）。只有實質變化（新增／移除／換板）才 emit
 /// `codebridge://serial-ports-changed`，並同步更新 `AppState` 快取。
+///
+/// 埠有變化時**再**呼叫 `arduino-cli board list` 補齊 port → fqbn 對應並 emit
+/// `codebridge://board-detected`：`board list` 需要啟動子進程（數百毫秒），
+/// 不可放在每 1500ms 的輪詢路徑上，否則 CLI 沒安裝時會每 1.5 秒失敗一次。
 ///
 /// **為什麼簽章要含 VID／PID**：同一個 COM 口插上不同板子時埠名不變，只比對
 /// 埠名會漏判，UI 就不會重新判斷 FQBN。
@@ -114,6 +151,7 @@ pub fn spawn_port_watcher(app: AppHandle) {
                 ) {
                     eprintln!("[CodeBridge] 無法推播序列埠變化: {err}");
                 }
+                publish_detected_boards(&app, &current);
             }
 
             previous = Some(current);
@@ -122,6 +160,37 @@ pub fn spawn_port_watcher(app: AppHandle) {
             ));
         }
     });
+}
+
+/// 以 `arduino-cli board list` 補齊 port → fqbn 對應並 emit `board-detected`。
+///
+/// CLI 不可用或查詢失敗時**不發事件**：前端拿不到對應時應維持使用者已選的
+/// FQBN，不可因為一次查詢失敗就把板子清空。
+fn publish_detected_boards(app: &AppHandle, ports: &[crate::events::PortInfo]) {
+    if ports.is_empty() {
+        // 沒有任何埠時仍要發空結果，前端據此把下拉清單清空。
+        let detected = crate::events::BoardsDetected::from_matches(Vec::new());
+        let _ = app.emit_to(
+            MAIN_WINDOW_LABEL_FOR_WATCHER,
+            crate::events::names::BOARD_DETECTED,
+            detected,
+        );
+        return;
+    }
+
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
+    let Ok(result) = query(&state, command::board_list(&flags_for(&state))) else {
+        return;
+    };
+
+    let detected = detect_boards(ports, &result.stdout);
+    let _ = app.emit_to(
+        MAIN_WINDOW_LABEL_FOR_WATCHER,
+        crate::events::names::BOARD_DETECTED,
+        detected,
+    );
 }
 
 /// watcher emit 使用的視窗 label（與 commands.rs 的 MAIN_WINDOW_LABEL 相同）。

@@ -38,6 +38,73 @@ pub mod names {
     pub const TOOLCHAIN_CHANGED: &str = "codebridge://toolchain-changed";
 }
 
+/// 一個被偵測到的板子（`arduino-cli board list` 的 port → fqbn 對應）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BoardMatch {
+    /// 序列埠名稱，例如 `COM3`。
+    pub port: String,
+    /// 對應的 FQBN，例如 `arduino:avr:uno`。
+    pub fqbn: String,
+    /// 板子顯示名稱（若 CLI 提供）。
+    pub name: String,
+}
+
+impl BoardMatch {
+    /// 建立一筆板子對應。
+    pub fn new(port: &str, fqbn: &str, name: &str) -> Self {
+        Self {
+            port: port.to_string(),
+            fqbn: fqbn.to_string(),
+            name: name.to_string(),
+        }
+    }
+}
+
+/// 板子偵測結果事件 payload。
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct BoardsDetected {
+    /// 所有 port → fqbn 對應（依埠名排序，讓前端可穩定比較）。
+    pub boards: Vec<BoardMatch>,
+    /// 無法辨識（缺少對應 core）的埠；前端需提示手動選板。
+    pub unknown: Vec<String>,
+}
+
+impl BoardsDetected {
+    /// 依 CLI 回應組裝；埠名或 FQBN 為空者歸入 `unknown`。
+    ///
+    /// **降級語意**：沒有安裝對應 core 時 CLI 不會給 FQBN，此時回空字串交由
+    /// 前端提示手動選板，而不是報錯（對齊 #cocoya 的行為）。
+    pub fn from_matches(matches: Vec<BoardMatch>) -> Self {
+        let mut boards: Vec<BoardMatch> = matches
+            .into_iter()
+            .filter(|item| !item.port.is_empty() && !item.fqbn.is_empty())
+            .collect();
+        boards.sort_by(|a, b| a.port.cmp(&b.port));
+        boards.dedup_by(|a, b| a.port == b.port);
+        Self {
+            boards,
+            unknown: Vec::new(),
+        }
+    }
+
+    /// 補上無法辨識的埠（保留既有 `boards`）。
+    pub fn with_unknown(mut self, unknown: Vec<String>) -> Self {
+        self.unknown = unknown;
+        self
+    }
+
+    /// 查詢某埠的 FQBN。
+    pub fn fqbn_for(&self, port: &str) -> String {
+        self.boards
+            .iter()
+            .find(|item| item.port == port)
+            .map(|item| item.fqbn.clone())
+            .unwrap_or_default()
+    }
+}
+
 /// 序列埠輪詢週期（毫秒）。
 ///
 /// 1500ms 對齊 #cocoya：使用者插拔板子的動作以秒為單位，週期再短只會增加
@@ -743,5 +810,84 @@ mod tests {
     #[test]
     fn poll_interval_matches_documented_value() {
         assert_eq!(PORT_POLL_INTERVAL_MS, 1500);
+    }
+
+    // ---------------------------------------------------------------
+    // 板子偵測（port → fqbn）payload 組裝
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn board_matches_are_sorted_by_port() {
+        let detected = BoardsDetected::from_matches(vec![
+            BoardMatch::new("COM7", "arduino:avr:nano", "Arduino Nano"),
+            BoardMatch::new("COM3", "arduino:avr:uno", "Arduino Uno"),
+        ]);
+        assert_eq!(detected.boards[0].port, "COM3");
+        assert_eq!(detected.boards[1].port, "COM7");
+    }
+
+    #[test]
+    fn board_without_fqbn_is_excluded_and_reported_as_unknown() {
+        // CLI 找不到對應 core 時不給 fqbn；不可讓空字串進入 boards 讓前端
+        // 把「沒有 FQBN」誤當成有效的板子。
+        let detected = BoardsDetected::from_matches(vec![
+            BoardMatch::new("COM3", "arduino:avr:uno", "Arduino Uno"),
+            BoardMatch::new("COM7", "", ""),
+        ])
+        .with_unknown(vec!["COM7".to_string()]);
+
+        assert_eq!(detected.boards.len(), 1);
+        assert_eq!(detected.unknown, vec!["COM7"]);
+        assert_eq!(detected.fqbn_for("COM7"), "");
+    }
+
+    #[test]
+    fn board_without_port_is_excluded() {
+        let detected = BoardsDetected::from_matches(vec![BoardMatch::new("", "arduino:avr:uno", "x")]);
+        assert!(detected.boards.is_empty());
+    }
+
+    #[test]
+    fn duplicate_ports_are_deduplicated() {
+        // 同一個埠可能被多個 core 宣稱；保留第一筆即可。
+        let detected = BoardsDetected::from_matches(vec![
+            BoardMatch::new("COM3", "arduino:avr:uno", "Arduino Uno"),
+            BoardMatch::new("COM3", "arduino:avr:mega", "Arduino Mega"),
+        ]);
+        assert_eq!(detected.boards.len(), 1);
+        assert_eq!(detected.fqbn_for("COM3"), "arduino:avr:uno");
+    }
+
+    #[test]
+    fn fqbn_lookup_returns_empty_for_unknown_port() {
+        let detected = BoardsDetected::from_matches(vec![BoardMatch::new(
+            "COM3",
+            "arduino:avr:uno",
+            "Arduino Uno",
+        )]);
+        assert_eq!(detected.fqbn_for("COM9"), "");
+    }
+
+    #[test]
+    fn boards_detected_serializes_camel_case_with_nested_matches() {
+        let detected = BoardsDetected::from_matches(vec![BoardMatch::new(
+            "COM3",
+            "arduino:avr:uno",
+            "Arduino Uno",
+        )])
+        .with_unknown(vec!["COM7".to_string()]);
+        let json = serde_json::to_value(&detected).expect("serialize");
+        assert_eq!(json["boards"][0]["port"], "COM3");
+        assert_eq!(json["boards"][0]["fqbn"], "arduino:avr:uno");
+        assert_eq!(json["boards"][0]["name"], "Arduino Uno");
+        assert_eq!(json["unknown"][0], "COM7");
+    }
+
+    #[test]
+    fn empty_detection_produces_empty_payload_not_error() {
+        // 沒插板子是正常狀態，不是錯誤。
+        let detected = BoardsDetected::from_matches(Vec::new());
+        assert!(detected.boards.is_empty());
+        assert!(detected.unknown.is_empty());
     }
 }
