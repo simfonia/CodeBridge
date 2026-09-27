@@ -164,9 +164,35 @@ pub fn spawn_port_watcher(app: AppHandle) {
 
 /// 以 `arduino-cli board list` 補齊 port → fqbn 對應並 emit `board-detected`。
 ///
+/// **為什麼要丟到獨立執行緒**：`board list` 需啟動子進程並掃描 USB，耗時數百
+/// 毫秒、逾時上限 60 秒。若在 watcher 的輪詢迴圈裡同步呼叫，序列埠掃描會被
+/// 整段卡住 —— 使用者插拔板子時 UI 會長時間沒有反應。
+///
+/// **in-flight 抑制**：上一次查詢還沒回來就跳過這次，避免快速插拔時堆積
+/// 出一長串 CLI 子進程。
+///
 /// CLI 不可用或查詢失敗時**不發事件**：前端拿不到對應時應維持使用者已選的
 /// FQBN，不可因為一次查詢失敗就把板子清空。
 fn publish_detected_boards(app: &AppHandle, ports: &[crate::events::PortInfo]) {
+    // 已有查詢在進行 → 本輪略過。
+    if BOARD_SCAN_INFLIGHT.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
+    let app = app.clone();
+    let ports = ports.to_vec();
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = detect_and_emit_boards(&app, &ports);
+        // 無論成功與否都要釋放旗標，否則一次例外就會永久卡住後續偵測。
+        BOARD_SCAN_INFLIGHT.store(false, std::sync::atomic::Ordering::SeqCst);
+        result
+    });
+}
+
+/// 實際執行板子偵測並發送事件。
+fn detect_and_emit_boards(
+    app: &AppHandle,
+    ports: &[crate::events::PortInfo],
+) -> Result<(), String> {
     if ports.is_empty() {
         // 沒有任何埠時仍要發空結果，前端據此把下拉清單清空。
         let detected = crate::events::BoardsDetected::from_matches(Vec::new());
@@ -175,15 +201,27 @@ fn publish_detected_boards(app: &AppHandle, ports: &[crate::events::PortInfo]) {
             crate::events::names::BOARD_DETECTED,
             detected,
         );
-        return;
+        return Ok(());
     }
 
     let Some(state) = app.try_state::<AppState>() else {
-        return;
+        return Ok(());
     };
-    let Ok(result) = query(&state, command::board_list(&flags_for(&state))) else {
-        return;
+    // 板子偵測是附帶功能，不可讓使用者等 60 秒：給較短的逾時，
+    // 逾時就當作「這次沒結果」，下一次埠變化時自然會再試。
+    let Ok(cli) = resolve_cli_for(&state) else {
+        return Ok(());
     };
+    let runner = StdProcessRunner::new();
+    let request = RunRequest::new(command::board_list(&flags_for(&state)))
+        .with_timeout(BOARD_SCAN_TIMEOUT);
+    let Ok(result) = runner.run(&cli, &request) else {
+        return Ok(());
+    };
+    if let Some(error) = result.error() {
+        let _ = error;
+        return Ok(());
+    }
 
     let detected = detect_boards(ports, &result.stdout);
     let _ = app.emit_to(
@@ -191,7 +229,15 @@ fn publish_detected_boards(app: &AppHandle, ports: &[crate::events::PortInfo]) {
         crate::events::names::BOARD_DETECTED,
         detected,
     );
+    Ok(())
 }
+
+/// 板子偵測逾時：短於一般查詢，避免 UI 因附帶功能而停滯。
+const BOARD_SCAN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
+
+/// 板子偵測是否已在進行中（防止 CLI 子進程堆積）。
+static BOARD_SCAN_INFLIGHT: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 /// watcher emit 使用的視窗 label（與 commands.rs 的 MAIN_WINDOW_LABEL 相同）。
 const MAIN_WINDOW_LABEL_FOR_WATCHER: &str = "main";
@@ -655,6 +701,47 @@ pub fn core_list(state: State<AppState>) -> Result<serde_json::Value, String> {
     let parsed: PlatformsResponse =
         serde_json::from_str(&result.stdout).map_err(|err| err.to_string())?;
     Ok(serde_json::json!({ "platforms": parsed.platforms }))
+}
+
+/// 搜尋可安裝的 board core。
+///
+/// 這是「第一次使用」的關鍵入口：CodeBridge 刻意與使用者的 Arduino IDE 隔離，
+/// 因此新使用者**不會**看到自己已裝的核心。若沒有這條路徑，首次開啟就會
+/// 卡在「清單是空的」，完全不知道該怎麼辦。
+#[tauri::command]
+pub fn core_search(
+    state: State<AppState>,
+    term: String,
+) -> Result<serde_json::Value, String> {
+    let result = query(&state, command::core_search(&flags_for(&state), &term))?;
+    // 索引可能尚未下載（首次執行時 CLI 會自動抓取），解析失敗就回空清單
+    // 而不是報錯 —— 搜尋不到不該阻擋使用者。
+    let platforms = serde_json::from_str::<PlatformsResponse>(&result.stdout)
+        .map(|parsed| parsed.platforms)
+        .unwrap_or_default();
+    Ok(serde_json::json!({ "platforms": platforms }))
+}
+
+/// 安裝（或更新）board core。
+///
+/// 需要獨立命令而非併入 `compile`：`core install` 會下載數百 MB，
+/// 使用者必須能看到即時進度，也必須能在失敗時重試。
+#[tauri::command]
+pub fn core_install(
+    state: State<AppState>,
+    package: String,
+) -> Result<serde_json::Value, String> {
+    if package.trim().is_empty() {
+        return Err("CLI_ERROR_INVALID_FQBN|".to_string());
+    }
+    let result = query(
+        &state,
+        command::core_install(&flags_for(&state), package.trim()),
+    )?;
+    Ok(serde_json::json!({
+        "stdout": result.stdout,
+        "package": package.trim(),
+    }))
 }
 
 /// 列出已安裝的函式庫。

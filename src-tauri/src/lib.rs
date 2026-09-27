@@ -125,6 +125,8 @@ pub fn run() {
             commands::board_list_all,
             commands::board_details,
             commands::core_list,
+            commands::core_search,
+            commands::core_install,
             commands::lib_list,
             commands::operation_status,
             commands::operation_cancel,

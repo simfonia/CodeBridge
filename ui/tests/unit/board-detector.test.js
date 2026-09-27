@@ -125,10 +125,12 @@ describe('board-detector 序列埠選取', () => {
     emitPorts(bridge, ['COM3', 'COM7']);
 
     expect(select.disabled).toBe(false);
-    expect(select.values()).toEqual(['', 'COM3', 'COM7']);
+    // 真的有埠時**不該**出現「未偵測到序列埠」——
+    // 使用者明明插著板子，卻看到這個選項會以為沒偵測到。
+    expect(select.values()).toEqual(['COM3', 'COM7']);
   });
 
-  test('沒有任何埠時仍保留「未偵測到」placeholder 選項', async () => {
+  test('沒有任何埠時顯示「未偵測到序列埠」提示', async () => {
     const { sandbox, bridge, select } = await loadDetector();
     sandbox.CodeBridgeBoardDetector.init({ select, store: createStore() });
     emitPorts(bridge, []);
@@ -173,14 +175,19 @@ describe('board-detector 序列埠選取', () => {
     expect(storage.getItem('codebridgePreferredPort')).toBe('COM7');
   });
 
-  test('沒有任何埠時保留已選取的埠（不清空選擇）', async () => {
+  test('拔掉板子時顯示「未偵測到」提示且保留原選擇', async () => {
+    // 拔線後要讓使用者知道板子不見了（否則會以為還插著而一直按執行），
+    // 但仍保留原選擇，讓重插時不需要重選。
     const { sandbox, bridge, select } = await loadDetector();
     sandbox.CodeBridgeBoardDetector.init({ select, store: createStore() });
     emitPorts(bridge, ['COM3']);
     expect(select.value).toBe('COM3');
 
     emitPorts(bridge, [], 'removed');
-    expect(select.values()).toEqual(['COM3']);
+
+    // 第一項必須是「未偵測到序列埠」的提示，而不是直接消失。
+    expect(select.values()[0]).toBe('');
+    expect(select.values()).toContain('COM3');
     expect(select.value).toBe('COM3');
   });
 });
@@ -302,7 +309,8 @@ describe('board-detector 重新整理', () => {
     await sandbox.CodeBridgeBoardDetector.refresh();
 
     expect(bridge.calls).toContain('refresh_serial_ports');
-    expect(select.values()).toEqual(['', 'COM5']);
+    // 有可用埠時不顯示「未偵測到序列埠」placeholder。
+    expect(select.values()).toEqual(['COM5']);
   });
 
   test('refresh 在純瀏覽器環境安全失敗', async () => {

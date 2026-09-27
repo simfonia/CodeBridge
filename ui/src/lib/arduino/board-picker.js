@@ -29,6 +29,8 @@ var CodeBridgeBoardPicker = (function() {
     var term = '';
     var errorKey = '';
     var unknownPorts = [];
+    /// 核心是否正在安裝（避免重複點擊造成多次下載）。
+    var installing = false;
     /// 由 `init(options)` 注入的依賴（目前只有 store）。
     var context = null;
 
@@ -69,6 +71,9 @@ var CodeBridgeBoardPicker = (function() {
             loaded: loaded,
             error: errorKey,
             count: boards.length,
+            installing: installing,
+            /// 清單為空且核心服務可用時，面板要提供安裝入口 —— 否則使用者卡死。
+            canInstallCore: canInstallCore(),
             unknownPorts: unknownPorts.slice()
         };
     }
@@ -148,6 +153,89 @@ var CodeBridgeBoardPicker = (function() {
         return row;
     }
 
+    /// 核心服務（延後載入，讓面板在沒有該模組時仍能運作）。
+    function core() { return window.CodeBridgeCore || null; }
+
+    /// 是否提供核心安裝入口（服務存在且尚未有任何板子）。
+    function canInstallCore() {
+        return Boolean(core()) && boards.length === 0;
+    }
+
+    /// 搜尋並安裝 board core，讓「清單是空的」不再是死路。
+    ///
+    /// 首次使用者（或剛清空核心的使用者）會看到空的板子清單。若只顯示
+    /// 「尚未安裝核心」而不提供任何入口，使用者就完全卡住了。
+    ///
+    /// 流程：搜尋可安裝核心 → 取第一個（優先推薦）→ 安裝 → 重載清單。
+    /// 回傳結果物件而非拋出，讓呼叫端能決定要不要提示。
+    function installCore(term) {
+        var service = core();
+        if (!service || typeof service.search !== 'function') {
+            return Promise.resolve({ installed: false, reason: 'no-service' });
+        }
+        installing = true;
+        errorKey = '';
+        render();
+
+        return service.search(term || 'arduino').then(function(platforms) {
+            var candidates = (platforms || []).filter(function(item) {
+                return item && item.id && !item.installed;
+            });
+            if (!candidates.length) {
+                installing = false;
+                render();
+                return { installed: false, reason: 'none-available' };
+            }
+            // 推薦的核心排前面：高中生最常用 AVR（Uno／Nano）。
+            candidates.sort(function(a, b) {
+                return (b.recommended ? 1 : 0) - (a.recommended ? 1 : 0);
+            });
+            var chosen = candidates[0];
+            return service.install(chosen.id).then(function() {
+                installing = false;
+                // 安裝完必須重載，否則清單還是舊的空值。
+                loaded = false;
+                return openPanel({ unknownPorts: unknownPorts });
+            }).then(function() {
+                return { installed: true, id: chosen.id, name: chosen.name };
+            });
+        }).catch(function(error) {
+            installing = false;
+            errorKey = (error && error.message ? String(error.message) : '').split('|')[0]
+                || 'CLI_ERROR_COMMAND_FAILED';
+            render();
+            return { installed: false, reason: 'error' };
+        });
+    }
+
+    /// 建立「安裝核心」按鈕。
+    ///
+    /// 沒有它，首次使用者在空清單前會完全卡住 —— 看到「尚未安裝核心」
+    /// 卻不知道去哪裡裝、也不知道要去哪個網址下載。
+    function createInstallButton() {
+        var wrapper = document.createElement('li');
+        wrapper.className = 'cb-board-install';
+
+        var label = document.createElement('div');
+        label.className = 'cb-board-notice';
+        label.textContent = text(
+            'TLB_BOARD_EMPTY_HINT',
+            '尚未安裝任何開發板核心。安裝後即可選用該板型的所有開發板。'
+        );
+        wrapper.appendChild(label);
+
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'cb-board-install-button';
+        button.textContent = installing
+            ? text('CLI_OPERATION_CORE_INSTALL', '安裝中…')
+            : text('TLB_BOARD_INSTALL_ACTION', '安裝 Arduino AVR Boards（Uno／Nano）');
+        button.setAttribute('data-action', 'install-core');
+        button.addEventListener('click', function() { installCore(); });
+        wrapper.appendChild(button);
+        return wrapper;
+    }
+
     /// 重建清單。直接操作 DOM，不依賴 innerHTML 拼接。
     function render() {
         var element = listElement();
@@ -173,10 +261,15 @@ var CodeBridgeBoardPicker = (function() {
         if (!visible.length) {
             // 尚未搜尋就沒東西 = 使用者還沒裝任何核心，或清單是空的。
             if (!term) {
-                element.appendChild(createNotice(
-                    'TLB_BOARD_EMPTY_HINT',
-                    '尚未安裝任何開發板核心，請先到「設定 → 環境」安裝核心後再試'
-                ));
+                if (canInstallCore()) {
+                    // 有安裝入口就不是死路：直接給可操作的按鈕。
+                    element.appendChild(createInstallButton());
+                } else {
+                    element.appendChild(createNotice(
+                        'TLB_BOARD_EMPTY_HINT',
+                        '尚未安裝任何開發板核心，請先到「設定 → 環境」安裝核心後再試'
+                    ));
+                }
             } else {
                 // 搜尋無結果時要說明「開發板」而非沿用積木搜尋的字串，
                 // 否則使用者在選板時會看到「找不到符合的積木」而不知所措。
@@ -338,6 +431,7 @@ var CodeBridgeBoardPicker = (function() {
         setFilter: setFilter,
         setTerm: setTerm,
         selectBoard: selectBoard,
+        installCore: installCore,
         visibleBoards: visibleBoards,
         matches: matches,
         presets: presets,

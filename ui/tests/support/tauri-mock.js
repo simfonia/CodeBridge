@@ -36,6 +36,11 @@ export async function installTauriMock(page, options = {}) {
         { name: 'Arduino Nano', fqbn: 'arduino:avr:nano' },
         { name: 'Arduino Mega', fqbn: 'arduino:avr:mega' }
       ],
+      // 可安裝的核心（T2-E 首次使用流程）。
+      platforms: [
+        { id: 'arduino:avr', name: 'Arduino AVR Boards', version: '1.8.8' }
+      ],
+      installedPlatforms: [],
       errors: {}
     }, config.cli || {});
 
@@ -66,7 +71,9 @@ export async function installTauriMock(page, options = {}) {
           }
           if (command === 'compile_start' || command === 'upload_start' ||
               command === 'upload_ready' || command === 'operation_cancel' ||
-              command === 'board_list_all' || command === 'refresh_serial_ports') {
+              command === 'board_list_all' || command === 'refresh_serial_ports' ||
+              command === 'core_list' || command === 'core_search' ||
+              command === 'core_install') {
             window.__MOCK_CLI_CALLS__.push({ command, args: payload });
             const cli = window.__MOCK_CLI__;
             const forced = cli.errors[command];
@@ -76,6 +83,15 @@ export async function installTauriMock(page, options = {}) {
             if (command === 'upload_ready') return respond(cli.uploadReady);
             if (command === 'board_list_all') return respond({ boards: cli.boards });
             if (command === 'refresh_serial_ports') return respond(cli.ports || []);
+            if (command === 'core_list') return respond({ platforms: cli.installedPlatforms });
+            if (command === 'core_search') return respond({ platforms: cli.platforms });
+            if (command === 'core_install') {
+              const id = payload.package;
+              if (cli.installedPlatforms.indexOf(id) === -1) cli.installedPlatforms.push(id);
+              // 允許測試在安裝後提供板子清單（模擬「安裝 avr 後 Uno／Nano 可用」）。
+              if (typeof cli.onCoreInstalled === 'function') cli.onCoreInstalled(id);
+              return respond({ package: id, stdout: 'done' });
+            }
             return respond(cli.cancelResult);
           }
           return fail('MSG_UNKNOWN_ERROR', command);

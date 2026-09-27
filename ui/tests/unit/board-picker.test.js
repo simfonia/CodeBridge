@@ -346,6 +346,63 @@ describe('board-picker 錯誤處理', () => {
   });
 });
 
+describe('board-picker 核心安裝入口', () => {
+  /** 載入時注入假的 core 服務，記錄搜尋與安裝呼叫。 */
+  async function loadWithCore(overrides = {}) {
+    const loaded = await loadPicker(overrides);
+    loaded.coreCalls = [];
+    // 契約對齊真實 `core.js` 的 `search()`：**回傳已映射的陣列**，
+    // 每筆含 id / installed / recommended，而非原始 CLI 的 {platforms}。
+    loaded.sandbox.CodeBridgeCore = {
+      search(term) {
+        loaded.coreCalls.push({ command: 'search', term });
+        return Promise.resolve(overrides.platforms || [
+          { id: 'arduino:avr', name: 'Arduino AVR Boards', installed: false, recommended: true }
+        ]);
+      },
+      install(id) {
+        loaded.coreCalls.push({ command: 'install', id });
+        return Promise.resolve({ package: id });
+      }
+    };
+    return loaded;
+  }
+
+  test('清單為空時提供安裝核心的按鈕', async () => {
+    // CodeBridge 與使用者的 Arduino IDE 隔離，首次使用時清單一定是空的。
+    // 若只顯示「尚未安裝核心」而沒有任何入口，使用者就完全卡住了。
+    const { sandbox } = await loadWithCore({ boards: [] });
+    await sandbox.CodeBridgeBoardPicker.open();
+
+    const hasAction = sandbox.CodeBridgeBoardPicker.getState().canInstallCore;
+    expect(hasAction).toBe(true);
+  });
+
+  test('點擊後搜尋可安裝的核心並列出結果', async () => {
+    const { sandbox, coreCalls } = await loadWithCore({ boards: [] });
+    await sandbox.CodeBridgeBoardPicker.open();
+    await sandbox.CodeBridgeBoardPicker.installCore();
+
+    expect(coreCalls.some((call) => call.command === 'search')).toBe(true);
+  });
+
+  test('安裝完成後重新載入板子清單', async () => {
+    const { sandbox, coreCalls } = await loadWithCore({ boards: [] });
+    await sandbox.CodeBridgeBoardPicker.open();
+    await sandbox.CodeBridgeBoardPicker.installCore();
+
+    expect(coreCalls.some((call) => call.command === 'install')).toBe(true);
+  });
+
+  test('安裝失敗時保留錯誤訊息，不中斷面板', async () => {
+    const { sandbox } = await loadWithCore({ boards: [], platforms: [] });
+    await sandbox.CodeBridgeBoardPicker.open();
+
+    // 搜尋不到任何核心時不應拋出例外。
+    await expect(sandbox.CodeBridgeBoardPicker.installCore()).resolves.toBeDefined();
+  });
+});
+
 describe('board-picker 無結果提示與引導', () => {
   test('搜尋無結果時顯示「開發板」字樣而非「積木」', async () => {
     // 這是實際回報的缺陷：提示列沿用了積木搜尋的 i18n key，

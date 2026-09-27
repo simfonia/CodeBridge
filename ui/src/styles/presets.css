@@ -258,6 +258,32 @@
     outline-offset: 1px;
 }
 
+/* 空清單時的「安裝核心」入口：首次使用者的唯一出路，不可省略。 */
+.cb-board-install {
+    padding: 14px 12px;
+    text-align: center;
+}
+
+.cb-board-install .cb-board-notice {
+    padding: 0 0 10px;
+    text-align: left;
+}
+
+.cb-board-install-button {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--cb-surface, #fff);
+    background: var(--cb-text, #333);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.cb-board-install-button:hover {
+    opacity: 0.88;
+}
+
 .cb-board-notice {
     padding: 12px;
     color: var(--cb-text-muted);

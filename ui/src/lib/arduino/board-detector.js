@@ -147,7 +147,13 @@ var CodeBridgeBoardDetector = (function() {
         return available[0];
     }
 
-    /// 重建下拉選項。`available` 為空且有既有選擇時保留該項。
+    /// 重建下拉選項。
+    ///
+    /// 顯示規則（**順序不可對調**，否則使用者會看到相反的狀態）：
+    /// - 有可用埠 → **只列實際的埠**。此時出現「未偵測到序列埠」會讓插著板子
+    ///   的使用者以為沒偵測到。
+    /// - 沒有任何埠 → 先列「未偵測到序列埠」讓使用者知道板子不見了，
+    ///   再列原選擇（標為已移除），這樣重插時不必重選。
     function renderOptions(available) {
         var element = select();
         if (!element) return;
@@ -159,31 +165,30 @@ var CodeBridgeBoardDetector = (function() {
             element.removeChild(element.firstChild);
         }
 
-        // 沒有任何埠但保留了原選擇時，只顯示該項：此時再放一個
-        // 「未偵測到序列埠」placeholder 會讓下拉出現兩個可選項，
-        // 使用者會誤以為還有其他埠可選。
-        var keepPrevious = available.length === 0 && Boolean(previous);
-        if (!keepPrevious) {
+        if (!available.length) {
             var placeholder = document.createElement('option');
             placeholder.value = '';
             placeholder.textContent = text('TLB_NO_PORT', '未偵測到序列埠');
             element.appendChild(placeholder);
-        }
 
-        available.forEach(function(port) {
-            var option = document.createElement('option');
-            option.value = port;
-            // 有辨識到的板名時一併顯示，省去使用者對照文件。
-            var name = boardNames[port];
-            option.textContent = name ? port + ' (' + name + ')' : port;
-            element.appendChild(option);
-        });
-
-        if (keepPrevious) {
-            var kept = document.createElement('option');
-            kept.value = previous;
-            kept.textContent = previous;
-            element.appendChild(kept);
+            // 保留原選擇，讓使用者看得到自己原本選的是哪一個；
+            // 標成「已移除」以免誤以為板子還插著。
+            if (previous) {
+                var kept = document.createElement('option');
+                kept.value = previous;
+                kept.textContent = text('TLB_PORT_REMOVED', '%1（已移除）').replace('%1', previous);
+                kept.setAttribute('data-removed', 'true');
+                element.appendChild(kept);
+            }
+        } else {
+            available.forEach(function(port) {
+                var option = document.createElement('option');
+                option.value = port;
+                // 有辨識到的板名時一併顯示，省去使用者對照文件。
+                var name = boardNames[port];
+                option.textContent = name ? port + ' (' + name + ')' : port;
+                element.appendChild(option);
+            });
         }
 
         // 選取依序考慮：專案既有的 port → 偏好埠 → 目前選擇 → 第一個埠。
@@ -192,8 +197,8 @@ var CodeBridgeBoardDetector = (function() {
         var target = choosePort(available, previous || currentMeta().port || '', readPreferred());
         if (target) {
             element.value = target;
-        } else if (keepPrevious) {
-            // 沒有可用埠但保留了原選擇：維持原值，不清成未選取。
+        } else if (previous) {
+            // 沒有可用埠但有原選擇：維持原值，不清成未選取。
             element.value = previous;
         } else {
             element.value = '';

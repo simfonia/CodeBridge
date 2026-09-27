@@ -166,4 +166,36 @@ test.describe('開發板選擇面板', () => {
 
     await expect(page.locator('#cb-board-list .cb-board-notice')).toBeVisible();
   });
+
+  test('核心清單為空時提供安裝按鈕（首次使用不被卡住）', async ({ page }) => {
+    // CodeBridge 與使用者的 Arduino IDE 隔離，首次開啟時板子清單一定是空的。
+    // 若只顯示一句提示而沒有入口，使用者就完全不知道該怎麼辦。
+    await page.evaluate(() => {
+      window.__MOCK_CLI__.boards = [];
+    });
+    await page.click('#btn-select-board');
+
+    await expect(page.locator('#cb-board-list .cb-board-install-button')).toBeVisible();
+  });
+
+  test('安裝核心後板子清單可用', async ({ page }) => {
+    // 首次使用：清單為空 → 出現安裝入口 → 安裝後清單可用。
+    // mock 的 `board_list_all` 直接回傳 `boards`，因此安裝後由測試補上板子，
+    // 模擬「安裝 avr 核心後 Uno／Nano 開始可用」。
+    await page.evaluate(() => {
+      const cli = window.__MOCK_CLI__;
+      cli.boards = [];
+      cli.onCoreInstalled = () => {
+        cli.boards = [
+          { name: 'Arduino Uno', fqbn: 'arduino:avr:uno' },
+          { name: 'Arduino Nano', fqbn: 'arduino:avr:nano' }
+        ];
+      };
+    });
+    await page.click('#btn-select-board');
+    await page.click('#cb-board-list .cb-board-install-button');
+
+    // 安裝後清單應重新載入並出現可選的板子。
+    await expect(page.locator('#cb-board-list .cb-board-item').first()).toBeVisible();
+  });
 });
