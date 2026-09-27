@@ -74,6 +74,7 @@ async function loadDetector(overrides = {}) {
     isAvailable() { return this.available; },
     invoke(command) {
       this.calls.push(command);
+      if (command === 'get_serial_ports') return Promise.resolve(['COM3', 'COM7']);
       if (command === 'refresh_serial_ports') {
         return Promise.resolve(overrides.refreshPorts || []);
       }
@@ -115,6 +116,45 @@ describe('board-detector 事件訂閱', () => {
     sandbox.CodeBridgeBoardDetector.init({ select, store: createStore() });
     expect(Object.keys(bridge.listeners)).toEqual([]);
     expect(select.disabled).toBe(true);
+  });
+});
+
+describe('board-detector 初始快照', () => {
+  test('init 会主動拉取当前序列埠（事件可能在 init 前就發出）', async () => {
+    // 事件遗失：Rust 在 setup() 就啟動 watcher，第一次 emit 在數十毫秒內；
+    // 而前端要等 Blockly 載入后才註寫 listener－事件在統命前發出就永久遺失。
+    // 解法：事件管「後續變化」，初始快照管「當前狀態」。
+    const { sandbox, bridge } = await loadDetector();
+    sandbox.CodeBridgeBoardDetector.init({ select: createSelect(), store: createStore() });
+
+    // 序列埠下拉應與 init 結果一致（非空清單）。
+    expect(bridge.calls).toContain('get_serial_ports');
+  });
+
+  test('用戶先手動選過埠後 init 仍會寫入 meta', async () => {
+    // 回歸：启動時下拉顯示 COM4，但將推上傳後接話「尚未選擇串列埠」。
+    // 根因：handlePortsChanged 只在下拉值「變化」時才寫 meta；
+    // 用戶已給同一個埠時 value 沒變 -> 不寫入 -> meta.port 仍為 null。
+    const store = createStore();
+    const { sandbox, select } = await loadDetector({ store });
+    sandbox.CodeBridgeBoardDetector.init({ select, store });
+
+    // 用戶先手動選了快照里的同一個埠（mock 提供 COM3/COM7）。
+    select.choose('COM3');
+    await flushAsync();
+    // 初始快照模符下下拉值未變。
+    await flushAsync();
+    await flushAsync();
+
+    expect(store.meta.port).toBe('COM3');
+  });
+
+  test('主動拉取到的序列埠會顯示在下拉菜單', async () => {
+    const { sandbox, bridge, select } = await loadDetector();
+    sandbox.CodeBridgeBoardDetector.init({ select, store: createStore() });
+    await flushAsync();
+
+    expect(select.values()).toEqual(['COM3', 'COM7']);
   });
 });
 
@@ -413,6 +453,10 @@ function createStore(initialMeta = {}) {
 }
 
 /** 送出一次序列埠變化事件。 */
+function flushAsync() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
 function emitPorts(bridge, ports, change = 'initial') {
   bridge.listeners['codebridge://serial-ports-changed']({
     payload: { ports, change, added: ports, removed: [] }

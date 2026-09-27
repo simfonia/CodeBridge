@@ -178,11 +178,18 @@ impl ArduinoCliDirs {
             if !output.status.success() {
                 return None;
             }
-            let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if text.is_empty() {
+            // `from_utf8_lossy` 回傳 `Cow<str>`，借用 output；必須綁成變數
+            // 否則 `.trim()` 的借用會指向即將被釋放的暫存值。
+            let decoded = String::from_utf8_lossy(&output.stdout);
+            let raw = decoded.trim();
+            // CLI 對「未設定的鍵」輸出的是 `""`（含引號的空字串），不是空行。
+            // 直接當路徑會得到 `""` 這個非法檔名，`create_dir_all` 便報
+            // os error 123（檔案名稱語法錯誤）。因此必須先剝掉引號再判斷。
+            let unquoted = raw.trim_matches('"').trim();
+            if unquoted.is_empty() {
                 None
             } else {
-                Some(PathBuf::from(text))
+                Some(PathBuf::from(unquoted))
             }
         };
         match run("directories.data") {

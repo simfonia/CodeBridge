@@ -36,6 +36,20 @@ const BLINK_PROJECT = [
 ].join('\n');
 
 /** 開啟一個帶有 fqbn 與 port 的既有專案，讓編譯流程具備完整前置條件。 */
+
+/**
+ * 模擬後端的編詯完成事件。
+ *
+ * 必要的原因：`compile_start` 是從面任務，立即回傳 op id，
+ * 但 `last_builds` 要等編詯成功才填。前端因此等待
+ * `operation-status: succeeded` 才接續上傳 —— 模擬必須主動發那個事件。
+ */
+async function emitCompileSucceeded(page, operationId = 'op-compile') {
+  await emitMockEvent(page, 'codebridge://operation-status', {
+    operationId, kind: 'compile', state: 'succeeded', lines: []
+  });
+}
+
 async function openReadyProject(page) {
   await installTauriMock(page, { files: { [BLINK_PATH]: BLINK_PROJECT } });
   await setUiLocale(page, 'zh-hant');
@@ -67,6 +81,8 @@ test.describe('編譯／上傳流程', () => {
     await openReadyProject(page);
 
     await page.locator('#btn-run').click();
+    // 後端編詯完成後才有 last_builds，前端因此等後上傳。
+    await emitCompileSucceeded(page);
     await page.waitForFunction(() => window.CodeBridgeCompile.getState().operationId === 'op-upload');
 
     const calls = await readCliCalls(page);
@@ -75,13 +91,15 @@ test.describe('編譯／上傳流程', () => {
     ]);
 
     const compile = calls[0];
-    expect(compile.args.fqbn).toBe('arduino:avr:uno');
-    expect(compile.args.projectId).toBe('Blink');
-    expect(compile.args.code).toContain('delay(250)');
+    // Tauri 契約：Rust 稿名為 compile_start(payload: CompilePayload)，
+    // 前端必須包成 { payload: {...} }。
+    expect(compile.args.payload.fqbn).toBe('arduino:avr:uno');
+    expect(compile.args.payload.projectId).toBe('Blink');
+    expect(compile.args.payload.code).toContain('delay(250)');
     // ID marker 永遠不得寫入磁碟（行號契約的前提）
-    expect(compile.args.code).not.toContain('__BLOCKLY_ID');
+    expect(compile.args.payload.code).not.toContain('__BLOCKLY_ID');
 
-    expect(calls[2].args.port).toBe('COM3');
+    expect(calls[2].args.payload.port).toBe('COM3');
   });
 
   test('執行時終端機自動展開並顯示編譯與上傳訊息', async ({ page }) => {
@@ -89,6 +107,7 @@ test.describe('編譯／上傳流程', () => {
 
     await page.locator('#btn-run').click();
     await page.waitForFunction(() => window.CodeBridgeCompile.isBusy());
+    await emitCompileSucceeded(page);
 
     await expect(page.locator('#terminalArea')).not.toHaveClass(/collapsed/);
     const lines = (await terminalLines(page)).join('\n');
@@ -96,11 +115,26 @@ test.describe('編譯／上傳流程', () => {
     expect(lines).toContain('開始上傳到 COM3');
   });
 
-  test('上傳忙碌時按停止會送出 operation_cancel', async ({ page }) => {
+  test('燒錄中按停止不會取消（避免把板子寫壞）', async ({ page }) => {
+    // 中斷燒錄會讓 flash 內容半尾；板子不會報廢（bootloader 區段不受影響），
+    // 重新燒一次即可還原，但對使用者來說「板子寫壞」本身就是傷害。
     await openReadyProject(page);
-
     await page.locator('#btn-run').click();
+    await emitCompileSucceeded(page);
     await page.waitForFunction(() => window.CodeBridgeCompile.getState().operationId === 'op-upload');
+
+    await page.locator('#btn-stop').click();
+    await page.waitForTimeout(300);
+
+    const calls = await readCliCalls(page);
+    expect(calls.map((call) => call.command)).not.toContain('operation_cancel');
+  });
+
+  test('編譯中按停止會送出 operation_cancel', async ({ page }) => {
+    // 編譯階段中止不影響任何硬體，因此仍允許取消。
+    await openReadyProject(page);
+    await page.locator('#btn-run').click();
+    await page.waitForFunction(() => window.CodeBridgeCompile.isBusy());
     await page.locator('#btn-stop').click();
 
     await page.waitForFunction(
@@ -108,7 +142,7 @@ test.describe('編譯／上傳流程', () => {
     );
     const calls = await readCliCalls(page);
     const cancel = calls.find((call) => call.command === 'operation_cancel');
-    expect(cancel.args.id).toBe('op-upload');
+    expect(cancel.args.id).toBe('op-compile');
   });
 
   test('沒有作業進行時按停止不會呼叫後端', async ({ page }) => {
@@ -126,6 +160,7 @@ test.describe('編譯／上傳流程', () => {
     await setCliResponse(page, { uploadReady: false });
 
     await page.locator('#btn-run').click();
+    await emitCompileSucceeded(page);
     await page.waitForTimeout(300);
 
     const calls = await readCliCalls(page);
@@ -151,6 +186,10 @@ test.describe('編譯／上傳流程', () => {
     await openReadyProject(page);
     await page.locator('#btn-run').click();
     await page.waitForFunction(() => window.CodeBridgeCompile.isBusy());
+    // 先發編詯失敗，避開前端在成功後接續上傳。
+    await emitMockEvent(page, 'codebridge://operation-status', {
+      operationId: 'op-compile', kind: 'compile', state: 'failed', lines: []
+    });
 
     const lineIndex = await page.evaluate(() => {
       const nodes = document.querySelectorAll('#codeContent .code-line[data-line-index]');

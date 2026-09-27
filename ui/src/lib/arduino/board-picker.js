@@ -316,8 +316,39 @@ var CodeBridgeBoardPicker = (function() {
         if (target && typeof target.setMeta === 'function') {
             target.setMeta({ fqbn: fqbn });
         }
+        renderLabel(fqbn);
         close();
         return true;
+    }
+
+    /// 工具列的開發板標籤。
+    ///
+    /// 為什麼需要：下拉只顯示序列埠，選了哪塊板完全沒有回饋。上一版
+    /// HTML 有 `#board-label` 元素卻從未寫入，使用者選完看不到結果，
+    /// 只能靠「執行」後會不會報錯來猜。
+    function renderLabel(fqbn) {
+        if (typeof document === 'undefined') return;
+        var label = document.getElementById('board-label');
+        if (!label) return;
+        if (!fqbn) {
+            label.textContent = text('TLB_BOARD_NONE_SELECTED', '未選擇開發板');
+            return;
+        }
+        var name = boardNameOf(fqbn) || fqbn;
+        label.textContent = name;
+        // 完整 FQBN 放在 title：高中生看名稱就夠，進階使用者可檢視原始值。
+        label.setAttribute('title', fqbn);
+    }
+
+    /// 由 FQBN 找出板子名稱。
+    function boardNameOf(fqbn) {
+        var hit = boards.find(function(board) { return board && board.fqbn === fqbn; });
+        return hit ? hit.name : '';
+    }
+
+    /// 面板關閉時依當前設定同步標籤（涵蓋「開檔載入既有 FQBN」的情境）。
+    function syncLabel() {
+        renderLabel(currentMeta().fqbn || '');
     }
 
     function setFilter(next) {
@@ -364,6 +395,7 @@ var CodeBridgeBoardPicker = (function() {
         }
 
         show();
+        syncLabel();
         var input = searchInput();
         if (input) input.value = term;
         render();
@@ -431,6 +463,8 @@ var CodeBridgeBoardPicker = (function() {
         setFilter: setFilter,
         setTerm: setTerm,
         selectBoard: selectBoard,
+        renderLabel: renderLabel,
+        syncLabel: syncLabel,
         installCore: installCore,
         visibleBoards: visibleBoards,
         matches: matches,

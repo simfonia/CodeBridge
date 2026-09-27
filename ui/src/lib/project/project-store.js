@@ -245,8 +245,19 @@ var CodeBridgeProject = (function() {
                 return state.snapshot;
             },
 
+            /// 更新專案 metadata。
+            ///
+            /// **合併語意**：只覆寫傳入的欄位，其餘保留。
+            ///
+            /// 為什麼不能用「整個替換」：調用方各只關心自己的欄位 ——
+            /// `board-picker` 選板時送 `{fqbn}`、`board-detector` 選序列埠時送
+            /// `{port}`。若這裡整個替換，兩者會**互相清除**（選了板子就失去
+            /// 序列埠、選了序列埠就失去板子），症狀是使用者明明選好了卻一直
+            /// 被回報「尚未選擇開發板／序列埠」。
+            ///
+            /// 傳入 `null`／省略參數仍代表「重置為空」（既有語意）。
             setMeta: function(meta) {
-                state.meta = meta || emptyMeta();
+                state.meta = meta ? Object.assign(emptyMeta(), state.meta, meta) : emptyMeta();
                 persist();
                 emit();
                 return publicState();

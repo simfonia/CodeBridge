@@ -38,6 +38,34 @@ var CodeBridgeCompile = (function() {
     var lastDiagnostics = [];
     var listeners = [];
 
+    /// 等待編譯完成後要執行的上傳前置參數；`null` 表示目前不接續上傳。
+    ///
+    /// **為什麼需要等待**：`compile_start` 是 `spawn_blocking`，**立即**回傳 op id，
+    /// 但後端的 `last_builds` 要等編譯**成功結束**才寫入。若 `run()` 在收到
+    /// op id 後立刻查 `upload_ready`，必然查不到而得到 `false` ——
+    /// 使用者只會看到「編譯成功」卻沒有上傳，且沒有任何錯誤訊息。
+    ///
+    /// 事件順序（後端保證）：先 `operation-status`（build 已寫入）、
+    /// 後 `compile-diagnostics`，因此在 `succeeded` 事件觸發上傳是安全的。
+    var pendingUpload = null;
+
+    /// 上傳是否已啟動（此時 busy 歸上傳流程所有）。
+    ///
+    /// 與 `pendingUpload` 分開是必要的：`handleOperationStatus` 一觸發上傳就會清空
+    /// `pendingUpload`，若用同一個旗標判斷，`compile-diagnostics` 抵達時會誤以為
+    /// 「沒有待續上傳」而解除 busy —— 但這時 avrdude 還在燒錄。
+    var uploading = false;
+
+    /// 上傳作業的識別；只有收到**這個 id** 的終態事件才算上傳結束。
+    ///
+    /// **為什麼不能用 `uploading` 布林值判斷**：`proceedToUpload` 必須在呼叫
+    /// `upload_ready` 之前就設 `uploading = true`（避免期間被解除 busy），
+    /// 這段時間裡 `upload_start` 還沒送出、也還沒有作業 id。若編譯的
+    /// succeeded 事件重複抵達（後端節流 flush + 最終送出各一次），
+    /// `uploading && succeeded` 就會**誤判為上傳結束** —— 症狀是
+    /// 「上傳成功」出現在「開始上傳到 COM4」之前。
+    var uploadOperationId = null;
+
     function bridge() { return window.CodeBridgeTauri; }
     function terminal() { return window.CodeBridgeTerminalPanel; }
     function project() { return window.CodeBridgeProject; }
@@ -192,14 +220,27 @@ var CodeBridgeCompile = (function() {
     // 事件處理
     // ---------------------------------------------------------------
 
+    /// 取出事件自帶的作業識別。
+    ///
+    /// **後端對同一個事件名稱送了兩種 payload，欄位名不同**：
+    /// - `OperationProgress`（節流 flush）→ 欄位 `operationId`
+    /// - `OperationStatus`（作業結束）→ 欄位 **`id`**
+    ///
+    /// 只讀其中一個會漏掉另一種：早期只讀 `operationId` 時，上傳結束事件
+    /// 帶的是 `id`，比對永遠失敗 →「上傳成功」從不顯示。
+    function eventOperationId(payload) {
+        if (!payload) return null;
+        return payload.operationId || payload.id || null;
+    }
+
     /// 判斷事件是否屬於本次流程。
     ///
     /// 後端可能同時在跑其他作業（例如安裝開發板核心），那些事件不該被畫進
     /// 終端機或標到程式碼面板。事件未帶 `operationId` 時一律視為相關
     /// （後端某些推播不帶識別），由呼叫端自行判斷。
-    function isOwnOperation(eventOperationId) {
-        if (!eventOperationId) return true;
-        return eventOperationId === activeOperationId || eventOperationId === compileOperationId;
+    function isOwnOperation(id) {
+        if (!id) return true;
+        return id === activeOperationId || id === compileOperationId || id === uploadOperationId;
     }
 
     /// 處理 `codebridge://operation-status`：把後端推播的進度附加到終端機。
@@ -209,7 +250,8 @@ var CodeBridgeCompile = (function() {
     /// 同時保留對舊 `lastLine` 欄位的相容（單行 payload）。
     function handleOperationStatus(payload) {
         if (!payload) return;
-        if (!isOwnOperation(payload.operationId)) return;
+        var eventId = eventOperationId(payload);
+        if (!isOwnOperation(eventId)) return;
         if (terminal()) {
             var lines = Array.isArray(payload.lines) ? payload.lines : [];
             lines.forEach(function(line) {
@@ -226,16 +268,63 @@ var CodeBridgeCompile = (function() {
         } else if (payload.state === 'failed' && payload.message) {
             reportError('CLI_ERROR_COMPILE_FAILED', payload.message);
         }
+
+        // 編譯成功後接續上傳。此時後端已把 build 寫入 `last_builds`
+        // （`builds.insert` 在 emit 之前），因此 `upload_ready` 查得到。
+        if (payload.state === 'succeeded' && pendingUpload) {
+            var request = pendingUpload;
+            pendingUpload = null;
+            proceedToUpload(request);
+            return;
+        }
+
+        if (payload.state === 'failed' || payload.state === 'cancelled') {
+            // 編譯沒成功就不該上傳，清掉意圖避免之後誤觸。
+            pendingUpload = null;
+        }
+
+        // 上傳作業收尾：解除 busy 與 `uploading`。
+        //
+        // 沒有這段的話 `uploading` 永遠停在 true、busy 永遠維持，
+        // 使用者第二次按「執行」會被 `if (busy) return false` 靜默擋下，
+        // 症狀是「第一次上傳成功，之後按上傳完全沒反應」。
+        //
+        // 判斷條件用 `uploading` 而非 `kind`：編譯的終態事件此時 `uploading`
+        // 仍為 false（`proceedToUpload` 已在上面的分支接手），因此不會誤觸。
+        if (uploading && uploadOperationId &&
+            eventId === uploadOperationId && isTerminalState(payload.state)) {
+            uploading = false;
+            uploadOperationId = null;
+            stopUploadHeartbeat();
+            if (payload.state === 'succeeded') {
+                // 明確的成功回饋：只有 CLI 原始輸出（"New upload port: ..."）
+                // 使用者分不出成功還是失敗。
+                if (terminal()) {
+                    terminal().appendMessage('CLI_UPLOAD_SUCCESS', '上傳成功', [], 'command');
+                }
+                toast('CLI_UPLOAD_SUCCESS', '上傳成功', 'success');
+            }
+            setBusy(false, null);
+        }
+    }
+
+    /// 作業是否已進入終態。
+    function isTerminalState(state) {
+        return state === 'succeeded' || state === 'failed' || state === 'cancelled';
     }
 
     /// 處理 `codebridge://compile-diagnostics`：標記程式碼面板並結束 busy 狀態。
     function handleCompileDiagnostics(payload) {
         if (!payload) return;
-        if (!isOwnOperation(payload.operationId)) return;
+        if (!isOwnOperation(eventOperationId(payload))) return;
         lastDiagnostics = Array.isArray(payload.diagnostics) ? payload.diagnostics.slice() : [];
         applyDiagnostics(payload.inoFileName, lastDiagnostics);
         lastDiagnostics.forEach(appendDiagnostic);
-        setBusy(false, null);
+        // 事件順序是 operation-status → compile-diagnostics。若這裡無條件
+        // setBusy(false)，會在「上傳已啟動但尚未結束」時解除 busy ——
+        // 執行按鈕恢復可用、使用者以為流程結束，而 avrdude 還在燒錄。
+        // 有待續的上傳時由上傳流程負責收尾。
+        if (!pendingUpload && !uploading) setBusy(false, null);
     }
 
     // ---------------------------------------------------------------
@@ -268,6 +357,13 @@ var CodeBridgeCompile = (function() {
         }
 
         if (terminal()) {
+            // 每次執行前清空上一輪的輸出。
+            //
+            // 不清的話，第二次執行時畫面上方還留著上一輪的「上傳成功」，
+            // 與本輪的編譯輸出交錯在一起，讀起來像訊息順序錯亂。
+            // 使用者要的是「這一輪發生了什麼」，不是「到目前為止的所有紀錄」——
+            // 需要歷史紀錄時終端機本來就有捲動緩衝。
+            terminal().clear();
             terminal().open();
             terminal().appendMessage('CLI_COMPILE_STARTING', '開始編譯 %1…', [projectName(state)], 'command');
         }
@@ -282,19 +378,42 @@ var CodeBridgeCompile = (function() {
             clean: false
         };
 
-        return bridge().invoke('compile_start', payload).then(function(operationId) {
+        // **必須包成 `{ payload: {...} }`**：Rust 端簽名是
+        // `compile_start(payload: CompilePayload)`，Tauri 依「參數名」取值，
+        // 傳扁平物件會得到 `missing required key payload`。
+        // 注意 `upload_ready(state, project_id, fqbn)` 是兩個獨立參數、
+        // 非 struct，因此那裡**維持扁平**、不可跟著包裝。
+        return bridge().invoke('compile_start', { payload: payload }).then(function(operationId) {
             activeOperationId = operationId;
             compileOperationId = operationId;
-            return bridge().invoke('upload_ready', {
-                projectId: payload.projectId,
-                fqbn: fqbn
-            });
+            // **不在這裡查 upload_ready**：編譯是背景作業，此刻 `last_builds`
+            // 還是空的。記下意圖，等 `operation-status: succeeded` 再接續上傳。
+            pendingUpload = { projectId: payload.projectId, fqbn: fqbn, port: port };
+            return true;
+        }).catch(function(error) {
+            pendingUpload = null;
+            var described = bridge().describeError(error);
+            reportError(described.key, described.detail);
+            setBusy(false, null);
+            return false;
+        });
+    }
+
+    /// 編譯成功後接續上傳（由 `handleOperationStatus` 在 succeeded 時觸發）。
+    function proceedToUpload(request) {
+        uploading = true;
+        // 上一輪的 id 不能残留，否則新作業的事件會被誤判。
+        uploadOperationId = null;
+        return bridge().invoke('upload_ready', {
+            projectId: request.projectId,
+            fqbn: request.fqbn
         }).then(function(ready) {
             if (!ready) {
-                // 沒有可用的編譯結果：等 compile-diagnostics 事件收尾即可。
+                // 不可靜默結束：使用者只看到「編譯成功」時會以為整個流程成功了。
+                reportError('CLI_ERROR_BUILD_STALE', '編譯結果已失效，請重新編譯');
                 return false;
             }
-            if (!port) {
+            if (!request.port) {
                 reportError('CLI_ERROR_NO_PORT', '尚未選擇序列埠');
                 return false;
             }
@@ -302,8 +421,13 @@ var CodeBridgeCompile = (function() {
         }).catch(function(error) {
             var described = bridge().describeError(error);
             reportError(described.key, described.detail);
-            setBusy(false, null);
             return false;
+        }).then(function(result) {
+            if (!result) {
+                uploading = false;
+                setBusy(false, null);
+            }
+            return result;
         });
     }
 
@@ -342,20 +466,64 @@ var CodeBridgeCompile = (function() {
         return confirmBoard().then(function(allowed) {
             if (!allowed) return false;
             if (terminal()) {
-                terminal().appendMessage('CLI_UPLOAD_STARTING', '開始上傳到 %1…', [port], 'command');
+                terminal().appendMessage(
+                    'CLI_UPLOAD_STARTING',
+                    '開始上傳到 %1，請勿斷開連線',
+                    [port],
+                    'command'
+                );
             }
-            return doUpload(state, fqbn, port);
+            // 燒錄期間心跳：avrdude 可能長時間沒有輸出，
+            // 畫面停在同一行會讓用戶分不清「還在燒」還是「卡住」。
+            startUploadHeartbeat();
+            return doUpload(state, fqbn, port).then(function(result) {
+                // 不在這裡停心跳：`doUpload` 只等到 `upload_start` 回傳作業 id
+                //（燒錄在背景進行），實際燒錄還要數秒。
+                // 真正的收尾在 `handleOperationStatus` 收到上傳終態事件時。
+                // 只有命令本身失敗才立即停止。
+                if (!result) stopUploadHeartbeat();
+                return result;
+            }, function(error) {
+                stopUploadHeartbeat();
+                throw error;
+            });
         });
+    }
+
+    /// 上傳心跳的間隔（毫秒）。
+    var UPLOAD_HEARTBEAT_MS = 1000;
+    /// 心跳計時器；`null` 表示未啟動。
+    var uploadHeartbeat = null;
+
+    function startUploadHeartbeat() {
+        stopUploadHeartbeat();
+        if (typeof setInterval !== 'function') return;
+        uploadHeartbeat = setInterval(function() {
+            if (terminal() && terminal().appendToLast) terminal().appendToLast('.');
+        }, UPLOAD_HEARTBEAT_MS);
+    }
+
+    function stopUploadHeartbeat() {
+        if (uploadHeartbeat === null) return;
+        clearInterval(uploadHeartbeat);
+        uploadHeartbeat = null;
     }
 
     /// 實際送出 upload_start（已通過板子確認）。
     function doUpload(state, fqbn, port) {
+        // 與 `compile_start` 同理：Rust 簽名是 `upload_start(payload: UploadPayload)`，
+        // 必須包成 `{ payload: {...} }`。
         return bridge().invoke('upload_start', {
-            projectId: resolveProjectId(state),
-            fqbn: fqbn,
-            port: port
+            payload: {
+                projectId: resolveProjectId(state),
+                fqbn: fqbn,
+                port: port
+            }
         }).then(function(operationId) {
             activeOperationId = operationId;
+            // 記錄上傳作業的 id：只有收到這個 id 的終態事件
+            // 才算上傳結束（見 uploadOperationId 註明）。
+            uploadOperationId = operationId;
             return true;
         }).catch(function(error) {
             var described = bridge().describeError(error);
@@ -368,9 +536,22 @@ var CodeBridgeCompile = (function() {
     /// 取消目前作業（等於「停止」按鈕的語意）。
     function stop() {
         if (!busy || !activeOperationId) return Promise.resolve(false);
+        // 燒錄進行中不接受取消：此時 avrdude 正在寫入 flash，中斷會讓 flash
+        // 內容半尾（板子按 reset 沒反應、跑出亂碼）。AVR 的 bootloader 區段通常
+        // 不受影響，因此板子不會報庲，重新燒一次即可還原－——
+        // 但對使用者來說「板子看起來像坏掉」本身就是伤害。
+        // 燒錄只需 2–5 秒，這段間間不該提供取消機會。
+        if (uploading) {
+            if (terminal()) {
+                terminal().appendMessage('CLI_UPLOAD_BUSY_HINT', '正在燒錄晶片中，請勿中斷', [], 'warn');
+            }
+            return Promise.resolve(false);
+        }
         if (!bridge() || !bridge().isAvailable()) return Promise.resolve(false);
         var id = activeOperationId;
         return bridge().invoke('operation_cancel', { id: id }).then(function(cancelled) {
+            // 使用者取消後心跳必須停，否則會一直往終端機加點。
+            if (cancelled) stopUploadHeartbeat();
             if (cancelled && terminal()) {
                 terminal().appendMessage('CLI_OPERATION_CANCELLED', '已取消 %1', [id], 'warn');
             }

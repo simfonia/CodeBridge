@@ -119,7 +119,37 @@ function lines(nodes) {
   return nodes.terminalContent.children.map((node) => node.textContent);
 }
 
-describe('終端機面板', () => {
+describe('終端機面板', () => {  test('appendToLast 把文字追加到最後一行，不斷增行', () => {
+    // 上傳心跳點不懂每次斷增一行：用戶要看的是「一行逐測延長的點」，
+    // 其他輸出（例如 New upload port）仍要單獨成行。
+    panel.append('開始上傳到 COM4，請勿斷開連線');
+    panel.appendToLast('.');
+    panel.appendToLast('.');
+
+    expect(lines(nodes)).toHaveLength(1);
+    expect(lines(nodes)[0]).toBe('開始上傳到 COM4，請勿斷開連線..');
+  });
+
+  test('appendToLast 後結的新行應取正確位置', () => {
+    panel.append('第一行');
+    panel.append('第二行');
+    panel.appendToLast('.');
+
+    expect(lines(nodes)).toHaveLength(2);
+    expect(lines(nodes)[1]).toBe('第二行.');
+  });
+
+  test('空面板時 appendToLast 會建立第一行', () => {
+    // 沒有既存行可追加時（清空終端機後的第一次心跳），建立一行並放進去，
+    // 這樣後續的點才能接在它後面，而不是每次都憑空新增一行。
+    panel.appendToLast('.');
+    expect(lines(nodes)).toEqual(['.']);
+
+    panel.appendToLast('.');
+    expect(lines(nodes)).toEqual(['..']);
+  });
+
+
   let dom;
   let panel;
   let nodes;

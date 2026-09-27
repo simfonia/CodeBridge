@@ -80,7 +80,9 @@ var UI_ZH_HANT = {
     
     // 編譯／上傳流程（T2-C）
     CLI_COMPILE_STARTING: '開始編譯 %1…',
-    CLI_UPLOAD_STARTING: '開始上傳到 %1…',
+    CLI_UPLOAD_STARTING: '開始上傳到 %1，請勿斷開連線',
+    CLI_UPLOAD_SUCCESS: '上傳成功',
+    CLI_UPLOAD_BUSY_HINT: '正在燒錄晶片中，請勿中斷',
     CLI_SIZE_FLASH: '程式儲存空間 %1 位元組（%2%%）',
     CLI_SIZE_RAM: '動態記憶體 %1 位元組（%2%%）',
     

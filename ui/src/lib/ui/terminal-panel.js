@@ -54,6 +54,39 @@ var CodeBridgeTerminalPanel = (function() {
         return true;
     }
 
+    /// 把文字追加到最後一行的末尾，**不新增行**。
+    ///
+    /// 用途：上傳期間的心跳點。每秒一個點若各自新增一行，畫面會被點淹沒，
+    /// 完全看不出「還在燒」。後續接收到的其他輸出（例如 `New upload port`）
+    /// 仍要單獨成行，因此只追加在相鄰的下一次 append。
+    function appendToLast(line) {
+        var host = content();
+        if (!host) return false;
+        var value = line === undefined || line === null ? '' : String(line);
+        if (value === '') return false;
+
+        var children = host.children;
+        if (!children || children.length === 0) {
+            // 還沒有任何行：建立第一行再追加，讓後續的點能接在它後面。
+            var row = document.createElement('div');
+            row.className = 'terminal-line terminal-line--info';
+            row.textContent = value;
+            host.appendChild(row);
+            totalLines += 1;
+            trim();
+            if (!paused) scrollToEnd();
+            emit();
+            return true;
+        }
+        var last = children[children.length - 1];
+        last.textContent = (last.textContent || '') + value;
+        totalLines += 1;
+        trim();
+        if (!paused) scrollToEnd();
+        emit();
+        return true;
+    }
+
     /// 附加多行；空字串會被忽略（避免連續空行佔滿面板）。
     function appendLines(lines, kind) {
         var appended = 0;
@@ -197,6 +230,7 @@ var CodeBridgeTerminalPanel = (function() {
         init: init,
         setHeight: setHeight,
         append: append,
+        appendToLast: appendToLast,
         appendLines: appendLines,
         appendMessage: appendMessage,
         clear: clear,

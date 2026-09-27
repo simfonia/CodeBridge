@@ -5,6 +5,12 @@
     --cb-surface: #121b2b;
     --cb-surface-raised: #182438;
     --cb-surface-hover: #203149;
+    /* 積木註解：深色底的淺色框 + 深色字。
+       Blockly 預設是亮黃底 + 白字，在此深色樣式下對比不足且刺眼
+       （實測 rgb(255,252,199) 背景 / rgb(255,255,255) 文字）。 */
+    --cb-comment-bg: #2d3f5c;
+    --cb-comment-text: #e8f0f9;
+    --cb-comment-icon: #ffcb6b;
     /* 下拉選單 hover：必須與 --cb-surface-raised 有明顯對比，否則深色主題下看起來沒有 hover */
     --cb-menu-hover: #2c4363;
     /* 未儲存變更指示 */
@@ -42,6 +48,10 @@
     --cb-surface: #ffffff;
     --cb-surface-raised: #fff0f7;
     --cb-surface-hover: #ffe1ef;
+    /* 淺色樣式：維持「淺底深字」的傳統註解外觀，但不用 Blockly 的螢光黃。 */
+    --cb-comment-bg: #fffbe0;
+    --cb-comment-text: #4a3f22;
+    --cb-comment-icon: #d9a404;
     --cb-menu-hover: #ffd0e4;
     --cb-dirty-surface: #ffe1ef;
     --cb-dirty-ring: #e94f91;
@@ -120,10 +130,27 @@
     stroke-width: 2px;
 }
 
-.blocklyCommentTextarea {
-    background: var(--cb-surface-raised) !important;
-    color: var(--cb-text) !important;
-    border-color: var(--cb-border) !important;
+/* ===== 積木註解（T2-E 修正）=====
+   **選擇器是 `.blocklyCommentText`**，不是 `.blocklyCommentTextarea` ——
+   寫錯時整條規則從未生效，註解就維持 Blockly 預設的亮黃底 + 白字，
+   在 Engineer（深色）樣式下幾乎看不清文字。
+
+   實測值：背景 rgb(255,252,199)、文字 rgb(255,255,255) —— 對比不足。 */
+.blocklyCommentText {
+    background: var(--cb-comment-bg) !important;
+    color: var(--cb-comment-text) !important;
+    caret-color: var(--cb-comment-text) !important;
+    font-family: var(--cb-font, inherit) !important;
+}
+
+/* 註解外框（foreignObject 內的 body）也要著色，否則邊緣仍留亮黃。 */
+.blocklyCommentForeignObject .blocklyMinimalBody {
+    background: var(--cb-comment-bg) !important;
+}
+
+/* 註解圖示（積木右上角的黃色小註解符號）。 */
+.blocklyCommentIcon {
+    fill: var(--cb-comment-icon) !important;
 }
 
 #toolbar,

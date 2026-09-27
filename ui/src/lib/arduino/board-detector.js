@@ -299,6 +299,33 @@ var CodeBridgeBoardDetector = (function() {
         });
     }
 
+    /// 拉取一次當前序列埠清單（初始快照）。
+    ///
+    /// **為什麼需要**：Rust 在 `setup()` 就啟動 watcher，第一次 emit 發生在
+    /// 數十毫秒內；而前端要等 Blockly 載入（數百毫秒）才註冊 listener。
+    /// 啟動時就插著板子的使用者，事件在他訂閱前就發出 → **永久遺失**，
+    /// 必須拔插或按偵測鈕才看得到。
+    ///
+    /// 事件與快照是互補的：事件管「後續變化」，快照管「當前狀態」，缺一不可。
+    function pullInitialPorts() {
+        if (!bridge() || !bridge().isAvailable()) return Promise.resolve([]);
+        return bridge().invoke('get_serial_ports').then(function(result) {
+            var list = Array.isArray(result) ? result : [];
+            if (list.length) {
+                handlePortsChanged({ ports: list, change: 'initial' });
+                // `handlePortsChanged` 只在下拉值**變化**時才寫 meta。若使用者
+                // 已先手動選過同一個埠，快照不會改變 value → meta 不會被寫入，
+                // 導致上傳時報「尚未選擇序列埠」（畫面上卻看得到 COM4）。
+                // 因此快照路徑必須自己保證 meta 與當前選擇一致。
+                var element = select();
+                if (element && element.value) {
+                    applyToMeta(element.value);
+                }
+            }
+            return list;
+        }).catch(function() { return []; });
+    }
+
     /// 重新掃描序列埠（`btn-refresh-serial`）。
     function refresh() {
         if (!bridge() || !bridge().isAvailable()) return Promise.resolve(false);
@@ -337,6 +364,8 @@ var CodeBridgeBoardDetector = (function() {
         if (!bridge() || !bridge().isAvailable()) return getState();
         bridge().listen(EVENTS.SERIAL_PORTS_CHANGED, handlePortsChanged);
         bridge().listen(EVENTS.BOARD_DETECTED, handleBoardsDetected);
+        // 補一次當前狀態：watcher 的第一次事件可能在我們訂閱前就發出了。
+        pullInitialPorts();
         return getState();
     }
 

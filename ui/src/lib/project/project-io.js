@@ -158,6 +158,28 @@ var CodeBridgeProjectIO = (function() {
             });
     }
 
+    /// 保留使用者的設備選擇（開發板／序列埠／鮑率）後回傳 metadata。
+    ///
+    /// 內建範例的 `.cbg` 只帶 `cbp:format` 與 `cbp:name`，**不含** fqbn / port，
+    /// 解析出來會是 `null`。若直接把它交給 `markUntitled`（整個替換），
+    /// 使用者剛選好的板子與序列埠就被清成空值 —— 症狀是「換一個範例，
+    /// 按執行卻說尚未選擇開發板」。
+    ///
+    /// 板子與序列埠描述的是**使用者身邊的硬體**，不是專案內容，因此換專案
+    /// 時必須保留。專案自帶的值（例如從磁碟開啟的舊 `.cbg`）仍可覆寫。
+    function keepDeviceMeta(incoming) {
+        var state = store().getState();
+        var current = (state && state.meta) || {};
+        var next = Object.assign({}, incoming || {});
+        ['fqbn', 'port', 'baud'].forEach(function(key) {
+            var value = next[key];
+            if (value === null || value === undefined || value === '') {
+                next[key] = current[key] === undefined ? null : current[key];
+            }
+        });
+        return next;
+    }
+
     function newProject() {
         return confirmDiscardIfDirty().then(function(allowed) {
             if (!allowed) return false;
@@ -166,7 +188,8 @@ var CodeBridgeProjectIO = (function() {
             if (typeof context.injectDefaultBlocks === 'function') context.injectDefaultBlocks();
             workspace.updateAriaLabel();
             context.onWorkspaceReloaded();
-            store().markUntitled(serializeWorkspace(), project().emptyMeta());
+            // 空白專案仍保留使用者已選的板子與序列埠（見 keepDeviceMeta 說明）。
+            store().markUntitled(serializeWorkspace(), keepDeviceMeta(project().emptyMeta()));
             store().setDraft(null);
             return true;
         });
@@ -188,7 +211,8 @@ var CodeBridgeProjectIO = (function() {
                     // 範例是隨程式打包的資源，沒有可在本機檔案總管顯示的路徑，只提供說明標籤。
                     store().markUntitled(
                         serializeWorkspace(),
-                        parsed.meta,
+                        // 範例不帶設備資訊 → 保留使用者當前選擇（見 keepDeviceMeta）。
+                        keepDeviceMeta(parsed.meta),
                         parsed.meta.name || project().nameFromPath(example.file),
                         { label: example.file }
                     );

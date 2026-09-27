@@ -14,7 +14,9 @@ const uiDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export async function loadClassicScript(relativePath, globals = {}) {
   const path = join(uiDirectory, relativePath);
   const code = await readFile(path, 'utf8');
-  const sandbox = { console, setTimeout, clearTimeout, ...globals };
+  // 計時器：`setInterval` 用於上傳心跳（每秒補一個點表示還在燒錄），
+  // 少了它 `board-picker`／`compile-controller` 的計時行為在測試中會靜默失效。
+  const sandbox = { console, setTimeout, clearTimeout, setInterval, clearInterval, ...globals };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);

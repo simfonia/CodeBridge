@@ -15,6 +15,47 @@
 - [x] 測試：`paths.rs` +5 項（共用取系統目錄、產物仍隔離、隔離模式不變、`build_root` 兩模式相同）
 - [x] 真實 smoke 測試：`shared_toolchain_dirs_point_at_the_users_existing_cores`（實測通過）
 - [ ] **待做**：`settings.json` 持久化、`toolchain_get_dirs` / `set_dirs`、設定對話框「進階 › 路徑」頁
+- [x] **Bug 修正**：`compile_start` / `upload_start` 的 payload 包裝（見下方「前後端契約教訓」）
+
+### 首次使用流程：arduino-cli 缺失時的處理（已決策，2026-09-27）
+
+**問題**：未裝 Arduino IDE 2 與 arduino-cli 的新使用者，`core install` 無法執行
+（它是 CLI 的子命令），但板子面板目前只檢查前端模組是否存在，會顯示一個**會失敗**的
+「安裝核心」按鈕。
+
+**決策：維持半自動，不自動執行遠端腳本。**
+
+| 面向 | 決策 | 理由 |
+|---|---|---|
+| 一鍵安裝 CLI | **不做自動安裝** | `irm ... \| iex` 是遠端腳本執行；需系統管理員權限（UAC）；裝完可能未加入 PATH；資安與可追蹤性都不適合教學產品 |
+| 提供什麼 | 下載說明頁 + 可複製的安裝指令 + 手動指定執行檔路徑 | 使用者需要知道「這是什麼、為什麼要裝」，而不是按一下系統就變了 |
+| 放在哪 | **設定中心 › 進階 › 路徑**，板子面板只放捷徑連結 | 語意層級不同：選板是「我要選一塊板」，安裝 CLI 是「我要把環境弄好」。在選板流程裡插入環境設定是語意錯亂 |
+
+**預期流程**：
+```
+開啟 CodeBridge（未裝 CLI）
+  → 首次啟動檢查 → 一次性提示「環境未就緒」
+  → [開啟設定中心] / [複製安裝指令]
+  → 設定中心 › 進階 › 路徑 › Arduino CLI：顯示當前值 + 來源
+  → CLI 就緒後，開發板管理器才有意義
+```
+
+**待做**：
+- [ ] `board-picker.canInstallCore()` 改為檢查 **CLI 是否可用**（呼叫 `toolchain_detect`），
+      CLI 缺失時顯示「請先到設定中心安裝 Arduino CLI」而非會失敗的按鈕
+- [ ] 首次啟動的環境檢查提示（可關閉）
+
+### 前後端契約教訓：Tauri command 的 payload 包裝
+
+Rust 端 `compile_start(payload: CompilePayload)` 要求前端送 `{ payload: {...} }`；
+`upload_ready(state, project_id, fqbn)` 是兩個獨立參數，要求**扁平**。
+
+兩者混用時 E2E 完全測不出來 —— 因為 `tauri-mock` 只記錄呼叫、不驗證參數形狀。
+實際症狀：`invalid args 'payload' for command 'compile_start'`，
+使用者按「執行」立即失敗。已補上單元測試
+`compile_start 與 upload_start 都以 { payload } 包裝送出`
+與 `upload_ready 保持扁平參數`。
+
 
 
 ---

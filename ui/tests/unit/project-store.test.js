@@ -109,6 +109,60 @@ describe('專案狀態與 dirty 判斷', () => {
     expect(store.getState().name).toBeNull();
   });
 
+  // ---------------------------------------------------------------
+  // metadata 合併語意（T2-D/T2-E 除錯）
+  // ---------------------------------------------------------------
+
+  test('setMeta 只更新指定欄位，不清除其他欄位', async () => {
+    // 關鍵：`board-picker` 送 `{fqbn}`、`board-detector` 送 `{port}`。
+    // 若 setMeta 是「整個替換」，兩者會互相清除 —— 使用者選了板子就
+    // 失去序列埠、選了序列埠就失去板子，症狀是「選了之後又說沒選」。
+    const project = await loadProjectModule();
+    const store = project.createStore(createStore());
+
+    store.setMeta({ fqbn: 'arduino:avr:uno' });
+    store.setMeta({ port: 'COM3' });
+
+    const meta = store.getState().meta;
+    expect(meta.fqbn).toBe('arduino:avr:uno');
+    expect(meta.port).toBe('COM3');
+  });
+
+  test('setMeta 傳入空值可清除單一欄位', async () => {
+    const project = await loadProjectModule();
+    const store = project.createStore(createStore());
+    store.setMeta({ fqbn: 'arduino:avr:uno', port: 'COM3' });
+
+    store.setMeta({ fqbn: null });
+
+    const meta = store.getState().meta;
+    expect(meta.fqbn).toBeNull();
+    // 只清 fqbn，port 必須保留。
+    expect(meta.port).toBe('COM3');
+  });
+
+  test('setMeta 仍保留其他 metadata 欄位（format 與 name）', async () => {
+    const project = await loadProjectModule();
+    const store = project.createStore(createStore());
+    store.setMeta({ format: 1, name: 'Blink', fqbn: 'arduino:avr:uno' });
+    store.setMeta({ port: 'COM3' });
+
+    const meta = store.getState().meta;
+    expect(meta.format).toBe(1);
+    expect(meta.name).toBe('Blink');
+  });
+
+  test('setMeta 傳入 null 物件時清空全部欄位', async () => {
+    // `setMeta()` 不帶參數是「重置」的既有語意，不可被合併邏輯破壞。
+    const project = await loadProjectModule();
+    const store = project.createStore(createStore());
+    store.setMeta({ fqbn: 'arduino:avr:uno' });
+
+    store.setMeta(null);
+
+    expect(store.getState().meta.fqbn).toBeNull();
+  });
+
   test('工作區變更後標記 dirty，相同內容不重複標記', async () => {
     const project = await loadProjectModule();
     const store = project.createStore(createStore());

@@ -25,7 +25,7 @@
 
 | 計畫 | 檔案 | 狀態 |
 |---|---|---|
-| **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-27）** —— 預設共用已上線 |
+| **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-27）** —— 預設共用已上線並實機驗證 |
 | Arduino CLI 編譯與上傳（Phase T2） | [`log/plan/ArduinoCompileUpload.md`](plan/ArduinoCompileUpload.md) | 已完成（2026-09-27） |
 | 工具列實作與 .cbg 專案 | [`log/plan/ToolbarImplementation.md`](plan/ToolbarImplementation.md) | 已完成 |
 | Blockly v13 升級 | [`log/plan/BlocklyV13Upgrade.md`](plan/BlocklyV13Upgrade.md) | 已完成 |
@@ -40,35 +40,37 @@
 > 各章節內仍保留原始清單以維持歷史紀錄，兩者若有差異以本章節為準。
 
 ### 工具列後續（2026-09-26 本輪凍結，需另開一輪）
-- [ ] Phase 3 Serial Monitor：`btn-refresh-serial`、`serial-selector` 綁定、Rust `open_serial_monitor` 串流（port/baud/重連/HEX/時間戳待討論）；`btn-terminal` 與 `btn-pause/clear/close-terminal` 已於 T2-C 實作為**編譯輸出面板**，序列監視器仍待 T3
-- [ ] `btn-run` / `btn-stop` 已於 T2-C 上線；待 T2-D 補上板子／序列埠選擇後才具備完整上傳前置條件
-- [ ] Phase 4 `btn-diagnose` 與設定選單擴充（Board Manager / Library Manager / CLI 設定）→ **已併入 T3 設定中心計畫**，見下方章節
+- [ ] Phase 3 Serial Monitor：`btn-terminal` 已作為**編譯輸出面板**上線，序列監視器（port/baud/重連/HEX/時間戳）仍待 T3
+- [x] `btn-run` / `btn-stop` 已於 T2-C 上線，並在 T2-D/T2-E 補齊板子／序列埠選擇與完整上傳流程（**已於 2026-09-27 完成並實機驗證通過**）
+- [x] Phase 4 `btn-diagnose` 與設定選單擴充 → **已併入 T3 設定中心計畫**，詳見下方章節
 - [ ] `.cbg` Windows 副檔名註冊與雙擊開檔（argv 解析、NSIS/WiX 自訂腳本）
 - [ ] 匯出 `.ino` 檔（選配；貼到 IDE 的需求已由「複製程式碼」滿足）
 - [ ] 工具列組態治理：讓 `btn-exit-practice`、`btn-cheat-close` 也經過 `data-action` 契約（目前由 practice-mode.js 自行綁定）
 - [ ] 總提供 `chevron-down` 與 `history` 圖示（下拉與最近專案圖示）
 
-### 下一階段主線：Arduino CLI 工具鏈 Phase T2
-- [x] T2-C：前端 `compile-controller.js`（單飛、取消、診斷雙向定位）、`terminal-panel.js`、工具列 `btn-run`/`btn-stop`/`btn-terminal` 上線（詳見下方 2026-09-26 章節）
-- [x] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（**已於 2026-09-27 完成**：`LineBuffer` 修正 + `PortInfo` 簽章 diff + `serial-ports-changed` 事件與背景 watcher；`board-detected` 事件的板子層亦已於同日補上）
-- [x] T2-D 主體：前端 `board-detector.js`（熱插拔事件、偏好埠恢復、自動切板）、序列埠下拉與 `btn-refresh-serial` 綁定上線、`MSG_BOARD_MISMATCH` 上傳前板子比對（**已於 2026-09-27 完成**，詳見下方同日期章節）
-- [x] 板子選擇面板：搜尋（名稱＋FQBN 同時比對）、手動選板、目前選用者標示（**已於 2026-09-27 完成**：`board-picker.js` + 工具列 `btn-select-board` + 面板骨架與 preset token 樣式）
-- [x] 桌機實機編譯驗證（**已於 2026-09-27 完成**：真實 `arduino-cli` 編譯成功，並抓出「草稿資料夾名 ≠ 主檔名」導致**每次編譯都失敗**的嚴重缺陷，已修正為 `build_root/<project_id>/<stem>/<stem>.ino`）
-- [ ] 實體上傳驗證：目前環境無序列埠、無開發板，需接硬體後才能驗證
-- [x] ~~評估「匯入使用者既有核心」~~：**已於 2026-09-27 決策，見 T3 計畫** —— 不做「匯入」，改為**預設共用** `arduino-cli` 系統目錄（官方慣例），保留獨立模式開關
+### 下一階段主線：Arduino CLI 工具鏈 Phase T2（2026-09-27 全數完成）
+- [x] T2-C：前端 `compile-controller.js`、`terminal-panel.js`、工具列 `btn-run`/`btn-stop`/`btn-terminal` 上線
+- [x] T2-D 前置：`LineBuffer` 修正 + `PortInfo` 簽章 diff + `serial-ports-changed` 事件與背景 watcher
+- [x] T2-D 主體：`board-detector.js`（熱插拔、偏好埠、自動切板）、序列埠下拉與 `btn-refresh-serial`、`MSG_BOARD_MISMATCH` 上傳前比對
+- [x] 板子選擇面板：`board-picker.js` 搜尋過濾、手動選板、常用板快捷列、核心安裝入口
+- [x] 桌機實機編譯驗證：真實 `arduino-cli` 編譯成功，並修正「草稿資料夾名 ≠ 主檔名」導致**每次編譯都失敗**的嚴重缺陷
+- [x] **實體上傳驗證**（**已於 2026-09-27 完成**）：使用者以第三廠 UNO clone（CH340，VID `0x1A86`）實測，編譯 924 bytes／2%、avrdude 寫入 flash 成功（`Device signature = 0x1e950f`）
+- [x] ~~評估「匯入使用者既有核心」~~：**已於 2026-09-27 決策** —— 不做「匯入」，改為**預設共用** `arduino-cli` 系統目錄（官方慣例），保留獨立模式開關
+- [x] 實機除錯（7 項使用者回報缺陷全數修正）：Tauri payload 包裝、編譯／上傳競態、`setMeta` 合併語意、開範例保留設備選擇、事件欄位名不一致、啟動即偵測、上傳心跳
 
-### 下一階段主線：Phase T3 設定中心（計畫已核准）
+### 下一階段主線：Phase T3 設定中心（計畫已核准，階段 1 部分完成）
 - [ ] **先讀計畫**：[`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md)
-- [x] **階段 1（部分）**：路徑預設共用已上線 —— `ArduinoCliDirs::probe()` 以 `arduino-cli config get` 為權威來源，`ToolchainDirs::shared()` 預設共用系統目錄，產物（`build_root`）仍隔離；隔離模式 `under()` 保留待設定 UI 串接（**已於 2026-09-27 完成**）
-  - 真實 smoke 測試 `shared_toolchain_dirs_point_at_the_users_existing_cores` 實測通過
-  - 驗證：`cargo` 211 passed、`cargo --test arduino_cli_smoke` 7 passed
+- [x] **階段 1（路徑預設共用）**：`ArduinoCliDirs::probe()` 以 `arduino-cli config get` 為權威來源，`ToolchainDirs::shared()` 預設共用系統目錄，產物（`build_root`）仍隔離；真實 smoke 測試實測通過
 - [ ] 階段 1（待做）：`settings.json` 持久化、`toolchain_get_dirs` / `set_dirs`（回報當前值 + **來源**）、設定對話框「進階 › 路徑」頁與獨立開關
 - [ ] 階段 2：開發板管理器（`core_remove`、`core_update_index`；把 `board-picker` 的臨時安裝按鈕升級）
 - [ ] 階段 3：函式庫管理器（`lib_search` / `lib_install` / `lib_remove`）
 - [ ] 範圍限制：只做 CodeBridge 用得到的設定，**不做**通用 Arduino 環境管理器（不提供 `additional_urls` 編輯等）
-- [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調
-- [x] i18n 新 key：`CLI_ERROR_INVALID_FQBN`、`CLI_ERROR_COMPILE_FAILED`、`CLI_ERROR_UPLOAD_FAILED`、`CLI_ERROR_NO_FQBN`、`CLI_ERROR_NO_PORT`、`CLI_ERROR_PORT_BUSY`、`CLI_ERROR_BUILD_STALE`、`DRAFT_ERROR_*`、`CLI_STREAM_STDOUT/STDERR`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_SIZE_FLASH/RAM`、`TLB_STOP_HINT`、`TLB_SCROLL_RESUMED`（中英兩份已補齊）
-- [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
+- [x] `btn-diagnose` 的診斷資訊改由設定中心「進階 › 診斷」承載
+- [ ] T2-E 收尾：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調
+- [x] i18n 新 key（中英兩份已補齊）：`CLI_ERROR_*`、`DRAFT_ERROR_*`、`CLI_STREAM_*`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_UPLOAD_SUCCESS`、`CLI_UPLOAD_BUSY_HINT`、`CLI_SIZE_*`、`TLB_BOARD_*` 等
+
+### 待決策的產品問題（2026-09-27 提出）
+- [ ] **停止鈕的定位與逾時保護**：`compile` / `upload` 目前**無逾時**（`RunRequest::new` 預設 `None`），卡住時停止鈕是唯一出路。已暫時禁止燒錄中取消（避免 flash 半尾），待決定是否改為「保留停止鈕 + 加入逾時」或「移除停止鈕 + 僅靠逾時」
 
 ### 主題架構後續（2026-09-26 palette contract）
 - [ ] 第三方模組若要加入 palette contract，目前需自行宣告 `blockTypes` / `typePrefix`；可考慮併入 `core_manifest.json` 由 loader 自動呼叫 `registerModule()`
@@ -180,6 +182,71 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 1. 讀 [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md)
 2. 實作階段 1，先寫 `ToolchainDirs::from_settings()` 的單元測試
 3. 實機驗證：預設狀態下 `board_list_all` 能列出使用者已裝的 3 個核心
+
+## 2026-09-27：T2-E 實機除錯（使用者回報的 6 項缺陷）
+
+### 使用者回報的現象
+1. 選了序列埠／開發板，執行其他動作後又「找不到」
+2. UI 顯示 COM4，但報「尚未設置序列埠」
+3. 選了 UNO 但工具列沒顯示
+4. 編譯成功但沒上傳
+5. 上傳成功後沒有明確訊息
+6. 「上傳成功」出現在「開始上傳到 COM4」之前
+7. Engineer 樣式下積木註解是白字亮黃背景，看不清
+
+### 已完成
+- [x] **Tauri payload 包裝**：`compile_start` / `upload_start` 需 `{ payload: {...} }`；`upload_ready` 維持扁平
+- [x] **編譯／上傳競態**：`compile_start` 立即回 id 但 `last_builds` 要等成功才寫入 → 改為等 `operation-status: succeeded` 才接續上傳
+- [x] **上傳靜默失敗**：`upload_ready` 回 false 時顯示 `CLI_ERROR_BUILD_STALE`
+- [x] **`setMeta` 改為合併語意**：原本整個替換，導致板子與序列埠**互相清除**
+- [x] **開範例保留設備選擇**：`keepDeviceMeta()`，範例 `.cbg` 不帶 fqbn/port 也不清空使用者選擇
+- [x] **`probe()` 處理帶引號空字串**：`""` 導致 `create_dir_all` 報 os error 123
+- [x] **`#board-label` 實作**：元素存在卻從未被寫入
+- [x] **上傳結束解除 busy**：`uploading` 永遠為 true 導致第二次按執行沒反應
+- [x] **上傳成功訊息**：`CLI_UPLOAD_SUCCESS`（中英）
+- [x] **事件欄位名不一致**：後端同一事件送兩種 payload（`OperationProgress.operationId` / `OperationStatus.id`）→ `eventOperationId()` 同時讀兩者
+- [x] **重複事件誤判**：用 `uploadOperationId` 精確比對取代布林值
+- [x] **每次執行前清空終端機**
+- [x] **積木註解配色**：選擇器從錯誤的 `.blocklyCommentTextarea` 改為 `.blocklyCommentText`，加入 preset token
+- [x] **啟動時插著板子偵測不到**：watcher 首次事件在 listener 註冊前就發出 → `pullInitialPorts()` 補初始快照
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 後端同一事件名稱送了兩種 payload，欄位名不同
+```rust
+sink.flush_now(Succeeded, true);      // OperationProgress → 欄位 operationId
+emit_to(OPERATION_STATUS, status);    // OperationStatus  → 欄位 id
+```
+前端只讀 `operationId` → 上傳結束事件（帶 `id`）無法識別。症狀是「上傳成功」從不顯示；
+而只用布林值判斷時，編譯的 succeeded 送兩次會導致「上傳成功」誤判出現。
+
+**教訓**：跨語言的事件契約必須把「同一事件名可能對應多種 payload」當成常態，
+欄位名要防禦性讀取（`payload.a || payload.b`）。
+
+#### 事件遺失：watcher 比 listener 早
+Rust 在 `setup()` 啟動 watcher，第一次 emit 在數十毫秒內；前端要等 Blockly 載入
+（數百毫秒）才註冊 listener。啟動時就插著板子的使用者，**事件在訂閱前就發出 → 永久遺失**。
+修法是「事件 + 初始快照」並存：事件管後續變化，`pullInitialPorts()` 管當前狀態。
+
+#### `setMeta` 的整個替換語意造成互斥清除
+`board-picker` 送 `{fqbn}`、`board-detector` 送 `{port}`，而 `setMeta` 是
+`state.meta = meta`（整個取代）→ **兩者互相清除**。症狀是「UI 顯示 COM4（那是 DOM 值）
+但 `meta.port` 已被清空」。改為合併語意，並保留 `setMeta(null)` 的重置語意。
+
+#### 註解配色從未生效
+選擇器寫成 `.blocklyCommentTextarea`，但 Blockly 13 實際產生 `.blocklyCommentText`。
+整條規則從未匹配，因此維持預設的螢光黃底（`rgb(255,252,199)`）+ 白字。
+**這種錯誤看程式碼完全看不出來** —— 選擇器拼錯不會報錯，只會靜默無效。
+
+### 驗證結果
+- `cargo test`：**211 passed** + 7 項真實 `arduino-cli` smoke
+- Vitest：**146 passed**
+- Playwright：**111 passed**
+- `npm run build`：成功
+
+### 下次啟動方向 (Next Steps)
+1. T3 設定中心：設定對話框、獨立模式開關、開發板／函式庫管理器
+2. 桌機實機回歸：開範例保留設備、啟動即偵測、註解配色
 
 ## 2026-09-27：T2-E 使用者回報修正（三項阻擋性缺陷）
 

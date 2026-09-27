@@ -208,6 +208,42 @@ test.describe('工具列與 .cbg 專案流程', () => {
     expect(clipboard).not.toContain('__BLOCKLY_ID');
   });
 
+  test('開斷範例不會清掉已選的開發板與串列埠', async ({ page }) => {
+    // 範例 .cbg 只庫 cbp:format 與 cbp:name，不庫 fqbn / port。
+    // 若直接用解析結果覆盶 metadata，使用者每換一個範例就要重選一次設備。
+    await installTauriMock(page);
+    await page.goto('/');
+    await page.waitForFunction(() => Boolean(window.CodeBridgeProjectStore));
+
+    await page.evaluate(() => {
+      window.CodeBridgeProjectStore.setMeta({ fqbn: 'arduino:avr:uno', port: 'COM4' });
+    });
+
+    await page.click('#btn-examples');
+    await page.locator('#examples-list .dropdown-item').first().click();
+    await expect.poll(async () => (await dirtyState(page)).filename).toBe('Blink');
+
+    const meta = await page.evaluate(() => window.CodeBridgeProjectStore.getState().meta);
+    expect(meta.fqbn).toBe('arduino:avr:uno');
+    expect(meta.port).toBe('COM4');
+  });
+
+  test('開空白專案也保留已選的設備', async ({ page }) => {
+    await installTauriMock(page);
+    await page.goto('/');
+    await page.waitForFunction(() => Boolean(window.CodeBridgeProjectStore));
+
+    await page.evaluate(() => {
+      window.CodeBridgeProjectStore.setMeta({ fqbn: 'arduino:avr:uno', port: 'COM4' });
+    });
+
+    await page.click('#btn-new');
+
+    const meta = await page.evaluate(() => window.CodeBridgeProjectStore.getState().meta);
+    expect(meta.fqbn).toBe('arduino:avr:uno');
+    expect(meta.port).toBe('COM4');
+  });
+
   test('內建範例可載入並成為未命名專案（檔名顯示範例名稱）', async ({ page }) => {
     await installTauriMock(page);
     await page.goto('/');

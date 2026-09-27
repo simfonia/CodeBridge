@@ -80,7 +80,9 @@ var UI_EN = {
     
     // Compile / upload flow (T2-C)
     CLI_COMPILE_STARTING: 'Compiling %1...',
-    CLI_UPLOAD_STARTING: 'Uploading to %1...',
+    CLI_UPLOAD_STARTING: 'Uploading to %1, do not disconnect...',
+    CLI_UPLOAD_SUCCESS: 'Upload complete',
+    CLI_UPLOAD_BUSY_HINT: 'Writing to chip, please do not interrupt',
     CLI_SIZE_FLASH: 'Program storage %1 bytes (%2%%)',
     CLI_SIZE_RAM: 'Dynamic memory %1 bytes (%2%%)',
     
