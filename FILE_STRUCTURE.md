@@ -115,7 +115,8 @@ CodeBridge/
 │   │       │   ├── project-store.js # .cbg metadata 序列化、dirty 狀態、最近專案與草稿
 │   │       │   └── project-io.js    # New/Open/Save/Save As/範例/複製 的流程編排
 │   │       ├── arduino/          # Arduino CLI 工具鏈（T2）
-│   │       │   └── compile-controller.js # 編譯／上傳狀態機、單飛、取消、診斷標記
+│   │       │   ├── compile-controller.js # 編譯／上傳狀態機、單飛、取消、診斷標記
+│   │       │   └── board-detector.js    # 板子／序列埠自動偵測（熱插拔、偏好埠、自動切板、上傳前比對）
 │   │       ├── ui/              # 工具列 UI 元件
 │   │       │   ├── toolbar-registry.js # 按鈕 registry（id / implemented / handledBy）
 │   │       │   ├── toolbar.js         # data-action 派發、dirty 指示、最近清單與範例

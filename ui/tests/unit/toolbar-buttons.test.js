@@ -14,9 +14,9 @@ const indexPath = join(uiDirectory, 'index.html');
  * 「僅桌面版可用」或「後續階段提供」的說明，不得出現無反應的按鈕。
  * 新增未實作按鈕時必須明確更新本清單，讓取捨是 conscious decision。
  */
-const FROZEN_UNIMPLEMENTED_IDS = [
-  'btn-refresh-serial'
-];
+// T2-D 上線後，所有工具列按鈕皆已實作（序列埠重新整理／開發板偵測完成）。
+// 新增按鈕若不實作，必須刻意把 id 加回本清單。
+const FROZEN_UNIMPLEMENTED_IDS = [];
 
 const IMPLEMENTED_ACTIONS = [
   'copy-code',
@@ -25,6 +25,7 @@ const IMPLEMENTED_ACTIONS = [
   'open-project',
   'practice-cheat',
   'practice-mode',
+  'refresh-serial',
   'run-program',
   'save-project',
   'save-project-as',

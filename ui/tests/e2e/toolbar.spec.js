@@ -59,7 +59,7 @@ test.describe('工具列與 .cbg 專案流程', () => {
     await setUiLocale(page, 'zh-hant');
   });
 
-  test('未實作的按鈕一律為 disabled，不提供無反應的按鈕', async ({ page }) => {
+  test('所有工具列按鈕皆已實作，不留無反應的按鈕', async ({ page }) => {
     await installTauriMock(page);
     await page.goto('/');
 
@@ -67,8 +67,9 @@ test.describe('工具列與 .cbg 專案流程', () => {
       document.querySelectorAll('.toolbar-btn[disabled], .terminal-tool-btn[disabled]')
     ).map((element) => element.id).sort());
 
-    // 編譯／上傳與終端機按鈕已於 T2-C 上線；開發板自動偵測待 T2-D。
-    expect(disabled).toEqual(['btn-refresh-serial']);
+    // 編譯／上傳與終端機按鈕於 T2-C 上線；序列埠重新整理與開發板自動偵測
+    // 於 T2-D 上線。工具列已無未實作按鈕 —— 留下無反應的按鈕比沒有更糟。
+    expect(disabled).toEqual([]);
   });
 
   test('終端機按鈕可展開、暫停、清除與關閉面板', async ({ page }) => {

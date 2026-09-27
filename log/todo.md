@@ -4,6 +4,8 @@
 
 - [目前待辦](#目前待辦)
 - [2026-09-27](#2026-09-27)
+  - [T2-D（板子／序列埠自動偵測）](#2026-09-27t2-d板子序列埠自動偵測)
+  - [T2-D 前置（EventSink 緩衝修正 + 序列埠 watcher）](#2026-09-27t2-d-前置eventsink-緩衝修正--序列埠-watcher)
 - [2026-09-26](#2026-09-26)
   - [Arduino CLI 編譯與上傳（Phase T2-C：前端控制器與終端機）](#2026-09-26arduino-cli-編譯與上傳phase-t2-c前端控制器與終端機)
   - [工具列實作與 .cbg 專案](#2026-09-26工具列實作與-cbg-專案)
@@ -28,8 +30,9 @@
 
 ### 下一階段主線：Arduino CLI 工具鏈 Phase T2
 - [x] T2-C：前端 `compile-controller.js`（單飛、取消、診斷雙向定位）、`terminal-panel.js`、工具列 `btn-run`/`btn-stop`/`btn-terminal` 上線（詳見下方 2026-09-26 章節）
-- [ ] T2-D：前端 `board-detector.js`（對齊 cocoya 熱插拔輪詢 + 偏好埠恢復）、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH` 上傳前板子比對
-- [x] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（**已於 2026-09-27 完成**：`LineBuffer` 修正 + `PortInfo` 簽章 diff + `serial-ports-changed` 事件與背景 watcher；`board-detected` 事件的板子層仍待 T2-D 消費端）
+- [x] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（**已於 2026-09-27 完成**：`LineBuffer` 修正 + `PortInfo` 簽章 diff + `serial-ports-changed` 事件與背景 watcher；`board-detected` 事件的板子層亦已於同日補上）
+- [x] T2-D 主體：前端 `board-detector.js`（熱插拔事件、偏好埠恢復、自動切板）、序列埠下拉與 `btn-refresh-serial` 綁定上線、`MSG_BOARD_MISMATCH` 上傳前板子比對（**已於 2026-09-27 完成**，詳見下方同日期章節）
+- [ ] 板子選擇面板：搜尋框 + 已安裝／全部開發板分頁（目前僅能自動偵測，使用者無法手動選板；`board_list_all` 後端命令已就緒）
 - [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調、桌機實機上傳驗證
 - [x] i18n 新 key：`CLI_ERROR_INVALID_FQBN`、`CLI_ERROR_COMPILE_FAILED`、`CLI_ERROR_UPLOAD_FAILED`、`CLI_ERROR_NO_FQBN`、`CLI_ERROR_NO_PORT`、`CLI_ERROR_PORT_BUSY`、`CLI_ERROR_BUILD_STALE`、`DRAFT_ERROR_*`、`CLI_STREAM_STDOUT/STDERR`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_SIZE_FLASH/RAM`、`TLB_STOP_HINT`、`TLB_SCROLL_RESUMED`（中英兩份已補齊）
 - [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
@@ -100,9 +103,63 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 - `git status`：工作區乾淨，master 領先 origin/master 6 個 commit
 
 ### 下次啟動方向 (Next Steps)
-1. ~~T2-D 前置~~：**已於 2026-09-27 完成**（見下方章節）
-2. T2-D：`board-detector.js`、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH`
-3. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
+1. ~~T2-D 前置~~：**已於 2026-09-27 完成**（`LineBuffer` 修正 + 序列埠 watcher + signature-diff 事件）
+2. ~~T2-D 主體~~：**已於 2026-09-27 完成**（`board-detector.js`、序列埠綁定、`btn-refresh-serial` 上線、`MSG_BOARD_MISMATCH`）
+3. 板子選擇面板（搜尋 + 已安裝／全部分頁）仍待實作
+4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
+
+## 2026-09-27：T2-D（板子／序列埠自動偵測）
+
+### 已完成
+- [x] Rust 板子層事件
+  - `BoardsDetected` / `BoardMatch` payload（port → fqbn 加上無法辨識的清單）
+  - `from_matches()`：過濾空 port／fqbn、依埠名排序、同埠去重
+  - `detect_boards()`：交叉比對 `board list` 與實際埠清單，差集即「無法辨識」
+  - `publish_detected_boards()`：僅在埠**有變化**時呼叫 CLI（不可放進 1500ms 輪詢路徑）
+  - CLI 不可用／查詢失敗時**不發事件**，保留使用者既有 FQBN
+- [x] 前端 `ui/src/lib/arduino/board-detector.js`（`window.CodeBridgeBoardDetector`）
+  - 訂閱 `serial-ports-changed` 與 `board-detected`
+  - 序列埠下拉渲染（含板名顯示）、`btn-refresh-serial` 綁定與啟用
+  - 偏好埠（localStorage `codebridgePreferredPort`）與自動選取的區分
+  - 自動填入 `meta.fqbn`（**僅在使用者尚未選過板子時**）
+  - `verifyBoardForUpload()`：上傳前板子比對
+- [x] `compile-controller.js` 的 `upload()` 改為先過 `confirmBoard()` 再送出
+- [x] i18n 中英各補 15 個 T2-D key（`TLB_SELECT_BOARD`／`MSG_BOARD_MISMATCH` 等）
+- [x] `index.html` 載入 `board-detector.js`；`serial-selector` 與 `btn-refresh-serial` 移除 `disabled`
+- [x] `toolbar-registry.js` 將 `refresh-serial` 標記為 `implemented: true`
+- [x] `toolbar-buttons.test.js` 凍結清單清空（所有工具列按鈕皆已實作）
+- [x] 測試：`board-detector.test.js`（23 項）
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 自動切板會把上傳前比對的基準抹掉
+初版 `applyToMeta()` 無條件把偵測到的 FQBN 寫回 `meta.fqbn`。這讓 `verifyBoardForUpload()` 的比對永遠是「相同」—— 因為 `expected` 與 `detected` 都是同一個值，等於沒有比對。**自動切板現在只在 `meta.fqbn` 為空（使用者從未選過板子）時填入**；使用者已選的板子代表「這個專案要燒哪顆晶片」，自動偵測到的硬體不該靜默改掉它。改板子必須由板子選擇面板明確操作。
+
+這個缺陷是被自己寫的測試抓到的：「FQBN 不同時詢問使用者」通過，但「FQBN 相同時直接放行」失敗 —— 兩者同時成立就代表比對邏輯不存在。
+
+#### 偏好埠與自動選取必須分開記錄
+拔線時使用者可能只剩內建 COM1，自動選取會把選擇切過去。若把這個自動結果寫成「偏好」，重插原板時就再也跳不回去。因此只有**使用者手動選的**埠（`change` 事件）才寫入 localStorage；`choosePort()` 在偏好埠重新出現時優先跳回。
+
+區分「使用者選的」與「自動選的」仰賴 DOM 語意：`change` 只在使用者互動時觸發，程式直接設定 `value` 不會。
+
+#### `Element.remove()` 不能用來清空下拉
+`renderOptions()` 初版用 `element.remove()` 清空選項，但那是把節點**從 DOM 摘掉**（等同 `Node.remove()`），會讓整個序列埠下拉從工具列消失。正確做法是 `while (element.firstChild) element.removeChild(...)`。這個錯誤在單元測試中浮現（fake select 的 `remove()` 語意不同），但根因在真實 DOM 一樣存在。
+
+#### 沒有可用埠時只保留原選擇，不放 placeholder
+一個埠都沒有時，若同時放「未偵測到序列埠」placeholder 與保留的原選擇，下拉會有兩個可選項，使用者會誤以為還有其他埠可選。因此 `keepPrevious` 時只顯示原選擇一項，並維持 `element.value`。
+
+#### `board list` 不可放進輪詢路徑
+watcher 每 1500ms 掃描一次序列埠，但 `arduino-cli board list` 需啟動子進程（數百毫秒），且 CLI 未安裝時會直接失敗。因此只在埠**簽章有變化**時才呼叫，並以事件推播結果。CLI 不可用時不發事件 —— 前端拿不到對應時應保留使用者已選的 FQBN，而不是清空。
+
+### 驗證結果
+- `cargo test`：**204 passed** + 4 個真實 `arduino-cli` 整合測試 passed
+- `npx vitest run tests/unit`：**101 passed**（7 個檔案，含新增 23 項 board-detector 測試）
+- `npm run build`：成功
+- E2E 全量：92 項（T2-D 上線後工具列已無 disabled 按鈕，斷言同步更新）
+
+### 下次啟動方向 (Next Steps)
+1. 板子選擇面板（搜尋 + 已安裝／全部開發板分頁）尚未實作 —— 目前只能自動偵測，使用者無法手動選板
+2. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機編譯／上傳驗證
 
 ## 2026-09-27：T2-D 前置（EventSink 緩衝修正 + 序列埠 watcher）
 
