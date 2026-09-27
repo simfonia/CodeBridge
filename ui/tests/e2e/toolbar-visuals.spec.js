@@ -28,7 +28,8 @@ async function readToolbarStyles(page) {
   return page.evaluate(() => {
     const dropdownItem = document.querySelector('#open-dropdown .dropdown-item');
     const dropdownPanel = document.getElementById('open-dropdown');
-    const saveButton = document.getElementById('btn-save');
+    // 未命名專案的 dirty 指示畫在 save-as 上（見 toolbar.js applyState）
+    const saveButton = document.getElementById('btn-save-as');
     const itemImage = dropdownItem.querySelector('img');
     const styles = (element) => getComputedStyle(element);
     return {
@@ -69,7 +70,7 @@ test.describe('工具列視覺回歸', () => {
     expect(styles.itemImageFilter).toContain('invert');
   });
 
-  test('未儲存變更時儲存按鈕有高对比指示（Engineer 與 Angel 皆然）', async ({ page }) => {
+  test('未儲存變更時按鈕有高對比指示（Engineer 與 Angel 皆然）', async ({ page }) => {
     for (const preset of ['engineer', 'angel']) {
       await page.addInitScript((value) => {
         localStorage.clear();
@@ -86,8 +87,9 @@ test.describe('工具列視覺回歸', () => {
         delay.render();
         setup.getInput('CONTENT').connection.connect(delay.previousConnection);
       });
+      // 預設開啟的是未命名專案，dirty 提示由 save-as 承擔
       await expect.poll(async () => page.evaluate(
-        () => document.getElementById('btn-save').classList.contains('is-dirty')
+        () => document.getElementById('btn-save-as').classList.contains('is-dirty')
       )).toBe(true);
 
       const styles = await readToolbarStyles(page);

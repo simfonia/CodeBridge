@@ -29,9 +29,29 @@ Blockly v13 的工作區 ARIA 初始化需要官方基礎訊息。CodeBridge loa
 | `plugins/scroll-options.js` | 8604 | `E81530D9FD7E922AF29C712E3C55F0F6011310234DE088360CA65C57415DC7A7` |
 | `plugins/workspace-minimap.js` | 10974 | `4DE655A1696B53ADA8B455653BBB337BC4E2E305B9DF806B0F3E91C983369FEE` |
 
+## Media（離線備份）
+
+Blockly 預設從 `https://static.blockly.com/media/` 載入縮放鈕、垃圾桶、註記摺疊與
+縮放把手的 SVG。依賴外網 CDN 會讓離線環境（校園教學常見）整組圖示失效，因此把
+同一份資源備份到本機，並在 `Blockly.inject` 傳入 `media: './blockly/media/'`。
+
+注意 Blockly 13 的選項名稱是 **`media`**；舊版的 `pathToMedia` 在此版本已被忽略
+（選項解析處硬寫 `this.pathToMedia = "https://static.blockly.com/media/"`）。
+
+`sprites.svg` 的座標與 `blockly.js` 內的 `x:-32`（zoom in）、`x:-64`（zoom out）、
+`y:-92`（三顆共用）偏移完全對應，**不可**用其他 Blockly 版本的媒體檔替代。
+
+| 檔案 | Bytes | SHA-256 |
+|---|---:|---|
+| `media/sprites.svg` | 1775 | `862DE0EE081FA9BAF504E673736D7446439C15246452258CAB964A82566EF40F` |
+| `media/delete-icon.svg` | 315 | `3EEE02B06F476CE746566808178543389E53CD4E9D7FD32B69E329EFF4FC71EF` |
+| `media/foldout-icon.svg` | 150 | `0AC7478B56F5E5CC583C26710CB7EE5EDCEDB563CDE65CD2385F4DD3E9E08C64` |
+| `media/resize-handle.svg` | 218 | `C95D07B3FB3AAA088E6665061B01952E7EA9DDA462B7032A85E095BF8A12855B` |
+
 ## Runtime 選項
 
 - renderer：`thrasos`
 - theme：`Blockly.Themes.Classic`
 - sounds：`false`
+- media：`./blockly/media/`（本機離線備份，見上節）
 - Node.js 開發環境：Blockly 13.3.0 與目前測試工具鏈要求 Node.js 22.12 以上
