@@ -218,11 +218,52 @@
     box-shadow: inset 3px 0 0 var(--cb-text);
 }
 
+/* 常用開發板快捷列：讓使用者不必知道 FQBN 怎麼拼，點一下就能用。 */
+.cb-board-presets {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--cb-border);
+    background: var(--cb-surface-raised);
+}
+
+.cb-board-presets-label {
+    margin-bottom: 6px;
+    color: var(--cb-text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.cb-board-presets-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cb-board-preset {
+    padding: 5px 10px;
+    font-size: 12px;
+    color: var(--cb-text);
+    background: var(--cb-surface);
+    border: 1px solid var(--cb-border);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.cb-board-preset:hover {
+    border-color: var(--cb-text);
+}
+
+.cb-board-preset:focus-visible {
+    outline: 2px solid var(--cb-text);
+    outline-offset: 1px;
+}
+
 .cb-board-notice {
     padding: 12px;
     color: var(--cb-text-muted);
     font-size: 13px;
     cursor: default;
+    line-height: 1.5;
 }
 
 #codeContent,

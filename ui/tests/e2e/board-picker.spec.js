@@ -76,6 +76,45 @@ test.describe('開發板選擇面板', () => {
     await expect(page.locator('#cb-board-list .cb-board-notice')).toBeVisible();
   });
 
+  test('搜尋無結果時提示提到「開發板」而非「積木」', async ({ page }) => {
+    // 回歸：曾沿用積木搜尋的 i18n key，使用者看到「找不到符合的積木」而不知所措。
+    await page.click('#btn-select-board');
+    await page.fill('#cb-board-search', 'zzz-no-such-board');
+
+    const notice = await page.locator('#cb-board-list .cb-board-notice').first().textContent();
+    expect(notice).not.toContain('積木');
+    expect(notice).toContain('開發板');
+  });
+
+  test('提供常用開發板快捷按鈕，不必手動輸入名稱', async ({ page }) => {
+    // 使用者手上的 UNO 多為第三廠 clone，自動偵測必然失敗；
+    // 面板必須提供一鍵選用，而不是要他猜 FQBN 怎麼拼。
+    await page.click('#btn-select-board');
+
+    const presets = page.locator('#cb-board-list .cb-board-preset');
+    await expect(presets.first()).toBeVisible();
+    expect(await presets.count()).toBeGreaterThan(0);
+  });
+
+  test('點擊常用開發板即可完成選板', async ({ page }) => {
+    await page.click('#btn-select-board');
+    await page.locator('#cb-board-list .cb-board-preset', { hasText: 'Arduino Uno' }).click();
+
+    expect(await readProjectFqbn(page)).toBe('arduino:avr:uno');
+    await expect(page.locator('#cb-board-panel')).toBeHidden();
+  });
+
+  test('無法辨識的埠會說明手動選板仍可正常使用', async ({ page }) => {
+    // CH340 clone 不在官方 VID 白名單內，自動辨識必然失敗。
+    // 提示必須說清楚「仍可正常上傳」，否則學生會以為板子壞了。
+    await page.evaluate(() => {
+      window.CodeBridgeBoardPicker.open({ unknownPorts: ['COM4'] });
+    });
+
+    const notice = await page.locator('#cb-board-list .cb-board-notice').first().textContent();
+    expect(notice).toContain('手動選擇');
+  });
+
   test('選取開發板後寫入專案並關閉面板', async ({ page }) => {
     await page.click('#btn-select-board');
     await page.locator('#cb-board-list .cb-board-item', { hasText: 'Arduino Mega' }).click();

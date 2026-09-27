@@ -161,10 +161,22 @@ async function loadPicker(overrides = {}) {
   return { sandbox, bridge, doc, buttons };
 }
 
-/** 面板目前畫面上的 fqbn 清單（只取清單容器的當前子節點）。 */
+/** 依 fqbn 找出面板清單中的對應項目（preset 列的按鈕也在容器內，故以屬性定位）。 */
+function boardItem(doc, fqbn) {
+  return doc.getElementById('cb-board-list').children
+    .find((item) => item.getAttribute('data-fqbn') === fqbn);
+}
+
+/**
+ * 面板目前畫面上的 fqbn 清單。
+ *
+ * 只取「清單項」（class 含 `cb-board-item`）—— 常用開發板快捷列的按鈕
+ * 也在同一個容器內，但那是捷徑而非完整清單。
+ */
 function renderedFqbn(doc) {
   const list = doc.getElementById('cb-board-list');
   return list.children
+    .filter((item) => String(item.className).includes('cb-board-item'))
     .map((item) => item.getAttribute('data-fqbn'))
     .filter((fqbn) => Boolean(fqbn));
 }
@@ -249,8 +261,13 @@ describe('board-picker 搜尋過濾', () => {
     const { sandbox, doc, buttons } = await loadPicker();
     await sandbox.CodeBridgeBoardPicker.open();
     buttons.search.type('zzzz-no-such-board');
+    // 沒有任何可選項 —— 不可因為搜不到就自動挑一個。
     expect(renderedFqbn(doc)).toEqual([]);
-    expect(renderedText(doc).includes('搜尋')).toBe(true);
+    // 但必須給出下一步的指引，而不是一片空白。
+    expect(renderedText(doc).length).toBeGreaterThan(0);
+    // 常用開發板快捷列仍然存在，讓使用者不必知道 FQBN 怎麼拼。
+    expect(doc.getElementById('cb-board-list').children
+      .some((item) => String(item.className).includes('cb-board-presets'))).toBe(true);
   });
 
   test('切換分頁不清空搜尋關鍵字', async () => {
@@ -269,7 +286,7 @@ describe('board-picker 選取開發板', () => {
     const { sandbox, doc } = await loadPicker({ store });
     await sandbox.CodeBridgeBoardPicker.open();
 
-    doc.getElementById('cb-board-list').children[2].click();
+    boardItem(doc, 'arduino:avr:mega').click();
 
     expect(store.meta.fqbn).toBe('arduino:avr:mega');
     expect(sandbox.CodeBridgeBoardPicker.isOpen()).toBe(false);
@@ -281,7 +298,7 @@ describe('board-picker 選取開發板', () => {
     const { sandbox, doc } = await loadPicker({ store });
     await sandbox.CodeBridgeBoardPicker.open();
 
-    doc.getElementById('cb-board-list').children[1].click();
+    boardItem(doc, 'arduino:avr:nano').click();
 
     expect(store.meta.fqbn).toBe('arduino:avr:nano');
   });
@@ -326,6 +343,45 @@ describe('board-picker 錯誤處理', () => {
     const { sandbox, doc } = await loadPicker();
     await sandbox.CodeBridgeBoardPicker.open({ unknownPorts: ['COM7'] });
     expect(renderedFqbn(doc).length).toBeGreaterThan(0);
+  });
+});
+
+describe('board-picker 無結果提示與引導', () => {
+  test('搜尋無結果時顯示「開發板」字樣而非「積木」', async () => {
+    // 這是實際回報的缺陷：提示列沿用了積木搜尋的 i18n key，
+    // 使用者在選開發板時看到「找不到符合的積木」，完全不知所云。
+    const { sandbox, buttons } = await loadPicker();
+    await sandbox.CodeBridgeBoardPicker.open();
+    buttons.search.type('zzz-no-such-board');
+
+    const text = renderedText(sandbox.document);
+    expect(text).not.toContain('積木');
+    expect(text).toContain('開發板');
+  });
+
+  test('清單為空且尚未搜尋時提示如何選擇，而非只說找不到', async () => {
+    // 使用者第一次開啟面板時不該只看到「找不到」——他根本還沒搜尋。
+    const { sandbox } = await loadPicker({ boards: [] });
+    await sandbox.CodeBridgeBoardPicker.open();
+    expect(renderedText(sandbox.document).length).toBeGreaterThan(0);
+  });
+
+  test('提供常用板子快捷建議，讓使用者不必知道板子名稱', async () => {
+    // 高中生手上多為 UNO／Nano clone，卻未必知道 FQBN 怎麼拼。
+    // 面板應直接列出常見選擇，而不是要使用者猜字串。
+    const { sandbox } = await loadPicker();
+    await sandbox.CodeBridgeBoardPicker.open();
+    const presets = sandbox.CodeBridgeBoardPicker.presets();
+    expect(presets.length).toBeGreaterThan(0);
+    expect(presets.some((preset) => /uno/i.test(preset.name))).toBe(true);
+  });
+
+  test('無法辨識的埠會顯示可操作的說明（該選哪塊板）', async () => {
+    // CH340 clone 不在官方 VID 清單內，自動偵測必然失敗；
+    // 面板必須說明「手動選擇即可正常上傳」，否則學生會卡住。
+    const { sandbox } = await loadPicker();
+    await sandbox.CodeBridgeBoardPicker.open({ unknownPorts: ['COM4'] });
+    expect(sandbox.CodeBridgeBoardPicker.getState().unknownPorts).toEqual(['COM4']);
   });
 });
 
