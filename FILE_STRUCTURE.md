@@ -116,7 +116,8 @@ CodeBridge/
 │   │       │   └── project-io.js    # New/Open/Save/Save As/範例/複製 的流程編排
 │   │       ├── arduino/          # Arduino CLI 工具鏈（T2）
 │   │       │   ├── compile-controller.js # 編譯／上傳狀態機、單飛、取消、診斷標記
-│   │       │   └── board-detector.js    # 板子／序列埠自動偵測（熱插拔、偏好埠、自動切板、上傳前比對）
+│   │       │   ├── board-detector.js    # 板子／序列埠自動偵測（熱插拔、偏好埠、自動切板、上傳前比對）
+│   │       │   └── board-picker.js      # 開發板選擇面板（搜尋過濾、手動選板、錯誤降級）
 │   │       ├── ui/              # 工具列 UI 元件
 │   │       │   ├── toolbar-registry.js # 按鈕 registry（id / implemented / handledBy）
 │   │       │   ├── toolbar.js         # data-action 派發、dirty 指示、最近清單與範例

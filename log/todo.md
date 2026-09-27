@@ -32,7 +32,7 @@
 - [x] T2-C：前端 `compile-controller.js`（單飛、取消、診斷雙向定位）、`terminal-panel.js`、工具列 `btn-run`/`btn-stop`/`btn-terminal` 上線（詳見下方 2026-09-26 章節）
 - [x] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（**已於 2026-09-27 完成**：`LineBuffer` 修正 + `PortInfo` 簽章 diff + `serial-ports-changed` 事件與背景 watcher；`board-detected` 事件的板子層亦已於同日補上）
 - [x] T2-D 主體：前端 `board-detector.js`（熱插拔事件、偏好埠恢復、自動切板）、序列埠下拉與 `btn-refresh-serial` 綁定上線、`MSG_BOARD_MISMATCH` 上傳前板子比對（**已於 2026-09-27 完成**，詳見下方同日期章節）
-- [ ] 板子選擇面板：搜尋框 + 已安裝／全部開發板分頁（目前僅能自動偵測，使用者無法手動選板；`board_list_all` 後端命令已就緒）
+- [x] 板子選擇面板：搜尋（名稱＋FQBN 同時比對）、手動選板、目前選用者標示（**已於 2026-09-27 完成**：`board-picker.js` + 工具列 `btn-select-board` + 面板骨架與 preset token 樣式）
 - [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調、桌機實機上傳驗證
 - [x] i18n 新 key：`CLI_ERROR_INVALID_FQBN`、`CLI_ERROR_COMPILE_FAILED`、`CLI_ERROR_UPLOAD_FAILED`、`CLI_ERROR_NO_FQBN`、`CLI_ERROR_NO_PORT`、`CLI_ERROR_PORT_BUSY`、`CLI_ERROR_BUILD_STALE`、`DRAFT_ERROR_*`、`CLI_STREAM_STDOUT/STDERR`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_SIZE_FLASH/RAM`、`TLB_STOP_HINT`、`TLB_SCROLL_RESUMED`（中英兩份已補齊）
 - [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
@@ -107,6 +107,43 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 2. ~~T2-D 主體~~：**已於 2026-09-27 完成**（`board-detector.js`、序列埠綁定、`btn-refresh-serial` 上線、`MSG_BOARD_MISMATCH`）
 3. 板子選擇面板（搜尋 + 已安裝／全部分頁）仍待實作
 4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
+
+## 2026-09-27：T2-E（開發板選擇面板）
+
+### 已完成
+- [x] `ui/src/lib/arduino/board-picker.js`（`window.CodeBridgeBoardPicker`）
+  - `board_list_all` 載入（只載入一次，核心索引數百筆不重複請求）
+  - 搜尋同時比對名稱與 FQBN，不分大小寫
+  - 選取寫回 `meta.fqbn` 並關閉面板；目前選用者標示 `is-active`
+  - 載入中／錯誤／無結果三種狀態皆有提示列
+  - Escape、遮罩點擊、關閉鈕三種關閉途徑
+- [x] 工具列 `btn-select-board`（沿用既有 `hardware-chip-outline.png` 圖示）與 `board-label`
+- [x] `index.html` 面板骨架、`presets.css` 樣式（僅用 `--cb-*` token，符合 Engineer／Angel preset 契約）
+- [x] `main.js` 初始化、`toolbar-registry.js` 註冊 `select-board`
+- [x] 測試：`board-picker.test.js`（17 項單元）、`board-picker.spec.js`（10 項 E2E）
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 手動選板必須能覆寫既有值 —— 與自動切板方向相反
+`board-detector.js` 的自動切板只在 `meta.fqbn` 為空時填入（否則會抹掉上傳前比對的基準）；面板的選取則**一定覆寫**。兩者看似矛盾，實則語意不同：自動切板是「推測硬體」，手動選板是「使用者明確指定」。若面板也拒絕覆寫，使用者將永遠無法改板子。
+
+#### 名稱與 FQBN 必須並列
+只顯示 `arduino:avr:uno` 對高中生沒有判斷依據；兩者並列才確認得了是不是自己手上的那塊板。搜尋也同時比對兩者，因為使用者可能輸入「uno」也可能直接貼文件中的 FQBN。
+
+#### 搜尋字串在關閉／重開後保留
+使用者搜到一半被打斷（插拔板子、誤按遮罩）時，重開面板若清空關鍵字就得重打一次。因此 `term` 是模組狀態而非 input 的暫存值。
+
+#### 教訓：新增測試一律建新檔
+本輪曾把 `board-picker` 的 E2E 內容寫進 `compile-flow.spec.js` 的 import 區塊，覆蓋了 T2-C 既有測試，已用 `git show HEAD:<path>` 還原。不要把既有 spec 的開頭當插入點。
+
+### 驗證結果
+- `npx vitest run tests/unit`：**118 passed**（8 個檔案）
+- `npx playwright test`：**103 passed**
+- `npm run build`：成功
+
+### 下次啟動方向 (Next Steps)
+1. 桌機實機編譯／上傳驗證（純瀏覽器 E2E 蓋不到真實 CLI 與硬體）
+2. T2-E 其餘：preset 微調、cocoya 圖示搬遷
 
 ## 2026-09-27：T2-D（板子／序列埠自動偵測）
 

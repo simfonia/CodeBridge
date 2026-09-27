@@ -30,6 +30,12 @@ export async function installTauriMock(page, options = {}) {
       uploadReady: true,
       uploadStart: 'op-upload',
       cancelResult: true,
+      // 開發板清單（T2-E）：預設給三款常見板子，讓面板 E2E 不需真實 CLI。
+      boards: [
+        { name: 'Arduino Uno', fqbn: 'arduino:avr:uno' },
+        { name: 'Arduino Nano', fqbn: 'arduino:avr:nano' },
+        { name: 'Arduino Mega', fqbn: 'arduino:avr:mega' }
+      ],
       errors: {}
     }, config.cli || {});
 
@@ -59,7 +65,8 @@ export async function installTauriMock(page, options = {}) {
             return respond(null);
           }
           if (command === 'compile_start' || command === 'upload_start' ||
-              command === 'upload_ready' || command === 'operation_cancel') {
+              command === 'upload_ready' || command === 'operation_cancel' ||
+              command === 'board_list_all' || command === 'refresh_serial_ports') {
             window.__MOCK_CLI_CALLS__.push({ command, args: payload });
             const cli = window.__MOCK_CLI__;
             const forced = cli.errors[command];
@@ -67,6 +74,8 @@ export async function installTauriMock(page, options = {}) {
             if (command === 'compile_start') return respond(cli.compileStart);
             if (command === 'upload_start') return respond(cli.uploadStart);
             if (command === 'upload_ready') return respond(cli.uploadReady);
+            if (command === 'board_list_all') return respond({ boards: cli.boards });
+            if (command === 'refresh_serial_ports') return respond(cli.ports || []);
             return respond(cli.cancelResult);
           }
           return fail('MSG_UNKNOWN_ERROR', command);
