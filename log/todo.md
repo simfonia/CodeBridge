@@ -113,6 +113,47 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 3. 板子選擇面板（搜尋 + 已安裝／全部分頁）仍待實作
 4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
 
+## 2026-09-27：T2-E 使用者回報修正（CH340 clone 無法自動辨識）
+
+### 已完成
+- [x] **修正錯誤 i18n key**：無結果提示沿用了積木搜尋的 `TLB_BLOCK_SEARCH_NO_RESULTS`，使用者選開發板時看到「找不到符合的**積木**」。改為開發板專用的 `TLB_BOARD_SEARCH_NO_RESULTS`
+- [x] **新增常用開發板快捷列**：Uno／Nano／Mega／Micro／Leonardo／ESP32／Pico 一鍵選用，不必知道 FQBN 怎麼拼
+- [x] **區分「沒搜尋」與「搜不到」**：前者提示安裝核心，後者提示改用快捷列
+- [x] **無法辨識的埠顯示可操作說明**：「常見於第三廠板，請手動選擇後即可正常編譯與上傳」
+- [x] i18n 中英各補 4 個 key；`presets.css` 加入快捷列樣式
+- [x] 測試：單元 +4 項（122 total）、E2E +4 項
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 實機驗證：CH340 clone 的真實行為
+使用者插入第三廠 UNO（`USB-SERIAL CH340 (COM4)`，驅動 Status OK），`arduino-cli board list` 顯示「未知的」。實測確認根因：
+
+```text
+arduino:avr:uno 認得的 VID/PID（僅 5 組官方）
+  0x2341/0x0043   0x2341/0x0001   0x2A03/0x0043   0x2341/0x0243   0x2341/0x006A
+第三廠 UNO clone 實際是
+  0x1A86/0x7523   ← CH340（WCH/Nanoxp），不在清單內
+```
+
+**關鍵實測**：`arduino-cli upload --fqbn arduino:avr:uno -p COM4` **完全不需要** VID/PID 匹配，成功燒錄（`Device signature = 0x1e950f (m328p)`、`writing flash 924 bytes`）。VID/PID 只影響「自動辨識板子」這一步。
+
+**產品含意**：高中生手上的 UNO 幾乎都是 clone，因此「自動偵測失敗 → 手動選板」不是邊緣案例而是**主要路徑**。面板必須對這條路徑友善：說清楚「手動選完照樣能燒」，並提供一鍵選用。
+
+#### 我犯的錯：沿用積木搜尋的 i18n key
+`TLB_BLOCK_SEARCH_NO_RESULTS` 的值是「找不到符合的**積木**」。開發板面板沿用後，使用者在選板時看到完全不相干的訊息。這類錯誤靠「看程式碼」很難發現，靠**實際操作**才會浮現 —— 也是為什麼面板的文案必須由實際使用者驗證。
+
+教訓：新增面板／功能時，提示列一律用該功能自己的 i18n 命名空間，勿圖省事沿用既有 key。
+
+### 驗證結果
+- Vitest：**122 passed**
+- Playwright board-picker：**15 passed**（含新增 4 項）
+- `cargo test`：**206 passed**
+
+### 下次啟動方向 (Next Steps)
+1. 執行全量 E2E
+2. 日誌與 commit
+3. T2-E 其餘：preset 微調、cocoya 圖示搬遷
+
 ## 2026-09-27：T2-E 實機驗證（真實編譯）—— 抓出「每次編譯都失敗」的嚴重缺陷
 
 ### 已完成
