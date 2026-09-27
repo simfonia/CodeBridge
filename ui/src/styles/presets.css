@@ -144,6 +144,87 @@
     border-color: var(--cb-border);
 }
 
+/* ===== 開發板選擇面板（T2-E） =====
+   刻意只用 --cb-* token：工程師／天使兩種 preset 都靠它們切換外觀，
+   寫死顏色會讓淺色 preset 下的面板變成深色。 */
+.board-label {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--cb-text-muted);
+    font-size: 12px;
+    padding: 0 4px;
+}
+
+.cb-board-dialog {
+    width: min(520px, 90vw);
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cb-board-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--cb-text);
+    background: var(--cb-surface-raised);
+    border: 1px solid var(--cb-border);
+    border-radius: 6px;
+}
+
+.cb-board-search:focus {
+    outline: 2px solid var(--cb-accent, var(--cb-text));
+    outline-offset: 1px;
+}
+
+.cb-board-list {
+    flex: 1;
+    min-height: 120px;
+    max-height: 46vh;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--cb-border);
+    border-radius: 6px;
+    background: var(--cb-surface);
+}
+
+.cb-board-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--cb-text);
+    font-size: 13px;
+    border-bottom: 1px solid var(--cb-border);
+}
+
+.cb-board-item:last-child {
+    border-bottom: none;
+}
+
+.cb-board-item:hover {
+    background: var(--cb-surface-raised);
+}
+
+/* 目前選用的板子：必須一眼看得出正在燒哪一顆。 */
+.cb-board-item.is-active {
+    background: var(--cb-surface-raised);
+    color: var(--cb-text);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--cb-text);
+}
+
+.cb-board-notice {
+    padding: 12px;
+    color: var(--cb-text-muted);
+    font-size: 13px;
+    cursor: default;
+}
+
 #codeContent,
 .practice-textarea {
     background: var(--cb-code-background);

@@ -663,6 +663,10 @@ document.addEventListener('DOMContentLoaded', function() {
     //    還原優先序：未儲存草稿 > 最後儲存的工作區快照 > 預設 setup + loop 積木。
     //    草稿與快照的差異由 store 以字串比對決定 dirty，因此使用者關掉分頁也不會遺失進度。
     projectStore = window.CodeBridgeProject.createStore();
+    // 掛到 window：`CodeBridgeProject` 是工廠而非 store 實例，board-picker /
+    // board-detector 這類無法直接依賴 main.js 閉包的模組需要這個入口，
+    // 才能把使用者的選擇寫回 metadata（沒有它們的選板不會存進 .cbg）。
+    window.CodeBridgeProjectStore = projectStore;
     window.CodeBridgeProjectIO.init({
         store: projectStore,
         getWorkspace: function() { return workspace; },
@@ -687,6 +691,13 @@ document.addEventListener('DOMContentLoaded', function() {
     //    並在偵測到板子時填入專案的 fqbn（僅在使用者尚未選過板子時）。
     if (window.CodeBridgeBoardDetector) {
         window.CodeBridgeBoardDetector.init({ store: projectStore });
+    }
+
+    // 7. 開發板選擇面板（T2-E）
+    //    允許使用者手動指定 FQBN：自動偵測無法識別的板子（缺少 core）
+    //    只能通過這個入口定下 FQBN。與自動切板相反，這裡的選取端不接收旧值。
+    if (window.CodeBridgeBoardPicker) {
+        window.CodeBridgeBoardPicker.init({ store: projectStore });
     }
 
     var initialState = projectStore.getState();

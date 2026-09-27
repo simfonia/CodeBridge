@@ -117,6 +117,10 @@
 
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
+                    <div class="toolbar-btn" id="btn-select-board" data-action="select-board" title="%{BKY_TLB_SELECT_BOARD}">
+                        <img src="src/icons/hardware-chip-outline.png" alt="">
+                    </div>
+                    <span class="board-label" id="board-label"></span>
                     <div class="toolbar-btn" id="btn-refresh-serial" data-action="refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
                         <img src="src/icons/connect_serial_24dp_1F1F1F.png" alt="">
                     </div>
@@ -613,8 +617,22 @@
     <!-- ====== Arduino CLI 編譯／上傳控制器（T2-C） ====== -->
     <script src="src/lib/arduino/compile-controller.js"></script>
 
+    <!-- ====== 開發板選擇面板（T2-E） ====== -->
+    <div class="cb-overlay" id="cb-board-panel" role="dialog" aria-modal="true" aria-labelledby="cb-board-title" hidden>
+        <div class="cb-dialog cb-board-dialog">
+            <div class="cb-dialog-title" id="cb-board-title">%{BKY_TLB_SELECT_BOARD}</div>
+            <input class="cb-board-search" id="cb-board-search" type="search"
+                   placeholder="%{BKY_TLB_BOARD_SEARCH_PLACEHOLDER}" autocomplete="off">
+            <ul class="cb-board-list" id="cb-board-list"></ul>
+            <div class="cb-dialog-actions">
+                <button type="button" class="cb-dialog-button" id="cb-board-close">%{BKY_MSG_CLOSE}</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ====== 板子／序列埠自動偵測（T2-D） ====== -->
     <script src="src/lib/arduino/board-detector.js"></script>
+    <script src="src/lib/arduino/board-picker.js"></script>
 
     <!-- ====== 工具列按鈕 registry 與行為 ====== -->
     <script src="src/lib/ui/toolbar-registry.js"></script>

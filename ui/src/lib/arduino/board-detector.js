@@ -49,9 +49,13 @@ var CodeBridgeBoardDetector = (function() {
         return document.getElementById('serial-selector');
     }
 
+    /// 取得可寫入的專案 store。
+    ///
+    /// `window.CodeBridgeProject` 是**工廠**（提供 `createStore`），沒有
+    /// `setMeta`；真正的 store 實例由 main.js 掛在 `window.CodeBridgeProjectStore`。
     function store() {
         if (context && context.store) return context.store;
-        return window.CodeBridgeProject || null;
+        return window.CodeBridgeProjectStore || null;
     }
 
     function readPreferred() {

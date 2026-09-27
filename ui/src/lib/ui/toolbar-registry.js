@@ -36,7 +36,9 @@ var CodeBridgeToolbar = (function() {
         // 留待 Phase 4 的 Board Manager／環境診斷實作。
         //
         // 序列埠重新整理與開發板自動偵測已於 T2-D 上線（board-detector.js）。
-        'refresh-serial': { id: 'btn-refresh-serial', implemented: true, handledBy: 'board', labelKey: 'TLB_SERIAL_REFRESH' }
+        'refresh-serial': { id: 'btn-refresh-serial', implemented: true, handledBy: 'board', labelKey: 'TLB_SERIAL_REFRESH' },
+        // 開發板選擇面板於 T2-E 上線（board-picker.js）。
+        'select-board': { id: 'btn-select-board', implemented: true, handledBy: 'board', labelKey: 'TLB_SELECT_BOARD' }
     };
 
     function findByElement(element) {
