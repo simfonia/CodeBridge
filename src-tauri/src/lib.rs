@@ -110,6 +110,8 @@ pub fn run() {
                 eprintln!("[CodeBridge] 無法建立工具鏈目錄: {}", err);
             }
             app.manage(state);
+            // 啟動序列埠熱插拔 watcher（T2-D）：1500ms 輪詢 + 簽章 diff。
+            commands::spawn_port_watcher(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

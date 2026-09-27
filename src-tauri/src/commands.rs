@@ -46,20 +46,86 @@ pub fn refresh_serial_ports(state: State<AppState>) -> Result<Vec<String>, Strin
     Ok(ports)
 }
 
-/// 以 `serialport` crate 掃描系統序列埠。
-fn scan_serial_ports() -> Vec<String> {
+/// 以 `serialport` crate 掃描系統序列埠（含 VID／PID，供熱插拔簽章使用）。
+///
+/// `serialport` 4.x 的 VID／PID 只在 `SerialPortType::UsbPort` 分支提供；
+/// 內建 COM 口（`PciPort`）與藍牙埠沒有這些資訊，一律視為 `None`。
+fn scan_ports_detailed() -> Vec<crate::events::PortInfo> {
+    use serialport::{SerialPortType, SerialPortType::UsbPort};
+
     serialport::available_ports()
         .map(|ports| {
-            let mut names: Vec<String> = ports
+            let mut infos: Vec<crate::events::PortInfo> = ports
                 .into_iter()
-                .map(|port| port.port_name)
+                .map(|port| {
+                    let (vid, pid) = match &port.port_type {
+                        UsbPort(usb) => (Some(usb.vid), Some(usb.pid)),
+                        SerialPortType::PciPort
+                        | SerialPortType::BluetoothPort
+                        | SerialPortType::Unknown => (None, None),
+                    };
+                    crate::events::PortInfo::with_ids(&port.port_name, vid, pid)
+                })
                 .collect();
             // 排序讓下拉選項順序穩定，避免每次刷新跳動。
-            names.sort();
-            names
+            infos.sort_by(|a, b| a.port.cmp(&b.port));
+            infos
         })
         .unwrap_or_default()
 }
+
+/// 以 `serialport` crate 掃描系統序列埠（只取名稱，供既有命令使用）。
+fn scan_serial_ports() -> Vec<String> {
+    scan_ports_detailed()
+        .into_iter()
+        .map(|port| port.port)
+        .collect()
+}
+
+/// 啟動序列埠／開發板熱插拔 watcher。
+///
+/// 每 `PORT_POLL_INTERVAL_MS`（1500ms）掃描一次序列埠，與上一輪結果做**簽章
+/// diff**（`port|vid|pid`）。只有實質變化（新增／移除／換板）才 emit
+/// `codebridge://serial-ports-changed`，並同步更新 `AppState` 快取。
+///
+/// **為什麼簽章要含 VID／PID**：同一個 COM 口插上不同板子時埠名不變，只比對
+/// 埠名會漏判，UI 就不會重新判斷 FQBN。
+///
+/// 首次掃描（`Initial`）也會 emit，讓前端一開啟程式就拿到完整清單。
+pub fn spawn_port_watcher(app: AppHandle) {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut previous: Option<Vec<crate::events::PortInfo>> = None;
+        loop {
+            let current = scan_ports_detailed();
+            let diff = crate::events::diff_ports(&current, previous.as_deref());
+
+            if diff.change.should_emit() {
+                // 同步快取，讓 `get_serial_ports`（唯讀命令）也拿到最新值。
+                if let Some(state) = app.try_state::<AppState>() {
+                    if let Ok(mut cache) = state.serial_ports.lock() {
+                        *cache = diff.ports.clone();
+                    }
+                }
+                let payload = crate::events::SerialPortsChanged::from(&diff);
+                if let Err(err) = app.emit_to(
+                    MAIN_WINDOW_LABEL_FOR_WATCHER,
+                    crate::events::names::SERIAL_PORTS_CHANGED,
+                    payload,
+                ) {
+                    eprintln!("[CodeBridge] 無法推播序列埠變化: {err}");
+                }
+            }
+
+            previous = Some(current);
+            std::thread::sleep(std::time::Duration::from_millis(
+                crate::events::PORT_POLL_INTERVAL_MS,
+            ));
+        }
+    });
+}
+
+/// watcher emit 使用的視窗 label（與 commands.rs 的 MAIN_WINDOW_LABEL 相同）。
+const MAIN_WINDOW_LABEL_FOR_WATCHER: &str = "main";
 
 /// 開啟序列監視器（T3 實作；目前回報未實作）。
 #[tauri::command]
