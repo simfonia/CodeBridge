@@ -225,6 +225,62 @@ test.describe('編譯／上傳流程', () => {
       .toContain('Compiling sketch...');
   });
 
+  test('後端一次 flush 送出的多行會全部依序附加到終端機', async ({ page }) => {
+    // T2-D 前置：舊後端只保留「最後一行」，中間行全部遺失。
+    // 現在 payload 以 lines 陣列送出整批，終端機必須完整呈現。
+    await openReadyProject(page);
+    await page.locator('#btn-run').click();
+    await page.waitForFunction(() => window.CodeBridgeCompile.isBusy());
+
+    await emitMockEvent(page, 'codebridge://operation-status', {
+      operationId: 'op-compile',
+      kind: 'compile',
+      kindLabel: 'CLI_OPERATION_COMPILE',
+      state: 'running',
+      lines: [
+        { text: 'Using board: arduino:avr:uno', stream: 'stdout' },
+        { text: 'Compiling sketch...', stream: 'stderr' },
+        { text: 'Sketch uses 1918 bytes', stream: 'stdout' }
+      ],
+      lineCount: 3
+    });
+
+    await expect.poll(async () => (await terminalLines(page)).join('\n'))
+      .toContain('Sketch uses 1918 bytes');
+    const output = (await terminalLines(page)).join('\n');
+    expect(output).toContain('Using board: arduino:avr:uno');
+    expect(output).toContain('Compiling sketch...');
+    // 行序必須與後端送出順序一致。
+    expect(output.indexOf('Using board')).toBeLessThan(output.indexOf('Compiling sketch'));
+    expect(output.indexOf('Compiling sketch')).toBeLessThan(output.indexOf('Sketch uses 1918'));
+  });
+
+  test('stderr 的輸出以錯誤樣式呈現，stdout 為一般樣式', async ({ page }) => {
+    await openReadyProject(page);
+    await page.locator('#btn-run').click();
+    await page.waitForFunction(() => window.CodeBridgeCompile.isBusy());
+
+    await emitMockEvent(page, 'codebridge://operation-status', {
+      operationId: 'op-compile',
+      kind: 'compile',
+      state: 'running',
+      lines: [
+        { text: 'normal output', stream: 'stdout' },
+        { text: 'compiler warning', stream: 'stderr' }
+      ]
+    });
+
+    await expect.poll(async () => (await terminalLines(page)).join('\n'))
+      .toContain('compiler warning');
+    const classes = await page.evaluate(() => Array.from(
+      document.querySelectorAll('#terminalContent .terminal-line')
+    ).map((node) => ({ text: node.textContent, className: node.className })));
+    const normal = classes.find((entry) => entry.text === 'normal output');
+    const warning = classes.find((entry) => entry.text === 'compiler warning');
+    expect(normal.className).toContain('terminal-line--info');
+    expect(warning.className).toContain('terminal-line--error');
+  });
+
   test('其他作業（例如安裝開發板核心）的事件不混入本次輸出', async ({ page }) => {
     await openReadyProject(page);
     await page.locator('#btn-run').click();

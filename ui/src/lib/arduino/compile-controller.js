@@ -203,11 +203,23 @@ var CodeBridgeCompile = (function() {
     }
 
     /// 處理 `codebridge://operation-status`：把後端推播的進度附加到終端機。
+    ///
+    /// 後端以 `lines` 送出「一次 flush 內累積的所有行」——節流期間的行不可丟棄，
+    /// 否則終端機只會看到零星幾行，gcc 錯誤訊息大多落在被丟棄的區段。
+    /// 同時保留對舊 `lastLine` 欄位的相容（單行 payload）。
     function handleOperationStatus(payload) {
         if (!payload) return;
         if (!isOwnOperation(payload.operationId)) return;
-        if (payload.lastLine && terminal()) {
-            terminal().append(payload.lastLine, payload.state === 'failed' ? 'error' : 'info');
+        if (terminal()) {
+            var lines = Array.isArray(payload.lines) ? payload.lines : [];
+            lines.forEach(function(line) {
+                if (!line || !line.text) return;
+                // stderr 是編譯器／avrdude 的進度與錯誤，一律以 error 樣式呈現。
+                terminal().append(line.text, line.stream === 'stderr' ? 'error' : 'info');
+            });
+            if (lines.length === 0 && payload.lastLine) {
+                terminal().append(payload.lastLine, payload.state === 'failed' ? 'error' : 'info');
+            }
         }
         if (payload.state === 'succeeded' && payload.message) {
             toast(payload.kindLabel || 'CLI_OPERATION_SUCCEEDED', payload.message, 'success');
