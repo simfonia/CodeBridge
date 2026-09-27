@@ -75,8 +75,12 @@ pub struct OperationStatus {
     pub state: OperationState,
     /// 最後一行輸出，供終端機面板顯示。
     pub last_line: Option<String>,
-    /// 失敗訊息。
+    /// 失敗訊息（`KEY|detail`）。
     pub message: Option<String>,
+    /// 累積輸出行數；UI 可用它比對自身已附加的行數，判斷是否漏接。
+    pub line_count: usize,
+    /// 已完成作業的最後結果（compile 為 CompileOutcome、upload 為 UploadOutcome）。
+    pub result: Option<serde_json::Value>,
 }
 
 /// 作業項目。
@@ -85,9 +89,12 @@ pub struct Operation {
     pub id: String,
     /// 作業種類。
     pub kind: OperationKind,
-    /// 已使用的子程序 handle，供取消時 kill。
-    pub child: Option<Arc<Mutex<std::process::Child>>>,
     /// 取消旗標。
+    ///
+    /// 子程序 handle **不在此保存**：串流 runner 在自己的執行緒內持有 `Child`
+    /// 並輪詢此旗標（見 `runner::wait_for_child`）。若同時保存 handle 供外部
+    /// `kill`，就會有兩條 kill 路徑、且 `Child` 無法跨執行緒安全共享 ——
+    /// 這正是 T1 遗留的死碼（`child` 欄位從未被讀寫）。
     pub cancel_flag: Arc<AtomicBool>,
     /// 目前狀態。
     pub state: OperationState,
@@ -95,6 +102,10 @@ pub struct Operation {
     pub last_line: Option<String>,
     /// 失敗訊息。
     pub message: Option<String>,
+    /// 累積輸出行數。
+    pub line_count: usize,
+    /// 完成後的結果。
+    pub result: Option<serde_json::Value>,
 }
 
 impl Operation {
@@ -103,12 +114,19 @@ impl Operation {
         Self {
             id,
             kind,
-            child: None,
             cancel_flag: Arc::new(AtomicBool::new(false)),
             state: OperationState::Running,
             last_line: None,
             message: None,
+            line_count: 0,
+            result: None,
         }
+    }
+
+    /// 記錄一行輸出並累加行數。
+    pub fn push_line(&mut self, line: &str) {
+        self.last_line = Some(line.to_string());
+        self.line_count += 1;
     }
 
     /// 目前狀態的快照。
@@ -119,6 +137,8 @@ impl Operation {
             state: self.state,
             last_line: self.last_line.clone(),
             message: self.message.clone(),
+            line_count: self.line_count,
+            result: self.result.clone(),
         }
     }
 
@@ -333,5 +353,45 @@ mod tests {
         let mut running = registry.running_ids();
         running.sort();
         assert_eq!(running, vec!["a".to_string(), "b".to_string()]);
+    }
+
+    #[test]
+    fn push_line_tracks_last_line_and_count() {
+        let registry = OperationRegistry::new();
+        let cell = registry.begin("op-lines".to_string(), OperationKind::Compile);
+        {
+            let mut op = cell.lock().unwrap();
+            op.push_line("Sketch uses 1918 bytes");
+            op.push_line("Global variables use 184 bytes");
+        }
+
+        let status = registry.status("op-lines").expect("status");
+        assert_eq!(status.line_count, 2);
+        assert_eq!(
+            status.last_line.as_deref(),
+            Some("Global variables use 184 bytes")
+        );
+    }
+
+    #[test]
+    fn status_carries_serialized_result() {
+        let registry = OperationRegistry::new();
+        let cell = registry.begin("op-result".to_string(), OperationKind::Compile);
+        {
+            let mut op = cell.lock().unwrap();
+            op.result = Some(serde_json::json!({ "inoFileName": "Blink.ino" }));
+        }
+
+        let status = registry.status("op-result").expect("status");
+        let result = status.result.expect("result");
+        assert_eq!(result["inoFileName"], "Blink.ino");
+    }
+
+    #[test]
+    fn new_operation_starts_without_result() {
+        let operation = Operation::new("op-new".to_string(), OperationKind::Upload);
+        assert_eq!(operation.line_count, 0);
+        assert!(operation.result.is_none());
+        assert_eq!(operation.state, OperationState::Running);
     }
 }

@@ -16,8 +16,10 @@ pub fn parse_json<T: for<'de> Deserialize<'de>>(raw: &str) -> Result<T, CliError
 
 /// `version --format json` 回應。
 ///
-/// CLI 實際回傳的字串欄位是 `VersionString`（如 `arduino-cli Version: 1.5.0`）；
-/// 部分版本另有 `Date`。此處以 `VersionString` 為準並保留 `version` 作為相容別名。
+/// CLI 實際回傳的字串欄位是 `VersionString`。**格式隨版本而異**（實測）：
+/// - 1.2.0：`"1.2.0"`
+/// - 較新版本：`"arduino-cli Version: 1.5.0"`
+/// 因此解析端不得依賴字面格式，只取非空字串供顯示。部分版本另有 `Date`。
 #[derive(Debug, Clone, Deserialize)]
 pub struct VersionInfo {
     #[serde(default, rename = "VersionString", alias = "version")]

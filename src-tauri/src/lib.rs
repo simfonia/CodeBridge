@@ -1,12 +1,15 @@
 pub mod arduino;
 pub mod commands;
+pub mod events;
 pub mod project;
 
 use tauri::{Emitter, Manager};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use arduino::operations::OperationRegistry;
 use arduino::paths::ToolchainDirs;
+use arduino::pipeline::BuildRecord;
 use arduino::runner::StdProcessRunner;
 use arduino::CodeBridgeToolchain;
 
@@ -22,6 +25,17 @@ pub struct AppState {
     pub operations: OperationRegistry,
     /// CodeBridge 隔離的 CLI 目錄；於啟動時建立。
     pub toolchain_dirs: ToolchainDirs,
+    /// 成功編譯紀錄（`projectId` → build 資訊），上傳時作為前置依據。
+    ///
+    /// **後端權威**：前端上傳時只送 `projectId`／`fqbn`／`port`，
+    /// build 路徑一律由此處查出。不可讓前端直接指定 `--input-dir`，
+    /// 否則惡意的 webview 就能要求把任意目錄的內容寫進晶片。
+    pub last_builds: Arc<Mutex<HashMap<String, BuildRecord>>>,
+    /// 序列埠佔用鎖；None 代表空閒。
+    ///
+    /// compile／upload 期間佔用，T3 的 Serial Monitor 需沿用同一把鎖，
+    /// 實現「上傳前暫停 Monitor、結束後依設定重連」。
+    pub port_lease: Arc<Mutex<Option<String>>>,
 }
 
 impl AppState {
@@ -33,7 +47,39 @@ impl AppState {
             board_manager_urls: Arc::new(Mutex::new(Vec::new())),
             operations: OperationRegistry::new(),
             toolchain_dirs: ToolchainDirs::under(&app_data_dir),
+            last_builds: Arc::new(Mutex::new(HashMap::new())),
+            port_lease: Arc::new(Mutex::new(None)),
         }
+    }
+
+    /// 嘗試佔用序列埠；已被佔用時回傳 `false`。
+    pub fn try_acquire_port(&self, port: &str) -> bool {
+        let mut lease = match self.port_lease.lock() {
+            Ok(guard) => guard,
+            Err(_) => return false,
+        };
+        match lease.as_deref() {
+            Some(current) if current == port => true,
+            Some(_) => false,
+            None => {
+                *lease = Some(port.to_string());
+                true
+            }
+        }
+    }
+
+    /// 釋放序列埠佔用。
+    pub fn release_port(&self, port: &str) {
+        if let Ok(mut lease) = self.port_lease.lock() {
+            if lease.as_deref() == Some(port) {
+                *lease = None;
+            }
+        }
+    }
+
+    /// 目前被佔用的序列埠（供 UI 顯示「忙於編譯／上傳」）。
+    pub fn leased_port(&self) -> Option<String> {
+        self.port_lease.lock().ok().and_then(|lease| lease.clone())
     }
 }
 
@@ -49,7 +95,7 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     api.prevent_close();
-                    let _ = window.emit(events::REQUEST_CLOSE, ());
+                    let _ = window.emit(events::names::REQUEST_CLOSE, ());
                 }
             }
         })
@@ -70,7 +116,6 @@ pub fn run() {
             commands::get_serial_ports,
             commands::refresh_serial_ports,
             commands::open_serial_monitor,
-            commands::run_arduino_code,
             commands::get_version,
             commands::toolchain_detect,
             commands::toolchain_set_cli_path,
@@ -81,6 +126,9 @@ pub fn run() {
             commands::lib_list,
             commands::operation_status,
             commands::operation_cancel,
+            commands::compile_start,
+            commands::upload_start,
+            commands::upload_ready,
             project::project_read,
             project::project_save,
             project::project_exists,
@@ -106,14 +154,62 @@ pub fn resolve_cli_for(state: &AppState) -> Result<arduino::CliHandle, arduino::
     arduino::resolve_cli(configured.as_deref(), None)
 }
 
-/// 供命令使用的事件名稱；集中管理避免拼字不一致。
-pub mod events {
-    /// 工具鏈狀態變更。
-    pub const TOOLCHAIN_STATUS: &str = "codebridge://toolchain-status";
-    /// 作業狀態更新。
-    pub const OPERATION_STATUS: &str = "codebridge://operation-status";
-    /// 編譯診斷結果。
-    pub const COMPILE_DIAGNOSTICS: &str = "codebridge://compile-diagnostics";
-    /// 視窗被要求關閉（攔截 CloseRequested 後通知前端處理未儲存變更）。
-    pub const REQUEST_CLOSE: &str = "codebridge://request-close";
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 測試用狀態；使用暫存根目錄避免污染應用程式資料。
+    fn state(tag: &str) -> AppState {
+        let root = std::env::temp_dir().join(format!("codebridge-state-{tag}"));
+        let _ = std::fs::remove_dir_all(&root);
+        AppState::new(root)
+    }
+
+    #[test]
+    fn port_lease_is_exclusive_across_different_ports() {
+        let state = state("lease-exclusive");
+        assert!(state.try_acquire_port("COM3"));
+        // 不同埠不可同時佔用。
+        assert!(!state.try_acquire_port("COM4"));
+        assert_eq!(state.leased_port().as_deref(), Some("COM3"));
+    }
+
+    #[test]
+    fn port_lease_is_reentrant_for_same_port() {
+        // 同一埠重複取得應回 true（冪等），避免重複點擊造成自我阻塞。
+        let state = state("lease-reentrant");
+        assert!(state.try_acquire_port("COM3"));
+        assert!(state.try_acquire_port("COM3"));
+    }
+
+    #[test]
+    fn port_lease_release_frees_the_port() {
+        let state = state("lease-release");
+        assert!(state.try_acquire_port("COM3"));
+        state.release_port("COM3");
+        assert!(state.leased_port().is_none());
+        assert!(state.try_acquire_port("COM4"), "other port must be free");
+    }
+
+    #[test]
+    fn port_lease_release_only_affects_owning_port() {
+        // 釋放別人持有的埠不應影響現有持有者（否則會出現雙持有）。
+        let state = state("lease-foreign");
+        assert!(state.try_acquire_port("COM3"));
+        state.release_port("COM9");
+        assert_eq!(state.leased_port().as_deref(), Some("COM3"));
+    }
+
+    #[test]
+    fn toolchain_dirs_are_under_the_given_root() {
+        let state = state("dirs");
+        assert!(state.toolchain_dirs.config_dir.starts_with(&state.toolchain_dirs.data_dir.parent().unwrap()));
+        assert!(state.toolchain_dirs.data_dir.starts_with(&state.toolchain_dirs.config_dir));
+    }
+
+    #[test]
+    fn last_builds_start_empty() {
+        let state = state("builds");
+        assert!(state.last_builds.lock().unwrap().is_empty());
+    }
 }

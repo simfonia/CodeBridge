@@ -79,7 +79,9 @@ fn assemble(flags: &GlobalFlags, tail: Vec<String>) -> Vec<String> {
 pub fn version(flags: &GlobalFlags) -> CliCommand {
     CliCommand {
         subcommand: "version".to_string(),
-        args: assemble(flags, vec!["--format".into(), "json".into()]),
+        // `version` 是子命令，**必須**出現在 args 中；少了它 arduino-cli 會
+        // 印出整頁 help 並以 exit 0 結束（真實踩過的坑）。
+        args: assemble(flags, vec!["version".into(), "--format".into(), "json".into()]),
     }
 }
 
@@ -449,10 +451,57 @@ mod tests {
         let flags = GlobalFlags::isolated(&test_dirs());
         let cmd = version(&flags);
         assert_eq!(cmd.subcommand, "version");
-        // `version` 無子命令 token，參數直接接在全域旗標之後。
+        // 子命令 token 必須真的出現在 args：少了它 CLI 只會印 help 並回傳 0。
+        assert!(
+            cmd.args.contains(&"version".to_string()),
+            "args: {:?}",
+            cmd.args
+        );
         assert!(cmd.args.contains(&"--format".to_string()));
         let format_idx = cmd.args.iter().position(|a| a == "--format").expect("--format");
         assert_eq!(cmd.args[format_idx + 1], "json");
+    }
+
+    #[test]
+    fn every_builder_passes_its_subcommand_token() {
+        // 回歸保護：T1 曾漏掉 version 的子命令 token，導致 CLI 印出整頁 help
+        // 並以 exit 0 結束（真實踩過的坑，且 T1 的測試完全沒抓到）。
+        let flags = GlobalFlags::isolated(&test_dirs());
+        let sketch = Path::new("/sk/proj");
+        let build = Path::new("/build");
+        let cases: Vec<(&str, CliCommand)> = vec![
+            ("version", version(&flags)),
+            ("board", board_list(&flags)),
+            ("board", board_list_all(&flags)),
+            ("board", board_details(&flags, "arduino:avr:uno")),
+            ("core", core_list(&flags)),
+            ("lib", lib_list(&flags)),
+            (
+                "compile",
+                compile(
+                    &flags,
+                    sketch,
+                    "arduino:avr:uno",
+                    build,
+                    &CompileOptions::teaching_default(),
+                ),
+            ),
+            (
+                "upload",
+                upload(&flags, sketch, "arduino:avr:uno", "COM3", build),
+            ),
+            ("monitor", monitor(&flags, "COM3", 115200)),
+            ("config", config_init(&flags, build)),
+            ("config", config_dump(&flags)),
+        ];
+
+        for (subcommand, cmd) in cases {
+            assert!(
+                cmd.args.contains(&subcommand.to_string()),
+                "{subcommand} builder lost its subcommand token: {:?}",
+                cmd.args
+            );
+        }
     }
 
     #[test]

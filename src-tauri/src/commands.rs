@@ -3,16 +3,24 @@
 //! 本階段（T1）只開放**唯讀查詢**命令。compile／upload 需要 T2 的草稿寫入
 //! 與 operation 串流，會另行加入，避免在此放置未完成的可被呼叫路徑。
 
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{State, Window};
+
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager, State, Window};
 
 use crate::arduino::command::{self, GlobalFlags};
+use crate::arduino::diagnostics::Diagnostic;
+use crate::arduino::operations::{self, OperationKind, OperationState};
 use crate::arduino::parser::{
     BoardDetailResponse, BoardSummaries, DetectedBoards, LibrariesResponse, PlatformsResponse,
     VersionInfo,
 };
-use crate::arduino::runner::{ProcessRunner, RunRequest, RunResult};
+use crate::arduino::pipeline::{self, SizeUsage};
+use crate::arduino::runner::{ProcessRunner, RunRequest, RunResult, StdProcessRunner};
 use crate::arduino::{CliError, InstallHint, ToolchainStatus, ARDUINO_CLI_DOWNLOAD_URL};
+use crate::events::names as event_names;
+use crate::events::EventSink;
 use crate::{resolve_cli_for, toolchain, AppState};
 
 /// CLI 查詢的共用逾時；board listall 在首次索引下載時可能較慢。
@@ -59,10 +67,269 @@ pub fn open_serial_monitor(_port: String) -> Result<String, String> {
     Err("SERIAL_MONITOR_NOT_IMPLEMENTED".to_string())
 }
 
-/// 執行 Arduino 程式碼（T2 實作；目前回報未實作）。
+/// 主視窗 label；事件一律以此視窗為目標（cocoya 的 emit_to 鐵則）。
+const MAIN_WINDOW_LABEL: &str = "main";
+
+/// compile 命令的請求 payload（camelCase，供前端 `invoke` 使用）。
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompilePayload {
+    /// 專案識別（暫存目錄名）。
+    pub project_id: String,
+    /// 專案顯示名（用於推導 .ino 檔名）。
+    pub project_name: String,
+    /// 目標開發板 FQBN。
+    pub fqbn: String,
+    /// **plain code**（前端已去除 ID marker）。
+    pub code: String,
+    /// 編譯前清除 build 快取。
+    #[serde(default)]
+    pub clean: bool,
+    /// 平行編譯工作數。
+    #[serde(default)]
+    pub jobs: Option<u32>,
+}
+
+impl CompilePayload {
+    /// 轉為 pipeline 的領域型別。
+    fn to_request(&self) -> pipeline::CompileRequest {
+        pipeline::CompileRequest {
+            project_id: self.project_id.clone(),
+            project_name: self.project_name.clone(),
+            fqbn: self.fqbn.clone(),
+            code: self.code.clone(),
+            libraries: Vec::new(),
+            clean: self.clean,
+            jobs: self.jobs,
+        }
+    }
+}
+
+/// upload 命令的請求 payload。
+///
+/// **不包含 build 路徑**：上傳所用的一定是後端 `last_builds` 記錄的編譯結果。
+/// 若讓前端傳入 `--input-dir`，惡意的 webview 就能要求把任意目錄寫進晶片。
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadPayload {
+    /// 專案識別。
+    pub project_id: String,
+    /// 目標開發板 FQBN（必須與編譯時相同）。
+    pub fqbn: String,
+    /// 序列埠。
+    pub port: String,
+}
+
+/// 編譯診斷事件 payload。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompileDiagnostics {
+    /// 對應的作業 ID。
+    pub operation_id: String,
+    /// 草稿 `.ino` 檔名；前端據此判斷診斷能否跳轉到自己的程式碼。
+    pub ino_file_name: String,
+    /// 可定位的診斷清單。
+    pub diagnostics: Vec<Diagnostic>,
+    /// 資源用量（成功時才有）。
+    pub size: Option<SizeUsage>,
+    /// 編譯摘要原文。
+    pub compiler_out: String,
+    /// 失敗訊息（`KEY|detail`）。
+    pub error: Option<String>,
+}
+
+impl CompileDiagnostics {
+    /// 由編譯結果建立 payload。
+    fn from_outcome(operation_id: &str, outcome: &pipeline::CompileOutcome) -> Self {
+        Self {
+            operation_id: operation_id.to_string(),
+            ino_file_name: outcome.ino_file_name.clone(),
+            diagnostics: outcome.diagnostics.clone(),
+            size: outcome.size,
+            compiler_out: outcome.compiler_out.clone(),
+            error: outcome.error.clone(),
+        }
+    }
+}
+
+/// 產生作業 ID（UUID v4）。
+///
+/// 用 UUID 而非自增序：作業 ID 會出現在事件 payload 與前端 localStorage 的
+/// 進行中作業清單，自增序在不同工作階段重複時會讓 UI 誤判為同一作業。
+fn new_operation_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+/// 啟動編譯（非同步）；立即回傳作業 ID。
+///
+/// 為什麼非同步：編譯可能長達數分鐘（首次編譯會連帶編譯整個函式庫叢）。
+/// 若同步等待，Tauri 命令執行緒會被佔住，前端既拿不到進度也無法取消。
+/// 進度透過 `codebridge://operation-status` 推播，結束時再送
+/// `codebridge://compile-diagnostics`。
 #[tauri::command]
-pub fn run_arduino_code(_code: String) -> Result<String, String> {
-    Err("COMPILE_NOT_IMPLEMENTED".to_string())
+pub async fn compile_start(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    payload: CompilePayload,
+) -> Result<String, String> {
+    // CLI 解析在啟動時做：找不到 arduino-cli 要立刻回報（前端顯示安裝引導），
+    // 而不是讓使用者按下執行後才在背景才失敗。
+    let cli = resolve_cli_for(&state).map_err(describe)?;
+    let id = new_operation_id();
+    let cell = state.operations.begin(id.clone(), OperationKind::Compile);
+    let request = payload.to_request();
+    let dirs = state.toolchain_dirs.clone();
+
+    let app_for_task = app.clone();
+    let id_for_task = id.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app_for_task.state::<AppState>();
+        let cancel = cell.lock().expect("operation lock").cancel_flag.clone();
+        let mut sink = EventSink::new(
+            app_for_task.clone(),
+            MAIN_WINDOW_LABEL,
+            &id_for_task,
+            OperationKind::Compile,
+        );
+
+        let outcome = pipeline::compile_pipeline(
+            &cli,
+            &dirs,
+            &StdProcessRunner::new(),
+            &request,
+            &mut sink,
+            &cancel,
+        );
+        // 送出最後一批輸出（避免尾端行因節流而遺失）。
+        sink.flush_now(outcome.state, true);
+
+        // 只有成功才保存 build 紀錄；取消／失敗都不允許上傳。
+        if outcome.state == OperationState::Succeeded {
+            let record = pipeline::build_record(&outcome, &request.fqbn);
+            if let Ok(mut builds) = state.last_builds.lock() {
+                builds.insert(request.project_id.clone(), record);
+            }
+        }
+
+        let status = finish_operation(
+            &cell,
+            &outcome.state,
+            outcome.error.clone(),
+            sink.line_count(),
+            &outcome,
+        );
+        let _ = app_for_task.emit_to(MAIN_WINDOW_LABEL, event_names::OPERATION_STATUS, status);
+        let _ = app_for_task.emit_to(
+            MAIN_WINDOW_LABEL,
+            event_names::COMPILE_DIAGNOSTICS,
+            CompileDiagnostics::from_outcome(&id_for_task, &outcome),
+        );
+
+        // 清除已結束的作業，避免 registry 隨編譯次數無限增長。
+        state.operations.prune_finished();
+    });
+
+    Ok(id)
+}
+
+/// 更新 registry 並回傳可推播的狀態快照。
+fn finish_operation(
+    cell: &Arc<Mutex<operations::Operation>>,
+    state: &OperationState,
+    error: Option<String>,
+    line_count: usize,
+    outcome: &impl Serialize,
+) -> operations::OperationStatus {
+    let mut op = cell.lock().expect("operation lock");
+    op.state = *state;
+    op.message = error;
+    op.line_count = line_count;
+    op.result = serde_json::to_value(outcome).ok();
+    op.status()
+}
+
+/// 啟動上傳（非同步）；立即回傳作業 ID。
+#[tauri::command]
+pub async fn upload_start(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    payload: UploadPayload,
+) -> Result<String, String> {
+    let cli = resolve_cli_for(&state).map_err(describe)?;
+
+    // 後端權威：build 路徑只從 last_builds 取得，前端無法指定。
+    let build = state
+        .last_builds
+        .lock()
+        .ok()
+        .and_then(|builds| builds.get(&payload.project_id).cloned())
+        .ok_or_else(|| "CLI_ERROR_BUILD_STALE|尚未編譯，請先執行一次編譯".to_string())?;
+
+    // 佔用序列埠：避免兩個作業同時操作同一個埠（會直接讓 avrdude 失敗）。
+    if !state.try_acquire_port(&payload.port) {
+        return Err(format!(
+            "CLI_ERROR_PORT_BUSY|{} 正被其他作業使用",
+            state.leased_port().unwrap_or_default()
+        ));
+    }
+
+    let id = new_operation_id();
+    let cell = state.operations.begin(id.clone(), OperationKind::Upload);
+    let request = pipeline::UploadRequest::new(&payload.fqbn, &payload.port, build);
+    let dirs = state.toolchain_dirs.clone();
+    let port = payload.port.clone();
+
+    let app_for_task = app.clone();
+    let id_for_task = id.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app_for_task.state::<AppState>();
+        let cancel = cell.lock().expect("operation lock").cancel_flag.clone();
+        let mut sink = EventSink::new(
+            app_for_task.clone(),
+            MAIN_WINDOW_LABEL,
+            &id_for_task,
+            OperationKind::Upload,
+        );
+
+        let outcome = pipeline::upload_pipeline(
+            &cli,
+            &dirs,
+            &StdProcessRunner::new(),
+            &request,
+            &mut sink,
+            &cancel,
+        );
+        sink.flush_now(outcome.state, true);
+
+        let status = finish_operation(
+            &cell,
+            &outcome.state,
+            outcome.error.clone(),
+            sink.line_count(),
+            &outcome,
+        );
+        let _ = app_for_task.emit_to(MAIN_WINDOW_LABEL, event_names::OPERATION_STATUS, status);
+
+        // 釋放序列埠 —— 無論成功與否都必須釋放，否則埠會被永久鎖死。
+        state.release_port(&port);
+        state.operations.prune_finished();
+    });
+
+    Ok(id)
+}
+
+/// 查詢某專案是否存在可上傳的編譯結果。
+///
+/// 前端用它決定「執行」鈕的行為：已有有效 build → 直接上傳；沒有 → 先編譯。
+#[tauri::command]
+pub fn upload_ready(state: State<'_, AppState>, project_id: String, fqbn: String) -> bool {
+    let Ok(builds) = state.last_builds.lock() else {
+        return false;
+    };
+    let Some(build) = builds.get(&project_id) else {
+        return false;
+    };
+    pipeline::verify_build(build, &fqbn).is_ok()
 }
 
 /// 取得應用程式版本。

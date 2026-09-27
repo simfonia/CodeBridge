@@ -8,9 +8,12 @@
 
 pub mod command;
 pub mod diagnostics;
+pub mod draft;
+pub mod encoding;
 pub mod operations;
 pub mod parser;
 pub mod paths;
+pub mod pipeline;
 pub mod runner;
 
 use serde::Serialize;
