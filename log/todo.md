@@ -69,8 +69,10 @@
 - [ ] T2-E 收尾：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調
 - [x] i18n 新 key（中英兩份已補齊）：`CLI_ERROR_*`、`DRAFT_ERROR_*`、`CLI_STREAM_*`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_UPLOAD_SUCCESS`、`CLI_UPLOAD_BUSY_HINT`、`CLI_SIZE_*`、`TLB_BOARD_*` 等
 
-### 待決策的產品問題（2026-09-27 提出）
-- [ ] **停止鈕的定位與逾時保護**：`compile` / `upload` 目前**無逾時**（`RunRequest::new` 預設 `None`），卡住時停止鈕是唯一出路。已暫時禁止燒錄中取消（避免 flash 半尾），待決定是否改為「保留停止鈕 + 加入逾時」或「移除停止鈕 + 僅靠逾時」
+### 已定案的產品問題（2026-09-27）
+- [x] **停止鈕移除 + 逾時保護**：`compile` 上限 **5 分鐘**、`upload` 上限 **60 秒**（Rust `COMPILE_TIMEOUT` / `UPLOAD_TIMEOUT`）。作業不再永久停潛，不需中途取消的入口；且同時避開了「燒錄中斷」留下半尾 flash 的風險
+  - 已從 `index.html`、`toolbar-registry.js`、`toolbar.js`、`compile-controller.stop()` 與相關測試中移除
+  - 保留 `operation_cancel` 後端命令（T3 Serial Monitor 可能用得上），前端暫無呼叫端
 
 ### 主題架構後續（2026-09-26 palette contract）
 - [ ] 第三方模組若要加入 palette contract，目前需自行宣告 `blockTypes` / `typePrefix`；可考慮併入 `core_manifest.json` 由 loader 自動呼叫 `registerModule()`

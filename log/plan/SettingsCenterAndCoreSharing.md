@@ -258,6 +258,24 @@ build_root:     app_data_dir.join("sketches")    // 維持隔離
 - `log/plan/ArduinoCompileUpload.md`（Phase T2）：本計畫延續其工具鏈設計，並修正其 `ToolchainDirs` 的隔離決策
 - `log/plan/ToolbarImplementation.md`：設定對話框的 UI 元件可沿用 `confirm-dialog.js` 的 overlay 模式
 
+## 产品決策：停止鈕移除 + 逾時保護（2026-09-27 定案）
+
+`compile` / `upload` 原本無逾時上限（`RunRequest::new` 預設 `None`），`arduino-cli` 一旦卡住
+（等待網線、驅動無回應、檔案被鎖）作業就會永久停潛，唯一出路是停止鈕。
+但停止的可能性很低（編詯 2–5 秒、上傳 3–5 秒），而燒錄中斷會留下半尾 flash（板子看起來像坏掉）。
+
+**最終方案：移除停止鈕，改以逾時保護。**
+
+| 作業 | 上限 | 理由 |
+|---|---|---|
+| `compile` | 5 分鐘（`COMPILE_TIMEOUT`） | 首次編詯可能需編詯核心工具鏈，需要富裕 |
+| `upload` | 60 秒（`UPLOAD_TIMEOUT`） | avrdude 燒 8KB UNO 只需數秒，上限主要防範「埠被卡住」 |
+
+已從下列位置移除停止鈕：`index.html`、`toolbar-registry.js`、`toolbar.js`、
+`compile-controller.stop()` 及相關測試。保留 Rust 的 `operation_cancel` 命令（T3 Serial Monitor 可能用得上）。
+
+---
+
 ## 下一步
 
 1. 階段 1 實作（路徑可設定 + 預設共用）

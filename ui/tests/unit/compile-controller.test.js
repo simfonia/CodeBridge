@@ -471,23 +471,6 @@ describe('編譯控制器', () => {
     expect(after).toBe(before);
   });
 
-  test('燒錄期間拒絕取消（避免把板子寫壞）', async () => {
-    // 中斷在 avrdude 寫入 flash 中對斷板不可能寫壞：
-    // flash 內容會半尾尾、板子看起來像坏掉，但重新燒一次就會寫回可用狀態。
-    // 燒錄只需 2–5 秒，不該在這段間當提供取消機會。
-    await controller.run();
-    bridge.listeners['codebridge://operation-status']({
-      operationId: 'op-compile', kind: 'compile', state: 'succeeded', lines: []
-    });
-    await flush();
-    await flush();
-
-    // 上傳已啟動（upload_start 已送出）但尚未收尾
-    const cancelled = await controller.stop();
-    expect(cancelled).toBe(false);
-    expect(bridge.calls.map((call) => call.command)).not.toContain('operation_cancel');
-  });
-
   test('上傳作業結束後解除 busy，可再次執行', async () => {
     // 迴歸：`uploading` 設 true 後若沒人清回 false，busy 永遠維持，
     // 第二次按「執行」會被 `if (busy) return false` 擋下 —— 使用者症狀是
@@ -612,26 +595,6 @@ describe('編譯控制器', () => {
     expect(await loaded.controller.run()).toBe(false);
     expect(loaded.bridge.calls).toHaveLength(0);
     expect(loaded.toast.shown.map((item) => item.key)).toContain('DRAFT_ERROR_EMPTY_CODE');
-  });
-
-
-  test('stop 會取消進行中的作業並放開單飛鎖', async () => {
-    const running = controller.run();
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(controller.isBusy()).toBe(true);
-
-    const cancelled = await controller.stop();
-
-    expect(cancelled).toBe(true);
-    expect(bridge.calls.some((call) => call.command === 'operation_cancel')).toBe(true);
-    expect(terminal.records.some((r) => r.key === 'CLI_OPERATION_CANCELLED')).toBe(true);
-    await running;
-  });
-
-  test('沒有進行中的作業時 stop 不發動後端', async () => {
-    expect(await controller.stop()).toBe(false);
-    expect(bridge.calls).toHaveLength(0);
   });
 
   test('projectId 由專案路徑推導，並去除後端不接受的字元', () => {

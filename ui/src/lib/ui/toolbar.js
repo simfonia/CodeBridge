@@ -233,7 +233,7 @@ var CodeBridgeToolbarUI = (function() {
         'run-program': function() { return compile().run(); },
         // 「停止」的語意是**取消目前的編譯或上傳作業**；上傳完成後沒有常駐
         // 程序可停（序列監視器屬 T3）。tooltip 由 TLB_STOP_HINT 說明。
-        'stop-program': function() { return compile().stop(); },
+        // 'stop-program' 已移除（2026-09-27）：作業已有逾時上限，無需中途取消。
         // 終端機面板
         'toggle-terminal': function() { return terminal().toggle(); },
         'terminal-pause': function() { return terminal().togglePaused(); },

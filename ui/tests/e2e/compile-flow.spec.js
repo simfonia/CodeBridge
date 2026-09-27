@@ -74,7 +74,8 @@ test.describe('編譯／上傳流程', () => {
 
     await expect(page.locator('#btn-run')).toBeEnabled();
     await expect(page.locator('#btn-run')).toHaveAttribute('title', /編譯|執行/);
-    await expect(page.locator('#btn-stop')).toBeEnabled();
+    // 停止鈕已于 2026-09-27 移除（作業已有逾時上限）。
+    await expect(page.locator('#btn-stop')).toHaveCount(0);
   });
 
   test('按下執行會依序送出 compile_start、upload_ready 與 upload_start', async ({ page }) => {
@@ -113,46 +114,6 @@ test.describe('編譯／上傳流程', () => {
     const lines = (await terminalLines(page)).join('\n');
     expect(lines).toContain('開始編譯');
     expect(lines).toContain('開始上傳到 COM3');
-  });
-
-  test('燒錄中按停止不會取消（避免把板子寫壞）', async ({ page }) => {
-    // 中斷燒錄會讓 flash 內容半尾；板子不會報廢（bootloader 區段不受影響），
-    // 重新燒一次即可還原，但對使用者來說「板子寫壞」本身就是傷害。
-    await openReadyProject(page);
-    await page.locator('#btn-run').click();
-    await emitCompileSucceeded(page);
-    await page.waitForFunction(() => window.CodeBridgeCompile.getState().operationId === 'op-upload');
-
-    await page.locator('#btn-stop').click();
-    await page.waitForTimeout(300);
-
-    const calls = await readCliCalls(page);
-    expect(calls.map((call) => call.command)).not.toContain('operation_cancel');
-  });
-
-  test('編譯中按停止會送出 operation_cancel', async ({ page }) => {
-    // 編譯階段中止不影響任何硬體，因此仍允許取消。
-    await openReadyProject(page);
-    await page.locator('#btn-run').click();
-    await page.waitForFunction(() => window.CodeBridgeCompile.isBusy());
-    await page.locator('#btn-stop').click();
-
-    await page.waitForFunction(
-      () => window.__MOCK_CLI_CALLS__.some((call) => call.command === 'operation_cancel')
-    );
-    const calls = await readCliCalls(page);
-    const cancel = calls.find((call) => call.command === 'operation_cancel');
-    expect(cancel.args.id).toBe('op-compile');
-  });
-
-  test('沒有作業進行時按停止不會呼叫後端', async ({ page }) => {
-    await openReadyProject(page);
-
-    await page.locator('#btn-stop').click();
-    await page.waitForTimeout(150);
-
-    const calls = await readCliCalls(page);
-    expect(calls.filter((call) => call.command === 'operation_cancel')).toHaveLength(0);
   });
 
   test('upload_ready 為 false 時不送出 upload_start', async ({ page }) => {

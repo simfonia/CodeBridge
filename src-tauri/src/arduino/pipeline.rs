@@ -39,6 +39,22 @@ use super::parser;
 use super::paths::{CliError, CliHandle, ToolchainDirs};
 use super::runner::{OutputSink, ProcessRunner, RunRequest};
 
+/// 編譯作業的逾時上限。
+///
+/// **為什麼需要上限**：`arduino-cli` 一旦卡住（等待網路、驅動無回應、
+/// 檔案被鎖住）作業就會**永久停滯**。CodeBridge 已移除停止鈕（見
+/// `log/todo.md` 的產品決策），逾時是使用者唯一的保護。
+///
+/// 給 5 分鐘：一般編譯 2–5 秒，但首次編譯可能要編譯核心工具鏈，較慢。
+const COMPILE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
+
+/// 上傳作業的逾時上限。
+///
+/// 給 60 秒：avrdude 燒錄 8KB UNO 只要幾秒，此上限主要防範「埠被卡住」
+/// 造成的永久等待。刻意比編譯短 —— 使用者看到逾時時，程式多半已經編譯完，
+/// 重試的成本遠低於乾等。
+const UPLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
 /// FQBN 允許的格式：`vendor:architecture:board`（可含額外設定項）。
 ///
 /// 驗證 FQBN 不是為了防禦 shell 注入（參數以陣列傳遞，沒有 shell），
@@ -366,7 +382,12 @@ pub fn compile_pipeline<R: ProcessRunner>(
         &options,
     );
 
-    let result = match runner.run_streamed(cli, &RunRequest::new(cli_command), sink, cancel) {
+    let result = match runner.run_streamed(
+        cli,
+        &RunRequest::new(cli_command).with_timeout(COMPILE_TIMEOUT),
+        sink,
+        cancel,
+    ) {
         Ok(result) => result,
         Err(error) => {
             let error = PipelineError::Cli(error);
@@ -594,7 +615,12 @@ pub fn upload_pipeline<R: ProcessRunner>(
         &request.build.build_dir,
     );
 
-    match runner.run_streamed(cli, &RunRequest::new(cli_command), sink, cancel) {
+    match runner.run_streamed(
+        cli,
+        &RunRequest::new(cli_command).with_timeout(UPLOAD_TIMEOUT),
+        sink,
+        cancel,
+    ) {
         Ok(result) => {
             let logs = sink.recent_lines();
             if result.cancelled {
@@ -657,6 +683,38 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use super::super::runner::RunResult;
+
+    #[test]
+    fn compile_and_upload_have_bounded_timeouts() {
+        // 沒有逾時時，arduino-cli 一旦卡住（網路等待、驅動無回應）作業就
+        // **永久停滯**，使用者只能關掉應用程式。這是移除停止鈕後唯一的保護，
+        // 因此兩個常數都必須有上限，且編譯要給得比上傳寬鬆。
+        assert!(COMPILE_TIMEOUT > UPLOAD_TIMEOUT);
+        assert!(
+            COMPILE_TIMEOUT <= std::time::Duration::from_secs(600),
+            "compile timeout must stay under 10 minutes"
+        );
+        assert!(
+            UPLOAD_TIMEOUT <= std::time::Duration::from_secs(120),
+            "upload timeout must stay under 2 minutes"
+        );
+    }
+
+    #[test]
+    fn timed_out_run_is_reported_as_failure_not_success() {
+        // 逾時的子程序 `exit_code` 為 None，若當成成功會讓 UI 顯示
+        // 「編譯成功」而 build 目錄其實是空的 —— 使用者按上傳才會莫名失敗。
+        let result = RunResult {
+            exit_code: None,
+            stdout: String::new(),
+            stderr: String::new(),
+            timed_out: true,
+            cancelled: false,
+            line_count: 0,
+        };
+        assert!(!result.is_success());
+        assert!(result.timed_out);
+    }
 
     /// 測試用暫存根目錄。
     struct TempRoot(PathBuf);

@@ -31,7 +31,7 @@ const IMPLEMENTED_ACTIONS = [
   'save-project-as',
   'select-board',
   'settings-menu',
-  'stop-program',
+
   'terminal-clear',
   'terminal-close',
   'terminal-pause',

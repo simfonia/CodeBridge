@@ -533,32 +533,6 @@ var CodeBridgeCompile = (function() {
         });
     }
 
-    /// 取消目前作業（等於「停止」按鈕的語意）。
-    function stop() {
-        if (!busy || !activeOperationId) return Promise.resolve(false);
-        // 燒錄進行中不接受取消：此時 avrdude 正在寫入 flash，中斷會讓 flash
-        // 內容半尾（板子按 reset 沒反應、跑出亂碼）。AVR 的 bootloader 區段通常
-        // 不受影響，因此板子不會報庲，重新燒一次即可還原－——
-        // 但對使用者來說「板子看起來像坏掉」本身就是伤害。
-        // 燒錄只需 2–5 秒，這段間間不該提供取消機會。
-        if (uploading) {
-            if (terminal()) {
-                terminal().appendMessage('CLI_UPLOAD_BUSY_HINT', '正在燒錄晶片中，請勿中斷', [], 'warn');
-            }
-            return Promise.resolve(false);
-        }
-        if (!bridge() || !bridge().isAvailable()) return Promise.resolve(false);
-        var id = activeOperationId;
-        return bridge().invoke('operation_cancel', { id: id }).then(function(cancelled) {
-            // 使用者取消後心跳必須停，否則會一直往終端機加點。
-            if (cancelled) stopUploadHeartbeat();
-            if (cancelled && terminal()) {
-                terminal().appendMessage('CLI_OPERATION_CANCELLED', '已取消 %1', [id], 'warn');
-            }
-            return cancelled;
-        }).catch(function() { return false; });
-    }
-
     // ---------------------------------------------------------------
     // 初始化
     // ---------------------------------------------------------------
@@ -584,7 +558,7 @@ var CodeBridgeCompile = (function() {
         init: init,
         run: run,
         upload: upload,
-        stop: stop,
+        // `stop` 已於 2026-09-27 移除（作業已有逾時上限）。
         isBusy: isBusy,
         getState: getState,
         onChange: onChange,
