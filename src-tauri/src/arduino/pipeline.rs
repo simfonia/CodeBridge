@@ -1055,7 +1055,9 @@ mod tests {
 
         assert_eq!(record.fqbn, "arduino:avr:uno");
         assert_eq!(record.ino_file_name, "Blink.ino");
-        assert_eq!(record.sketch_dir, dirs.sketch_dir("proj-1"));
+        // 草稿路徑是 `build_root/<project_id>/<stem>`：最內層目錄名與主檔名
+        // 相同（arduino-cli 硬性要求），外層 project_id 提供專案隔離。
+        assert_eq!(record.sketch_dir, dirs.sketch_path("proj-1", "Blink"));
     }
 
     #[test]

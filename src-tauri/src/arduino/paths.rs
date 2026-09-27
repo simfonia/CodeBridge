@@ -160,9 +160,22 @@ impl ToolchainDirs {
         Ok(())
     }
 
-    /// 產生指定專案的草稿目錄路徑（不負責建立）。
+    /// 產生指定專案的草稿**容器**目錄路徑（不負責建立）。
+    ///
+    /// 這是 `project_id` 層；底下還會有一層與 `.ino` 同名的目錄，
+    /// 因為 arduino-cli 要求草稿資料夾名必須與主檔名完全相同。
     pub fn sketch_dir(&self, project_id: &str) -> PathBuf {
         self.build_root.join(project_id)
+    }
+
+    /// 真正交給 `arduino-cli` 的草稿目錄：容器目錄下的 `<stem>/`。
+    ///
+    /// **為什麼要多一層**：`arduino-cli` 硬性要求草稿資料夾名與 `.ino` 主檔名
+    /// 完全相同，但 CodeBridge 還需要**專案隔離** —— 兩個同名專案不該共用一個
+    /// 草稿目錄。因此路徑是 `build_root/<project_id>/<stem>/<stem>.ino`：
+    /// 最內層目錄名滿足 CLI，外層的 `project_id` 滿足隔離。
+    pub fn sketch_path(&self, project_id: &str, stem: &str) -> PathBuf {
+        self.build_root.join(project_id).join(stem)
     }
 }
 

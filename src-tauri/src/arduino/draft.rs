@@ -19,7 +19,7 @@
 //! 絕不接受 `..` 或路徑分隔符（防止把草稿寫到使用者資料夾之外）。
 
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::paths::ToolchainDirs;
 
@@ -165,13 +165,19 @@ pub fn write_sketch(
     raw_name: &str,
     code: &str,
 ) -> Result<SketchPaths, DraftError> {
+    // `project_id` 必須通過白名單驗證（安全邊界：拒絕 `..` 與路徑分隔符），
+    // 並作為草稿的**外層隔離目錄**。注意它不當作草稿資料夾名本身 ——
+    // arduino-cli 要求資料夾名與主檔名完全相同，而主檔名來自顯示名。
     let id = ensure_project_id(project_id)?;
     if code.trim().is_empty() {
         return Err(DraftError::EmptyCode);
     }
 
     let stem = sanitize_stem(raw_name);
-    let sketch_dir = dirs.sketch_dir(id);
+    // 路徑為 `build_root/<project_id>/<stem>/<stem>.ino`：
+    // 最內層目錄名與主檔名相同（arduino-cli 硬性要求），外層 `project_id`
+    // 維持專案隔離（兩個同名專案不該共用草稿）。
+    let sketch_dir = dirs.sketch_path(&id, &stem);
     let ino_path = sketch_dir.join(format!("{}.ino", stem));
 
     // 清除舊草稿（冪等重建）。
@@ -193,6 +199,29 @@ pub fn write_sketch(
         normalized.pop();
     }
     normalized.push('\n');
+
+    // 寫入前清掉同名專案底下的其他草稿目錄（改名後不留殘留）。
+    purge_stale_sketches(dirs, &id, &sketch_dir)?;
+
+    /// 清除該專案底下所有舊的草稿目錄（改名後不留殘留）。
+    ///
+    /// 只在寫入前呼叫一次。專案改名（`Blink` → `閃爍`）時 stem 會變，
+    /// 舊目錄若不清掉會一直留在磁碟上；`build_path` 也可能指到舊目錄而讓
+    /// upload 撈到過期的 `.hex`。
+    fn purge_stale_sketches(dirs: &ToolchainDirs, id: &str, keep: &Path) -> Result<(), DraftError> {
+        let container = dirs.sketch_dir(id);
+        let Ok(entries) = std::fs::read_dir(&container) else {
+            return Ok(());
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path == keep || !path.is_dir() {
+                continue;
+            }
+            let _ = std::fs::remove_dir_all(&path);
+        }
+        Ok(())
+    }
 
     std::fs::write(&ino_path, normalized.as_bytes()).map_err(|err| DraftError::WriteFailed {
         path: ino_path.display().to_string(),
@@ -321,6 +350,42 @@ mod tests {
         );
         // 草稿目錄位於隔離的 sketches 根目錄之下。
         assert!(paths.sketch_dir.starts_with(dirs.build_root));
+    }
+
+    #[test]
+    fn sketch_dir_name_equals_ino_stem_even_when_project_id_differs() {
+        // 這條守住 arduino-cli 的硬性規則「草稿資料夾名必須與主檔名相同」。
+        //
+        // 專案識別（`project_id`）與顯示名（`project_name`）本來就不同 ——
+        // 前端傳的是 `untitled` / `My_Sketch` 這類識別碼。草稿目錄若沿用
+        // `project_id`、主檔名卻用 sanitize 過的顯示名，兩者就對不上，
+        // CLI 會回「main file missing from sketch」而**每次編譯都失敗**。
+        //
+        // 這個缺陷靠假 runner 的單元測試抓不到 —— 假 runner 不驗證檔名規則。
+        let temp = TempRoot::new("dir-matches-stem");
+        let dirs = temp.dirs();
+        let paths = write_sketch(&dirs, "untitled", "SmokeOk", SAMPLE).expect("write");
+
+        assert_eq!(
+            paths.sketch_dir.file_name().unwrap().to_string_lossy(),
+            paths.stem,
+            "sketch directory name must equal the .ino stem for arduino-cli"
+        );
+        assert!(paths.ino_path.is_file(), "ino file must exist on disk");
+    }
+
+    #[test]
+    fn sketch_dir_name_matches_stem_for_chinese_project_name() {
+        // 中文專案名會被 sanitize 成 ASCII；資料夾與檔名都必須用同一個結果。
+        let temp = TempRoot::new("dir-matches-stem-zh");
+        let dirs = temp.dirs();
+        let paths = write_sketch(&dirs, "proj-zh", "閃爍專案", SAMPLE).expect("write");
+
+        assert_eq!(
+            paths.sketch_dir.file_name().unwrap().to_string_lossy(),
+            paths.stem
+        );
+        assert!(paths.ino_path.is_file());
     }
 
     #[test]
