@@ -29,7 +29,7 @@
 ### 下一階段主線：Arduino CLI 工具鏈 Phase T2
 - [x] T2-C：前端 `compile-controller.js`（單飛、取消、診斷雙向定位）、`terminal-panel.js`、工具列 `btn-run`/`btn-stop`/`btn-terminal` 上線（詳見下方 2026-09-26 章節）
 - [ ] T2-D：前端 `board-detector.js`（對齊 cocoya 熱插拔輪詢 + 偏好埠恢復）、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH` 上傳前板子比對
-- [ ] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（`EventSink` 緩衝修正尚未完成，T2-D 的事件消費端依賴它）
+- [x] T2-D 前置：Rust 端 1500ms 序列埠／開發板 watcher 與 signature-diff 事件（**已於 2026-09-27 完成**：`LineBuffer` 修正 + `PortInfo` 簽章 diff + `serial-ports-changed` 事件與背景 watcher；`board-detected` 事件的板子層仍待 T2-D 消費端）
 - [ ] T2-E：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調、桌機實機上傳驗證
 - [x] i18n 新 key：`CLI_ERROR_INVALID_FQBN`、`CLI_ERROR_COMPILE_FAILED`、`CLI_ERROR_UPLOAD_FAILED`、`CLI_ERROR_NO_FQBN`、`CLI_ERROR_NO_PORT`、`CLI_ERROR_PORT_BUSY`、`CLI_ERROR_BUILD_STALE`、`DRAFT_ERROR_*`、`CLI_STREAM_STDOUT/STDERR`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_SIZE_FLASH/RAM`、`TLB_STOP_HINT`、`TLB_SCROLL_RESUMED`（中英兩份已補齊）
 - [ ] Phase UI-1：工具列板子選擇器與設定選單擴充（Board Manager / Library Manager / CLI 設定）
@@ -100,9 +100,59 @@ Blockly v13 載入工作區後會自動把註解補成 `pinned="true" h=… w=�
 - `git status`：工作區乾淨，master 領先 origin/master 6 個 commit
 
 ### 下次啟動方向 (Next Steps)
-1. **T2-D 前置**：修正 `EventSink` 緩衝（目前只保留一行且永遠 `take_flush(1)`，會遺失中間行、64 行門檻永遠不觸發）
-2. Rust 1500ms 序列埠／開發板 watcher 與 signature-diff 事件
-3. T2-D：`board-detector.js`、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH`
+1. ~~T2-D 前置~~：**已於 2026-09-27 完成**（見下方章節）
+2. T2-D：`board-detector.js`、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH`
+3. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
+
+## 2026-09-27：T2-D 前置（EventSink 緩衝修正 + 序列埠 watcher）
+
+### 已完成
+- [x] 修正 `EventSink` 緩衝缺陷（`src-tauri/src/events.rs`）
+  - 新增 `LineBuffer`（`VecDeque<ProgressLine>`，預設容量 512，可測）
+  - `on_line` 改為 `buffer.push()` + `take_flush(buffer.pending_len())` —— 64 行門檻終於會觸發
+  - `flush_now` 一次送出整批行，取代原本「只送最後一行」
+  - `OperationProgress.last_line`／`stream` → `lines: Vec<ProgressLine>`（每行自帶 stream）
+  - 空白行被忽略（避免終端機出現假進度）；`total_pushed` 與 `pending` 分開計數
+- [x] 前端消費端配合（`ui/src/lib/arduino/compile-controller.js`）
+  - `handleOperationStatus` 改為逐行附加 `payload.lines`，依 `stream` 決定 info／error 樣式
+  - 保留對舊 `lastLine` 單行 payload 的相容
+- [x] 序列埠／開發板 watcher（`src-tauri/src/events.rs` + `commands.rs` + `lib.rs`）
+  - `PortInfo`（port + vid + pid）、`port_signature()`、`diff_ports()`、`PortChange`（Initial／Added／Removed／Replaced／Unchanged）
+  - `PortChange::should_emit()`：`Unchanged` 不發事件
+  - `SerialPortsChanged` payload、`PORT_POLL_INTERVAL_MS = 1500`
+  - `commands::spawn_port_watcher()`：背景 `spawn_blocking` 迴圈，簽章 diff 後 emit `codebridge://serial-ports-changed` 並同步 `AppState.serial_ports` 快取
+  - `scan_ports_detailed()` 取代原本只取名稱的 `scan_serial_ports()`
+  - 於 Tauri `setup()` 啟動 watcher
+
+### 技術深挖 (Technical Deep Dive)
+
+#### `take_flush(1)` 讓雙門檻節流退化成單門檻
+舊 `on_line` 永遠傳 `1` 作為 pending 行數，而 `1 >= 64` 恆為 false —— **行數門檻從未生效**，節流實際上只靠 200ms 時間門檻。更嚴重的是舊結構只保留 `last_line` 一行：兩次 flush 之間的所有中間行都被丟棄。實務上 gcc 的錯誤訊息、avrdude 的進度幾乎都落在被丟棄的區段，終端機只剩零星幾行。
+
+修正方式是把緩衝獨立成 `LineBuffer`（不依賴 `AppHandle`），讓「保留哪些行、超過容量丟棄哪些、pending 如何影響門檻」都能在沒有 Tauri app 的情況下完整驗證。
+
+#### 序列埠簽章必須包含 VID／PID
+只比對埠名會漏掉最常見的換板情境：使用者從 COM3 拔下 Uno 插上 Nano，埠名不變。清單看似沒變，但 FQBN 必須重新判斷。因此簽章為 `port|vid|pid`，`PortChange::Replaced` 就是「埠名集合相同、簽章不同」的情況。
+
+`serialport` 4.x 的 VID／PID 只在 `SerialPortType::UsbPort` 分支提供；內建 COM 口（`PciPort`）、藍牙埠與 `Unknown` 都視為 `None`。這代表部分機器上 `Replaced` 偵測能力會退化為「只比埠名」——這是 API 限制，非可修正的缺陷。
+
+#### `Unchanged` 絕不可發事件
+1500ms 一次的事件若無條件推送，前端會不斷重建 `serial-selector` 的選項，使用者剛選好的序列埠會被反覆重設。因此 `should_emit()` 讓 diff 結果直接決定是否 emit —— 這條規則寫成 `PortChange` 的方法而非 watcher 內的 if，讓意圖在型別層可見。
+
+#### 首次掃描也要 emit
+`diff_ports(current, None)` 回 `Initial` 而非 `Unchanged`：前端一開啟程式就需要完整清單，靜默等待「有變化」會讓下拉清單一直是空的。
+
+### 驗證結果
+- `cargo test`：**197 passed** + 4 個真實 `arduino-cli` 整合測試 passed（本輪開始時為 178 項）
+- `cargo build`：成功（僅既有 `custom-protocol` cfg 警告）
+- `npx vitest run tests/unit`：**78 passed**（6 個檔案）
+- `npx playwright test`（多 worker 全量）：**92 passed**（2.0 分鐘，較前輪新增 2 項 compile-flow 測試）
+- `npm run build`：成功（Vite 395ms）
+
+### 下次啟動方向 (Next Steps)
+1. ~~T2-D 前置~~：**已於本輪完成**（`LineBuffer` 修正 + 序列埠 watcher + signature-diff 事件）
+2. **T2-D 主體**：`board-detector.js`、板子選擇面板、`serial-selector` 綁定、`MSG_BOARD_MISMATCH`
+3. **板子層事件**：watcher 目前只推 `serial-ports-changed`；`board-detected`（port → fqbn）仍待實作
 4. T2-E：cocoya 圖示搬遷、preset 微調、桌機實機上傳驗證
 
 ---

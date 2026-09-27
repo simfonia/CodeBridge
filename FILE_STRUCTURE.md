@@ -15,8 +15,9 @@ CodeBridge/
 │   ├── icons/           # 應用圖示
 │   └── src/
 │       ├── main.rs      # 主入口
-│       ├── lib.rs       # 應用程式邏輯、AppState、工具鏈 facade、事件名稱
-│       ├── commands.rs  # Tauri 指令 (serial, toolchain, board, library, operation)
+│       ├── lib.rs       # 應用程式邏輯、AppState、工具鏈 facade、啟動 watcher
+│       ├── commands.rs  # Tauri 指令 (serial, toolchain, board, library, operation) + 序列埠掃描與熱插拔 watcher
+│       ├── events.rs    # 事件名稱、FlushPolicy 節流、LineBuffer 行緩衝、PortInfo 簽章 diff
 │       ├── project.rs     # .cbg 專案檔讀寫（副檔名白名單、UTF-8 無 BOM、BOM 容忍）
 │       ├── capabilities/  # Tauri 2 權限宣告（core / dialog 最小權限）
 │       ├── tests/         # 整合測試（arduino_cli_smoke.rs：對真實 arduino-cli 端對端驗證）
