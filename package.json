@@ -2,7 +2,7 @@
   "name": "codebridge",
   "displayName": "CodeBridge: Visual Arduino Programming",
   "description": "Tauri desktop IDE for visual Arduino programming with Blockly",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "icon": "resources/app_icon.png",
   "publisher": "simfonia",
   "engines": {
