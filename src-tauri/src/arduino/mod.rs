@@ -24,11 +24,77 @@ pub use parser::{
     BoardDetail, BoardSummary, DetectedBoard, LibrarySummary, PlatformSummary, SketchProgram,
     VersionInfo,
 };
-pub use paths::{resolve_cli, CliError, CliHandle, CliSource, ToolchainDirs};
+pub use paths::{
+    resolve_cli, ArduinoCliDirs, CliError, CliHandle, CliSource, ToolchainDirs,
+};
 pub use runner::{ProcessRunner, RunRequest, RunResult, StdProcessRunner};
 
 /// 官方 Arduino CLI 下載頁；`CliError::NotFound` 會攜帶此 URL 供 UI 引導使用者。
 pub const ARDUINO_CLI_DOWNLOAD_URL: &str = "https://arduino.github.io/arduino-cli/latest/installation/";
+
+
+/// 單一目錄的**來源**；前端據此顯示「當前值 + 來源」說明。
+///
+/// 使用者被環境問題卡住時，需要知道的不只是「在哪」，還有「為什麼在那」。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DirSource {
+    /// 由 `arduino-cli` 的系統預設值決定（與 Arduino IDE 共用）。
+    SystemDefault,
+    /// CodeBridge 專屬的隔離目錄。
+    AppIsolated,
+    /// 使用者在設定頁手動指定。
+    UserConfigured,
+}
+
+impl DirSource {
+    /// 對應前端 i18n key。
+    pub fn message_key(&self) -> &'static str {
+        match self {
+            DirSource::SystemDefault => "DIR_SOURCE_SYSTEM_DEFAULT",
+            DirSource::AppIsolated => "DIR_SOURCE_APP_ISOLATED",
+            DirSource::UserConfigured => "DIR_SOURCE_USER_CONFIGURED",
+        }
+    }
+}
+
+/// 一個路徑加上它的來源。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DirEntry {
+    /// 目前生效的完整路徑。
+    pub value: String,
+    /// 這個值是怎麼來的。
+    pub source: DirSource,
+}
+
+/// `toolchain_get_dirs` 的回應：完整路徑快照 + 來源。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolchainDirsReport {
+    /// 實際使用的 `arduino-cli` 執行檔；未找到時為 `None`。
+    pub cli_path: Option<String>,
+    /// 執行檔來源；未找到時為 `None`。
+    pub cli_source: Option<crate::arduino::CliSource>,
+    /// 找不到 CLI 時的 i18n key（前端據此顯示安裝引導）。
+    pub cli_error: Option<String>,
+    /// 目前是否使用 CodeBridge 專屬目錄。
+    pub isolated: bool,
+    /// CLI 設定目錄（`--config-dir`）。
+    pub config_dir: DirEntry,
+    /// 核心／函式庫資料目錄。
+    pub data_dir: DirEntry,
+    /// sketchbook。
+    pub user_dir: DirEntry,
+    /// 套件下載暫存。
+    pub downloads_dir: DirEntry,
+    /// 產物（草稿暫存）根目錄。
+    pub build_root: DirEntry,
+    /// `settings.json` 的位置，讓使用者知道設定存到哪去了。
+    pub settings_path: String,
+}
+
+/// 工具鏈環境偵測結果，回傳給前端顯示狀態。
 
 /// 工具鏈環境偵測結果，回傳給前端顯示狀態。
 #[derive(Debug, Clone, Serialize)]

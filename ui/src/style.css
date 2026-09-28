@@ -1042,6 +1042,219 @@ input:checked + .slider:before {
     background: var(--cb-primary-hover, #FE2F89);
 }
 
+/* === 設定中心（進階 › 路徑） ===
+ *
+ * 字級主從（三層，差異必須明顯才叫得出主從）：
+ *   15px 600  分區標題（工具鏈／產物）── 唯一的「小標題」層
+ *   13px      欄位名稱與輸入內容        ── 正常閱讀層
+ *   11px      來源標籤、說明、註記      ── 輔助層，弱化以讓路徑突出
+ *
+ * 路徑是這頁的主角（使用者要靠它判斷環境問題），因此用等寬 + 12px
+ * 且單獨成行；來源則退成標籤形式附在其下。
+ */
+.cb-settings-dialog {
+    /* 必須同時給 max-height：視窗再矮也要能捲動，不能把內容擠出畫面 */
+    width: min(620px, calc(100vw - 48px));
+    max-width: none;
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 20px 14px;
+}
+
+.cb-settings-dialog .cb-dialog-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--cb-border, #d5d5d5);
+}
+
+.cb-dialog-body {
+    display: flex;
+    flex-direction: column;
+    /* 捲動必須發生在 body 上，標題與按鈕列才不會跟著捲走 */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 2px 4px 0;
+}
+
+/* --- 分區：標題 + 底線，讓項目之間有明確分界 --- */
+.cb-setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--cb-border, #e5e5e5);
+}
+
+.cb-setting-group:first-child {
+    padding-top: 4px;
+}
+
+.cb-setting-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.cb-setting-group-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cb-text, #333);
+    letter-spacing: 0.02em;
+    margin-bottom: 6px;
+}
+
+/* --- 欄位 --- */
+.cb-setting-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    /* 項目之間靠留白與底部細線分開，不靠字級差異硬分 */
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--cb-border, #e8e8e8);
+}
+
+.cb-setting-row:last-child {
+    border-bottom: none;
+}
+
+.cb-setting-label {
+    flex: 0 0 150px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--cb-text, #333);
+    /* 欄位名固定一行，長名換行也不會讓右欄起點飄移 */
+    word-break: keep-all;
+}
+
+.cb-setting-value {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 auto;
+    /* 沒有 min-width:0，長路徑會撐破 flex 容器而溢出面板 */
+    min-width: 0;
+}
+
+/* --- 路徑：這頁的主角，單獨一行、用等寬 --- */
+.cb-setting-path,
+.cb-setting-value code {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    /* 路徑是長串無空白片段，必須允許在任意處斷行 */
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    color: var(--cb-text, #222);
+    background: var(--cb-surface, rgba(127, 127, 127, 0.08));
+    border-radius: 4px;
+    padding: 4px 7px;
+}
+
+/* --- 來源：弱化成小標籤，緊貼在路徑下方 --- */
+.cb-setting-source {
+    align-self: flex-start;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--cb-text-muted, #777);
+    border: 1px solid var(--cb-border, #d5d5d5);
+    border-radius: 999px;
+    padding: 1px 8px;
+    max-width: 100%;
+}
+
+.cb-setting-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid var(--cb-border, #d5d5d5);
+    border-radius: 4px;
+    background: var(--cb-surface, #fff);
+    color: var(--cb-text, #333);
+    font-size: 13px;
+    font-family: Consolas, Menlo, monospace;
+}
+
+.cb-setting-input:focus {
+    outline: 2px solid var(--cb-primary, #FE2F89);
+    outline-offset: -1px;
+}
+
+/* --- 輔助文字層 --- */
+.cb-setting-hint,
+.cb-setting-note,
+.cb-setting-path-note {
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--cb-text-muted, #777);
+    margin: 0;
+    /* 說明文字是長句，同樣要能斷行 */
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.cb-setting-note {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--cb-surface, rgba(127, 127, 127, 0.08));
+    border-radius: 4px;
+    border-left: 3px solid var(--cb-primary, #FE2F89);
+}
+
+.cb-setting-path-note {
+    margin-top: 4px;
+    font-family: Consolas, Menlo, monospace;
+}
+
+.cb-setting-path-note code {
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+/* --- 開關列：靠左對齊欄位名，不跟著其他欄位的 value 欄 --- */
+.cb-setting-switch {
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.cb-setting-switch .cb-setting-label {
+    flex: 1 1 auto;
+    font-weight: 500;
+}
+
+.cb-setting-switch input[type='checkbox'] {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--cb-primary, #FE2F89);
+}
+
+/* --- 底部按鈕列：與捲動內容分離 --- */
+.cb-settings-dialog .cb-dialog-actions {
+    flex: 0 0 auto;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--cb-border, #d5d5d5);
+}
+
+/* 窄視窗（如 1024×768 螢幕）改為單欄，否則 150px 標籤欄會把值擠窄 */
+@media (max-width: 560px) {
+    .cb-setting-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .cb-setting-label {
+        flex: 1 1 auto;
+    }
+}
+
 /* === Toast 提示 === */
 .cb-toast {
     position: fixed;

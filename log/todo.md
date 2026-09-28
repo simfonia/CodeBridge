@@ -4,6 +4,8 @@
 
 - [目前待辦](#目前待辦)
 - [計畫文件](#計畫文件)
+- [2026-09-29](#2026-09-29)
+  - [T3 設定中心階段 1：settings.json 持久化與「進階 › 路徑」](#2026-09-29t3-設定中心階段-1settingsjson-持久化與進階--路徑)
 - [2026-09-28](#2026-09-28)
   - [.cbg 檔案格式規格化與多行存檔](#2026-09-28cbg-檔案格式規格化與多行存檔)
   - [修正重整後使用者回報的兩個缺陷](#2026-09-28修正重整後使用者回報的兩個缺陷)
@@ -33,7 +35,7 @@
 |---|---|---|
 | **序列監視器（T3 Phase 1）** | [`log/plan/SerialMonitor.md`](plan/SerialMonitor.md) | **實作完成（2026-09-28）** —— 單元測試通過，待實機驗證 |
 | **序列繪圖（T3 Phase 2）** | [`log/plan/SerialPlotter.md`](plan/SerialPlotter.md) | **實作完成（2026-09-28）** —— 左右分欄，單元與 E2E 全過，待實機驗證 |
-| **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-27）** —— 預設共用已上線並實機驗證 |
+| **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-29）** —— 路徑共用 + settings.json 持久化 + 設定頁全數上線 |
 | Arduino CLI 編譯與上傳（Phase T2） | [`log/plan/ArduinoCompileUpload.md`](plan/ArduinoCompileUpload.md) | 已完成（2026-09-27） |
 | 工具列實作與 .cbg 專案 | [`log/plan/ToolbarImplementation.md`](plan/ToolbarImplementation.md) | 已完成 |
 | Blockly v13 升級 | [`log/plan/BlocklyV13Upgrade.md`](plan/BlocklyV13Upgrade.md) | 已完成 |
@@ -85,11 +87,12 @@
 ### 下一階段主線：Phase T3 設定中心（計畫已核准，階段 1 部分完成）
 - [ ] **先讀計畫**：[`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md)
 - [x] **階段 1（路徑預設共用）**：`ArduinoCliDirs::probe()` 以 `arduino-cli config get` 為權威來源，`ToolchainDirs::shared()` 預設共用系統目錄，產物（`build_root`）仍隔離；真實 smoke 測試實測通過
-- [ ] 階段 1（待做）：`settings.json` 持久化、`toolchain_get_dirs` / `set_dirs`（回報當前值 + **來源**）、設定對話框「進階 › 路徑」頁與獨立開關
+- [x] 階段 1（**已於 2026-09-29 完成**）：`settings.json` 持久化（`AppSettings`）、`toolchain_get_dirs` / `toolchain_set_dirs`（回報**當前值 + 來源**）、`AppState.toolchain_dirs` 改 `RwLock`、設定對話框「進階 › 路徑」上線（`settings.js`），詳見 [T3 設定中心階段 1 章節](#2026-09-29t3-設定中心階段-1settingsjson-持久化與進階--路徑)
+- [ ] 階段 1（未做）：`board-picker.canInstallCore()` 改為檢查 **CLI 是否可用**（CLI 缺失時顯示「請先到設定中心安裝」而非會失敗的按鈕）；首次啟動的環境檢查提示（可關閉）
 - [ ] 階段 2：開發板管理器（`core_remove`、`core_update_index`；把 `board-picker` 的臨時安裝按鈕升級）
 - [ ] 階段 3：函式庫管理器（`lib_search` / `lib_install` / `lib_remove`）
 - [ ] 範圍限制：只做 CodeBridge 用得到的設定，**不做**通用 Arduino 環境管理器（不提供 `additional_urls` 編輯等）
-- [x] `btn-diagnose` 的診斷資訊改由設定中心「進階 › 診斷」承載
+- [x] `btn-diagnose` 的診斷資訊改由設定中心「進階 › 診斷」承載 —— **2026-09-29 已上線**（`btn-diagnose` 移除 `disabled`，點擊開啟設定中心路徑頁）
 - [ ] T2-E 收尾：自 cocoya 複製 `microchip-board.png`／`usb-bold.png`／`close-octagon.png`、終端機面板與診斷樣式的 preset 微調
 - [x] i18n 新 key（中英兩份已補齊）：`CLI_ERROR_*`、`DRAFT_ERROR_*`、`CLI_STREAM_*`、`CLI_COMPILE_STARTING`、`CLI_UPLOAD_STARTING`、`CLI_UPLOAD_SUCCESS`、`CLI_UPLOAD_BUSY_HINT`、`CLI_SIZE_*`、`TLB_BOARD_*` 等
 
@@ -124,6 +127,174 @@
 - [ ] 若未來 Blockly 支援可安全建立 headless temporary block，可移除 `controls_for` 的暫時實例化 skip，改為更完整的欄位文字索引
 - [ ] 若 Variables dynamic category 需要被搜尋，可新增 definition adapter，不直接掃描所有全域 block types
 - [ ] 若需要真正的 runtime 整合測試，可考慮以 `arduino-cli` 官方 binary 作為 CI fixture，或維持目前的 `FakeProcessRunner` 純單元測試策略
+
+---
+
+# 2026-09-29
+
+## 2026-09-29：T3 設定中心階段 1：settings.json 持久化與「進階 › 路徑」
+
+### 狀態
+
+已完成。補上 2026-09-27 階段 1 留下的最後一塊：讓「共用／隔離」這個開關
+真的**可以被使用者操作並跨啟動保留**，且畫面同時顯示「當前值 + 來源」。
+
+### 已完成
+
+- [x] **`src-tauri/src/settings.rs`（新增）**：`AppSettings { cliPath, isolated, buildRoot }`
+  - 缺檔、壞檔、空檔一律退回預設，**不回傳錯誤** —— 設定檔壞掉不該讓
+    CodeBridge 開不了機，使用者會連「重設設定」的逃生門都沒有
+  - 容忍 UTF-8 BOM（使用者可能用記事本編輯過）與未知欄位
+  - `save()` 採「寫 `.tmp` 再 rename」的置換式寫入，避免中途中斷產生半個 JSON
+  - `resolved_build_root()`：空白字串視為未設定（使用者清空欄位是常見操作）
+  - 10 項單元測試
+- [x] **`AppState` 接上設定**（`lib.rs`）
+  - 新增 `settings` / `app_data_dir` / `settings_path` 欄位
+  - `AppState::new()` 先讀 `settings.json` 再組 `ToolchainDirs`；
+    另提供 `from_settings()` 供測試與設定更新路徑使用
+  - `with_isolation()` 移除（其職責已被 `settings.isolated` 取代）
+  - `toolchain_dirs` 由 `ToolchainDirs` 改為 `Arc<RwLock<ToolchainDirs>>`
+  - `build_root` 獨立套用 `settings.buildRoot`（產物隔離是獨立決策，不受共用開關影響）
+  - 3 項整合測試（跨啟動保留、build_root 覆寫、首次啟動必須是共用）
+- [x] **新命令**（`commands.rs`）
+  - `toolchain_get_dirs`：回傳 `ToolchainDirsReport`，**每個目錄都帶 `source`**
+    （`systemDefault` / `appIsolated` / `userConfigured`）—— 計畫文件決策四
+  - `toolchain_set_dirs`：**先寫檔再套用**（寫失敗就不該讓記憶體與磁碟不一致），
+    參數為 `Option<Option<T>>` 以區分「未提供」與「明確清除」
+  - `refresh_dirs()`：設定變更後就地重建 `ToolchainDirs` 並 `ensure()` 目錄
+  - `toolchain_set_cli_path()` 補上寫入 `settings.json`（原本只改記憶體，
+    使用者重開就會發現設定自己消失）
+  - `current_dirs()` helper：鎖中毒時退回隔離佈局，而非讓應用程式 panic
+- [x] **`ui/src/lib/arduino/settings.js`（新增）**：設定對話框
+  - 每個欄位顯示**當前值 + 來源**；CLI 路徑欄位預填目前生效的值
+  - 「使用 CodeBridge 專屬目錄」開關 + 共用模式的說明文字
+  - 顯示 `settings.json` 的實際位置（使用者要知道設定存到哪去了）
+  - 入口為選單中的「環境診斷」（`btn-diagnose` 移除 `disabled`）
+- [x] **i18n**（中英各 15 個 key）：`SETTINGS_*`、`DIR_SOURCE_*`、`SETTINGS_ERROR_*`
+- [x] **CSS**（`style.css`）：`.cb-settings-dialog` 與 `.cb-setting-*` 系列
+- [x] **測試**：`ui/tests/unit/settings.test.js`（14 項）+
+      `ui/tests/e2e/settings.spec.js`（6 項）
+- [x] `tauri-mock.js` 加入 `toolchain_get_dirs` / `toolchain_set_dirs` 模擬
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 設定必須寫檔，不能只留在記憶體
+
+原本的 `toolchain_set_cli_path()` 只改 `state.cli_path_override`。
+症狀會是「設定可以改，但重開就消失」—— 那比沒有設定功能更令人困惑，
+因為使用者會以為自己記錯了。`toolchain_set_dirs()` 因此強制
+**先 `save()` 成功才更新執行期狀態**。
+
+#### `Option<Option<T>>` 是刻意的，不是過度設計
+
+前端「只送使用者真正更動的欄位」，後端就必須能區分三種狀態：
+
+| 前端送出 | 語意 |
+|---|---|
+| 欄位不存在（`None`） | 使用者沒動它，**沿用現有值** |
+| `Some("")` | 明確清除（CLI 改回系統 `PATH`、產物目錄回預設） |
+| `Some("D:/x")` | 設成新值 |
+
+若後端簽章是 `Option<String>`，第二種會被空字串過濾吃掉，
+變成「清空欄位 = 沒反應」。
+
+#### 前端不能自己算路徑
+
+設定頁顯示的每一個目錄值都必須來自後端回報。切到隔離模式後，
+實際目錄是 `<app_data>/arduino/data` 這種後端才知道的組法；
+前端若自行拼接會顯示一個不存在的目錄，使用者照著去檔案總管找就找不到。
+`save()` 的回傳值也直接取代本地推測值。
+
+#### `stopPropagation()` 差點弄壞工具列下拉選單
+
+初版把開啟對話框綁在齒輪鈕 `#btn-settings-root` 上並呼叫 `stopPropagation()`。
+但那顆按鈕同時是 `toolbar.js` 的 dropdown 觸發器，攔截事件會讓
+**整個下拉選單（主題切換、語言切換）全部失效**。
+症狀：`theme-runtime.spec.js` 的兩項測試紅燈（dropdown 不可見、
+`elementFromPoint` 命中的不是選單內容）。
+
+改成把入口放在選單項目「環境診斷」上 —— 這也正好符合 todo 既定決策
+「`btn-diagnose` 的診斷資訊改由設定中心承載」。已補回歸測試鎖住。
+
+#### 編輯器插入位置差一個字元，讓函式掉出 IIFE
+
+`dirRow()` 被插到 `})();` 之後（模組作用域），`text()` 因此不可見，
+`render()` 拋 `ReferenceError: text is not defined`。
+症狀很模糊：對話框開得起來但**內容全空**，而 `getReport()` 仍回傳正確資料
+（`lastReport` 在 `render()` 之前就已賦值）。
+
+**除錯教訓**：`load()` 的 `.catch()` 會把 `render()` 丟出的例外一起吞掉，
+症狀是「靜默失敗」而非報錯。當預期副作用沒發生時，
+應先在 `render()` 周圍臨時包 `try/catch` 把例外印出來，而不是猜。
+
+### 使用者回報修正：設定中心版面（字級無主從、項目無分隔、文字溢出）
+
+**回報**：設定對話框「字體大小一致沒有主從之分，項目也沒有清楚分隔，且文字太大跑到面板外了」。
+
+#### 根因不是字級設計，而是少了一個結尾大括號
+
+前一輪我用編輯器在 `style.css` 的 `.cb-dialog-button.is-primary:hover` 之後插入
+`.cb-setting-*` 樣式時，**吃掉了該規則的結尾 `}`**。CSS 沒有語法錯誤檢查，
+於是後面整段設定中心樣式都被巢狀成：
+
+```css
+.cb-dialog-button.is-primary:hover {
+    background: var(--cb-primary-hover, #FE2F89);
+    /* ↓ 後面 200 行全部變成這條規則的內容 */
+    .cb-settings-dialog { max-width: 640px; }
+    .cb-setting-path { ... }
+    ...
+}
+```
+
+巢狀選擇器在標準 CSS 中無效，瀏覽器**靜默忽略**整段 —— 沒有 console 錯誤、
+沒有紅字，畫面看起來「樣式有寫但沒生效」。
+
+這一點同時解釋了三個症狀：
+
+| 使用者看到的 | 實際原因 |
+|---|---|
+| 字體大小一致、沒有主從 | `.cb-setting-*` 全部未套用，文字沿用瀏覽器預設 16px |
+| 項目沒有清楚分隔 | 分隔線（`border-bottom`）同樣未套用 |
+| 文字太大跑到面板外 | 瀏覽器預設 16px 撐破 420px 的對話框；且 `.cb-settings-dialog { max-width: 640px }` 也沒生效 |
+
+**教訓**：CSS 沒有報錯機制，插入樣式後必須驗證「規則真的有套上」，
+而不是看程式碼覺得寫了就行。已加兩道防護：
+1. `temp/check_css_balance.py`（一次性工具，已用於掃描 `style.css` 與 `presets.css`，
+   兩者現為 depth 0 平衡）
+2. `settings.spec.js` 的「版面契約」6 項測試 —— 直接斷言 `getComputedStyle`
+   的 `fontSize`／`borderBottomStyle`／實際寬度，而不是斷言選擇器存在
+
+#### 版面重做
+
+- **字級三層主從**：16px 對話框標題 → 15px/600 分區標題 → 13px 欄位名 → 12px 等寬路徑 → 11px 來源標籤／說明
+- **分區**：原本五個目錄平鋪，語意上其實是兩件事 —— 「工具鏈（共用／隔離）」與「產物（永遠隔離）」。
+  現以 `<section class="cb-setting-group">` + 底線分開。
+- **項目分隔**：每列 `border-bottom: 1px dashed` + 7px 上下留白，最後一列不畫線
+- **來源改為標籤**：`border-radius: 999px` 的小膠囊，貼在路徑下方，弱化以凸顯路徑
+- **溢出修正**：`width: min(620px, calc(100vw - 48px))` + `max-height: calc(100vh - 80px)`；
+  `.cb-setting-value { min-width: 0 }`（沒有它，長路徑會撐破 flex 容器）；
+  路徑 `word-break: break-all` + `overflow-wrap: anywhere`
+- **捲動位置**：捲動發生在 `.cb-dialog-body`，標題與按鈕列固定不動
+- **窄視窗**：≤560px 改為單欄堆疊
+
+### 驗證結果
+
+- `cargo test`：**270 passed**
+- `npx vitest run tests/unit`：**261 passed**（14 檔）
+- `npx playwright test`：**175 passed**（3.2m，含新增 6 項版面契約）
+- `npm run build`：成功
+- CSS 大括號平衡檢查：`style.css` / `presets.css` 皆 depth 0
+
+### 下次啟動方向 (Next Steps)
+
+1. **實機驗證**（需使用者插板操作）：
+   - 設定中心 › 進階 › 路徑 應顯示 `%LOCALAPPDATA%\Arduino15` 與「共用系統目錄」
+   - 勾選「使用 CodeBridge 專屬目錄」→ 儲存 → 開發板清單應變空（行為正確切換）
+   - 取消勾選 → 核心應重新出現；**重啟 CodeBridge 後設定必須保留**
+   - 點「執行」確認編譯仍走同一套目錄（產物永遠在 `.codebridge/sketches`）
+2. `board-picker.canInstallCore()` 改為檢查 **CLI 是否可用**（CLI 缺失時的按鈕是會失敗的）
+3. 階段 2：開發板管理器（`core_remove`、`core_update_index`）
 
 ---
 

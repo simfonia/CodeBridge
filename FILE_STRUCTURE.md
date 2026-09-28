@@ -22,6 +22,7 @@ CodeBridge/
 │       ├── events.rs    # 事件名稱、FlushPolicy 節流、LineBuffer 行緩衝、PortInfo 簽章 diff、SerialData 批次事件
 │       ├── serial_monitor.rs  # 序列監視器（LineFramer 位元組切行、HEX 編碼、pump 讀取迴圈、Session）
 │       ├── project.rs     # .cbg 專案檔讀寫（副檔名白名單、UTF-8 無 BOM、BOM 容忍）
+│       ├── settings.rs    # settings.json 持久化（AppSettings：cliPath／isolated／buildRoot；壞檔退回預設、置換式寫入）
 │       ├── capabilities/  # Tauri 2 權限宣告（core / dialog 最小權限）
 │       ├── tests/         # 整合測試（arduino_cli_smoke.rs：對真實 arduino-cli 端對端驗證）
 │       ├── arduino/     # Arduino CLI 整合（B 方案：外部依賴 + 引導安裝）
@@ -121,6 +122,7 @@ CodeBridge/
 │   │       │   ├── compile-controller.js # 編譯／上傳狀態機、單飛、取消、診斷標記
 │   │       │   ├── board-detector.js    # 板子／序列埠自動偵測（熱插拔、偏好埠、自動切板、上傳前比對）
 │   │       │   ├── board-picker.js      # 開發板選擇面板（搜尋過濾、手動選板、錯誤降級）
+│   │       │   ├── settings.js          # 設定中心「進階 › 路徑」（toolchain_get_dirs／set_dirs、當前值 + 來源、只送更動欄位）
 │   │       │   └── serial-monitor.js    # 序列監視器（開關、baud、HEX、時間戳、開發者輸入行、多埠過濾、onDataLine 繪圖訂閱點）
 │   │       ├── plot/             # 序列繪圖（T3 Phase 2，與序列監視器共用同一條連線）
 │   │       │   ├── plot-parse.js    # 文字行 → 資料點（label:value / CSV / TSV / 布林 / 垃圾行忽略）

@@ -83,7 +83,9 @@
                             <span class="toolbar-caret"><img src="src/icons/chevron-down-solid.png" alt=""></span>
                         </div>
                         <div class="dropdown-content">
-                            <div class="dropdown-item" id="btn-diagnose" data-action="diagnose" title="%{BKY_TLB_DIAGNOSE}" disabled>
+                            <!-- 2026-09-29：診斷資訊改由設定中心「進階 › 路徑」承載，
+                                 disabled 已由 settings.js 的 init() 移除。 -->
+                            <div class="dropdown-item" id="btn-diagnose" data-action="diagnose" title="%{BKY_TLB_DIAGNOSE}">
                                 <img src="src/icons/module-puzzle-1.png" style="width: 16px; height: 16px; margin-right: 8px;" alt="">
                                 <span>%{BKY_TLB_DIAGNOSE}</span>
                             </div>
@@ -716,6 +718,9 @@
     <script src="src/lib/arduino/board-detector.js"></script>
     <script src="src/lib/arduino/core.js"></script>
     <script src="src/lib/arduino/board-picker.js"></script>
+
+    <!-- ====== 設定中心（進階 › 路徑，T3 階段 1） ====== -->
+    <script src="src/lib/arduino/settings.js"></script>
 
     <!-- ====== 工具列按鈕 registry 與行為 ====== -->
     <script src="src/lib/ui/toolbar-registry.js"></script>

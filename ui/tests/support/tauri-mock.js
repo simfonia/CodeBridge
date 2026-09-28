@@ -52,6 +52,19 @@ export async function installTauriMock(page, options = {}) {
       serialPort: 'COM3',
       serialBaud: 9600,
       serialSent: [],
+      // 設定中心（T3 階段 1）：預設共用系統目錄，來源為 systemDefault。
+      dirs: {
+        cliPath: 'C:/tools/arduino-cli.exe',
+        cliSource: 'systemPath',
+        cliError: null,
+        isolated: false,
+        configDir: { value: 'C:/Users/me/AppData/Local/Arduino15', source: 'systemDefault' },
+        dataDir: { value: 'C:/Users/me/AppData/Local/Arduino15', source: 'systemDefault' },
+        userDir: { value: 'C:/Users/me/AppData/Local/Arduino15/user', source: 'systemDefault' },
+        downloadsDir: { value: 'C:/Users/me/AppData/Local/Arduino15/staging', source: 'systemDefault' },
+        buildRoot: { value: 'C:/Users/me/.codebridge/sketches', source: 'appIsolated' },
+        settingsPath: 'C:/Users/me/.codebridge/settings.json'
+      },
       errors: {}
     }, config.cli || {});
 
@@ -109,6 +122,7 @@ export async function installTauriMock(page, options = {}) {
               command === 'board_list_all' || command === 'refresh_serial_ports' ||
               command === 'core_list' || command === 'core_search' ||
               command === 'core_install' ||
+              command === 'toolchain_get_dirs' || command === 'toolchain_set_dirs' ||
               command === 'serial_monitor_start' || command === 'serial_monitor_stop' ||
               command === 'serial_monitor_send') {
             window.__MOCK_CLI_CALLS__.push({ command, args: payload });
@@ -117,6 +131,30 @@ export async function installTauriMock(page, options = {}) {
             if (command === 'compile_start') return respond(cli.compileStart);
             if (command === 'upload_start') return respond(cli.uploadStart);
             if (command === 'upload_ready') return respond(cli.uploadReady);
+            if (command === 'toolchain_get_dirs') return respond(cli.dirs);
+            if (command === 'toolchain_set_dirs') {
+              // 套用後回報「隔離／共用」的真實樣貌，讓 E2E 能驗證來源標籤切換。
+              const source = payload.isolated ? 'appIsolated' : 'systemDefault';
+              const root = payload.isolated
+                ? 'C:/Users/me/.codebridge/arduino'
+                : 'C:/Users/me/AppData/Local/Arduino15';
+              cli.dirs = {
+                cliPath: payload.cliPath !== undefined ? payload.cliPath : cli.dirs.cliPath,
+                cliSource: payload.cliPath ? 'userConfigured' : 'systemPath',
+                cliError: null,
+                isolated: Boolean(payload.isolated),
+                configDir: { value: root, source: source },
+                dataDir: { value: root + '/data', source: source },
+                userDir: { value: root + '/user', source: source },
+                downloadsDir: { value: root + '/staging', source: source },
+                buildRoot: {
+                  value: payload.buildRoot || 'C:/Users/me/.codebridge/sketches',
+                  source: payload.buildRoot ? 'userConfigured' : 'appIsolated'
+                },
+                settingsPath: 'C:/Users/me/.codebridge/settings.json'
+              };
+              return respond(cli.dirs);
+            }
             if (command === 'board_list_all') return respond({ boards: cli.boards });
             if (command === 'refresh_serial_ports') return respond(cli.ports || []);
             if (command === 'core_list') return respond({ platforms: cli.installedPlatforms });

@@ -16,9 +16,13 @@ use crate::arduino::parser::{
     BoardDetailResponse, BoardSummaries, DetectedBoards, LibrariesResponse, PlatformsResponse,
     VersionInfo,
 };
+use crate::arduino::paths::{resolve_cli, ToolchainDirs};
 use crate::arduino::pipeline::{self, SizeUsage};
 use crate::arduino::runner::{ProcessRunner, RunRequest, RunResult, StdProcessRunner};
-use crate::arduino::{CliError, InstallHint, ToolchainStatus, ARDUINO_CLI_DOWNLOAD_URL};
+use crate::arduino::{
+    ArduinoCliDirs, CliError, DirEntry, DirSource, InstallHint, ToolchainDirsReport,
+    ToolchainStatus, ARDUINO_CLI_DOWNLOAD_URL,
+};
 use crate::events::names as event_names;
 use crate::events::EventSink;
 use crate::serial_monitor;
@@ -360,7 +364,7 @@ pub async fn compile_start(
     let id = new_operation_id();
     let cell = state.operations.begin(id.clone(), OperationKind::Compile);
     let request = payload.to_request();
-    let dirs = state.toolchain_dirs.clone();
+    let dirs = current_dirs(&state);
 
     let app_for_task = app.clone();
     let id_for_task = id.clone();
@@ -477,7 +481,7 @@ pub async fn upload_start(
     let id = new_operation_id();
     let cell = state.operations.begin(id.clone(), OperationKind::Upload);
     let request = pipeline::UploadRequest::new(&payload.fqbn, &payload.port, build);
-    let dirs = state.toolchain_dirs.clone();
+    let dirs = current_dirs(&state);
     let port = payload.port.clone();
 
     let app_for_task = app.clone();
@@ -576,6 +580,19 @@ pub fn app_close(window: Window) -> Result<(), String> {
     window.destroy().map_err(|error| error.to_string())
 }
 
+/// 取得目前的工具鏈目錄快照。
+///
+/// `toolchain_dirs` 是 `RwLock`（設定頁可隨時切換），但多數呼叫端只需要
+/// 一份可跨執行緒移動的複本 —— 鎖的守衛生命期不能跨越 `spawn_blocking`。
+/// 鎖中毒時退回隔離佈局：寧可指錯地方，也不要整個應用程式 panic。
+fn current_dirs(state: &AppState) -> ToolchainDirs {
+    state
+        .toolchain_dirs
+        .read()
+        .map(|dirs| dirs.clone())
+        .unwrap_or_else(|_| ToolchainDirs::under(&state.app_data_dir))
+}
+
 /// 建立含隔離旗標的全域配置。
 fn flags_for(state: &AppState) -> GlobalFlags {
     let urls = state
@@ -583,7 +600,7 @@ fn flags_for(state: &AppState) -> GlobalFlags {
         .lock()
         .map(|v| v.clone())
         .unwrap_or_default();
-    GlobalFlags::isolated(&state.toolchain_dirs)
+    GlobalFlags::isolated(&current_dirs(state))
         .with_additional_urls(urls)
         .with_json()
 }
@@ -610,7 +627,7 @@ fn query(state: &AppState, cmd: command::CliCommand) -> Result<RunResult, String
 /// 讓前端可以顯示安裝教學而不是通用錯誤訊息。
 #[tauri::command]
 pub fn toolchain_detect(state: State<AppState>) -> Result<ToolchainStatus, String> {
-    let dirs = &state.toolchain_dirs;
+    let dirs = current_dirs(&state);
     let base = ToolchainStatus {
         found: false,
         path: None,
@@ -668,6 +685,9 @@ fn install_hint_for(err: &CliError) -> InstallHint {
 /// 設定使用者自訂的 arduino-cli 路徑。
 ///
 /// 傳入 `None` 或空字串表示清除設定，改回使用系統 PATH。
+///
+/// **設定檔才是權威來源**：本命令同步寫入 `settings.json`，
+/// 否則使用者下次啟動就會發現設定「自己消失」—— 那比沒設定更令人困惑。
 #[tauri::command]
 pub fn toolchain_set_cli_path(
     state: State<AppState>,
@@ -677,9 +697,164 @@ pub fn toolchain_set_cli_path(
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
     if let Ok(mut slot) = state.cli_path_override.lock() {
-        *slot = normalized;
+        *slot = normalized.clone();
     }
+    if let Ok(mut settings) = state.settings.lock() {
+        settings.cli_path = normalized;
+        settings.save(&state.settings_path)?;
+    }
+    // 路徑改了，探測結果與核心目錄都可能改變；重新組一次。
+    refresh_dirs(&state);
     toolchain_detect(state)
+}
+
+/// 套用新的設定內容到 `AppState`（不寫檔）。
+///
+/// 設定頁調整「共用／隔離」或產物目錄後，必須讓 `toolchain_dirs`
+/// 立即反映新值 —— 否則畫面顯示已切換，但編譯仍寫到舊目錄。
+fn refresh_dirs(state: &AppState) {
+    let (app_data, settings) = {
+        let guard = match state.settings.lock() {
+            Ok(guard) => guard,
+            Err(_) => return,
+        };
+        (state.app_data_dir.clone(), guard.clone())
+    };
+    let defaults = resolve_cli(
+        settings.cli_path.as_deref().map(std::path::Path::new),
+        None,
+    )
+    .map(|cli| ArduinoCliDirs::probe(&cli.program))
+    .unwrap_or_else(|_| ArduinoCliDirs::platform_default());
+
+    let mut dirs = ToolchainDirs::with_mode(&app_data, &defaults, settings.isolated);
+    dirs.build_root = settings.resolved_build_root(&app_data);
+    if let Err(error) = dirs.ensure() {
+        eprintln!("[CodeBridge] 無法建立工具鏈目錄: {}", error);
+    }
+    if let Ok(mut slot) = state.toolchain_dirs.write() {
+        *slot = dirs;
+    }
+    if let Ok(mut flag) = state.isolated_toolchain.lock() {
+        *flag = settings.isolated;
+    }
+}
+
+/// 取得目前生效的所有路徑與每個路徑的**來源**。
+///
+/// **為什麼一定要回報來源**：使用者被「看不到核心」卡住時，本質是
+/// 不知道系統當下用哪個目錄、為什麼。有「值 + 來源」他就能自行回答，
+/// 不必依賴我們猜測（計畫文件決策四）。
+#[tauri::command]
+pub fn toolchain_get_dirs(state: State<AppState>) -> Result<ToolchainDirsReport, String> {
+    let dirs = current_dirs(&state);
+    let isolated = state
+        .isolated_toolchain
+        .lock()
+        .map(|flag| *flag)
+        .unwrap_or(false);
+    // 共用時來自 arduino-cli；隔離時是 CodeBridge 自己配的。
+    let toolchain_source = if isolated {
+        DirSource::AppIsolated
+    } else {
+        DirSource::SystemDefault
+    };
+    // 產物永遠是 CodeBridge 的東西，即使使用者覆寫了路徑也一樣。
+    let build_root_overridden = state
+        .settings
+        .lock()
+        .map(|settings| {
+            settings
+                .build_root
+                .as_ref()
+                .map(|raw| !raw.trim().is_empty())
+                .unwrap_or(false)
+        })
+        .unwrap_or(false);
+
+    let cli = resolve_cli_for(&state);
+    Ok(ToolchainDirsReport {
+        cli_path: cli.as_ref().ok().map(|handle| handle.program.display().to_string()),
+        cli_source: cli.as_ref().ok().map(|handle| handle.source),
+        cli_error: cli.as_ref().err().map(|error| error.message_key().to_string()),
+        isolated,
+        config_dir: DirEntry {
+            value: dirs.config_dir.display().to_string(),
+            source: toolchain_source,
+        },
+        data_dir: DirEntry {
+            value: dirs.data_dir.display().to_string(),
+            source: toolchain_source,
+        },
+        user_dir: DirEntry {
+            value: dirs.user_dir.display().to_string(),
+            source: toolchain_source,
+        },
+        downloads_dir: DirEntry {
+            value: dirs.downloads_dir.display().to_string(),
+            source: toolchain_source,
+        },
+        build_root: DirEntry {
+            value: dirs.build_root.display().to_string(),
+            source: if build_root_overridden {
+                DirSource::UserConfigured
+            } else {
+                DirSource::AppIsolated
+            },
+        },
+        settings_path: state.settings_path.display().to_string(),
+    })
+}
+
+/// 更新路徑設定並立即套用。
+///
+/// `None` 表示「該欄位未設定」，會沿用現有值；空字串則明確清除
+/// （CLI 路徑改回系統 `PATH`、產物目錄改回預設）。
+#[tauri::command]
+pub fn toolchain_set_dirs(
+    state: State<AppState>,
+    cli_path: Option<Option<String>>,
+    isolated: Option<bool>,
+    build_root: Option<Option<String>>,
+) -> Result<ToolchainDirsReport, String> {
+    let mut settings = state
+        .settings
+        .lock()
+        .map_err(|_| "SETTINGS_ERROR_LOCK_POISONED".to_string())?
+        .clone();
+
+    if let Some(value) = cli_path {
+        settings.cli_path = value
+            .map(|raw| raw.trim().to_string())
+            .filter(|raw| !raw.is_empty());
+    }
+    if let Some(value) = isolated {
+        settings.isolated = value;
+    }
+    if let Some(value) = build_root {
+        settings.build_root = value
+            .map(|raw| raw.trim().to_string())
+            .filter(|raw| !raw.is_empty());
+    }
+
+    // 先寫檔再套用：寫失敗就不該讓執行期狀態與磁碟內容不一致。
+    settings.save(&state.settings_path)?;
+    {
+        let mut slot = state
+            .settings
+            .lock()
+            .map_err(|_| "SETTINGS_ERROR_LOCK_POISONED".to_string())?;
+        *slot = settings;
+    }
+    if let Ok(mut slot) = state.cli_path_override.lock() {
+        *slot = state
+            .settings
+            .lock()
+            .ok()
+            .and_then(|settings| settings.cli_path.clone());
+    }
+    refresh_dirs(&state);
+    toolchain_get_dirs(state)
 }
 
 /// 列出實際連接中的開發板。

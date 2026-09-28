@@ -14,7 +14,7 @@ var CodeBridgeToolbar = (function() {
     'use strict';
 
     var actions = {
-        'settings-menu': { id: 'btn-settings-root', implemented: true, handledBy: 'css', labelKey: 'TLB_SETTINGS' },
+        'settings-menu': { id: 'btn-settings-root', implemented: true, handledBy: 'css+settings', labelKey: 'TLB_SETTINGS' },
         'open-project': { id: 'btn-open', implemented: true, handledBy: 'toolbar', labelKey: 'TLB_OPEN', requiresDesktop: true },
         'open-example': { id: 'btn-examples', implemented: true, handledBy: 'toolbar', labelKey: 'TLB_EXAMPLES' },
         'new-project': { id: 'btn-new', implemented: true, handledBy: 'toolbar', labelKey: 'TLB_NEW' },

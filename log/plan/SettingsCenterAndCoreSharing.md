@@ -1,21 +1,38 @@
 # 設定中心與核心目錄共用化（Phase T3）
 
 ## 文件資訊
-- 狀態：**階段 1 已完成（2026-09-27）** —— 預設共用已上線，可實測上傳；設定 UI 與階段 2／3 待做
-- 對應程式碼：`src-tauri/src/arduino/paths.rs`、`src-tauri/src/commands.rs`、`src-tauri/src/lib.rs`、`ui/src/lib/arduino/*`、`ui/src/lib/ui/*`、`ui/index.html`
+- 狀態：**階段 1 已完成（2026-09-29）** —— 路徑共用 + `settings.json` 持久化 + 設定頁全數上線；階段 2／3 待做
+- 對應程式碼：`src-tauri/src/settings.rs`（新增）、`src-tauri/src/arduino/paths.rs`、`src-tauri/src/commands.rs`、`src-tauri/src/lib.rs`、`ui/src/lib/arduino/settings.js`（新增）、`ui/src/main.js`、`ui/index.html`
 - 前置：Phase T2 已完成編譯／上傳、板子自動偵測、開發板選擇面板
 - 範圍限制：**只做 CodeBridge 自己用得到的設定**，不做通用 Arduino 環境管理器（不提供 `additional_urls` 編輯、代理設定等對高中生無意義的選項）
 - 相容性前提：**CodeBridge 尚未發佈，目前沒有使用者**，因此可直接改變預設行為，不需遷移舊設定
 
-### 階段 1 已完成的部分（2026-09-27）
+### 階段 1 已完成（2026-09-27 路徑共用 + 2026-09-29 持久化與 UI）
 - [x] `ArduinoCliDirs` + `platform_default()`（依 OS 推算預設值）
 - [x] `ArduinoCliDirs::probe(program)`：以 `arduino-cli config get directories.*` 為**權威來源**，失敗才退回平台預設
 - [x] `ToolchainDirs::shared()` / `with_mode(app_root, defaults, isolated)` / `under()`（保留隔離）
 - [x] `AppState::with_isolation()`，預設 `false`（共用）；新增 `isolated_toolchain` 旗標供後續設定切換
 - [x] 測試：`paths.rs` +5 項（共用取系統目錄、產物仍隔離、隔離模式不變、`build_root` 兩模式相同）
 - [x] 真實 smoke 測試：`shared_toolchain_dirs_point_at_the_users_existing_cores`（實測通過）
-- [ ] **待做**：`settings.json` 持久化、`toolchain_get_dirs` / `set_dirs`、設定對話框「進階 › 路徑」頁
 - [x] **Bug 修正**：`compile_start` / `upload_start` 的 payload 包裝（見下方「前後端契約教訓」）
+- [x] **`src-tauri/src/settings.rs`**：`AppSettings { cliPath, isolated, buildRoot }` 持久化到
+      `<app_data>/settings.json`。缺檔／壞檔／空檔一律退回預設（設定檔壞掉不該讓應用程式開不了機）；
+      容忍 BOM 與未知欄位；置換式寫入（`.tmp` + rename）。10 項單元測試。
+- [x] **`AppState` 接上設定**：`settings` / `app_data_dir` / `settings_path` 欄位；
+      `AppState::new()` 先讀設定再組 `ToolchainDirs`；`toolchain_dirs` 改為 `Arc<RwLock<..>>`；
+      `with_isolation()` 移除（職責被 `settings.isolated` 取代）。3 項整合測試。
+- [x] **`toolchain_get_dirs` / `toolchain_set_dirs`**：前者回傳每個目錄的**當前值 + 來源**
+      （`systemDefault` / `appIsolated` / `userConfigured`，即決策四）；後者**先寫檔再套用**，
+      參數用 `Option<Option<T>>` 區分「未提供」與「明確清除」。`refresh_dirs()` 負責就地重建。
+- [x] **`toolchain_set_cli_path()` 補上寫檔**：原本只改記憶體，使用者重開會發現設定自己消失。
+- [x] **前端 `ui/src/lib/arduino/settings.js`**：設定對話框。每個欄位顯示當前值 + 來源；
+      CLI 路徑欄位預填目前生效的值；「使用 CodeBridge 專屬目錄」開關；顯示 `settings.json` 位置。
+- [x] **入口**：`btn-diagnose`（原為 `disabled`）開啟設定中心 —— 符合「診斷由設定中心承載」的既定決策。
+      **不可**綁在齒輪鈕上：那是 `toolbar.js` 的 dropdown 觸發器，`stopPropagation()` 會讓整個下拉選單失效。
+- [x] **測試**：`ui/tests/unit/settings.test.js`（14 項）、`ui/tests/e2e/settings.spec.js`（6 項）
+- [ ] **待做**：`board-picker.canInstallCore()` 改為檢查 **CLI 是否可用**；
+      首次啟動的環境檢查提示（可關閉）；切換獨立模式時的確認對話框（只切換／切換並複製核心／取消）
+
 
 ### 首次使用流程：arduino-cli 缺失時的處理（已決策，2026-09-27）
 

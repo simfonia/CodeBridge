@@ -3,16 +3,18 @@ pub mod commands;
 pub mod events;
 pub mod project;
 pub mod serial_monitor;
+pub mod settings;
 
 use tauri::{AppHandle, Emitter, Manager};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 use arduino::operations::OperationRegistry;
 use arduino::paths::{resolve_cli, ArduinoCliDirs, ToolchainDirs};
 use arduino::pipeline::BuildRecord;
 use arduino::runner::StdProcessRunner;
 use arduino::CodeBridgeToolchain;
+use settings::AppSettings;
 
 /// AppState 定義應用程式狀態
 pub struct AppState {
@@ -24,15 +26,25 @@ pub struct AppState {
     pub board_manager_urls: Arc<Mutex<Vec<String>>>,
     /// 長作業 registry。
     pub operations: OperationRegistry,
-    /// CLI 目錄；於啟動時建立。
+    /// CLI 目錄；於啟動時建立，設定變更時可整組更新。
     ///
     /// **預設共用** `arduino-cli` 的系統目錄（見 [`ToolchainDirs`]）——
     /// 隔離會讓使用者看不到自己已裝的核心。需要獨立環境時由設定面板切換。
-    pub toolchain_dirs: ToolchainDirs,
+    ///
+    /// **為什麼是 `RwLock`**：設定頁切換共用／隔離時必須能就地換掉整組目錄，
+    /// 而 watcher、查詢命令都會同時讀取它。
+    pub toolchain_dirs: Arc<RwLock<ToolchainDirs>>,
     /// 工具鏈是否使用 CodeBridge 專屬目錄（`true` = 隔離，預設 `false` = 共用）。
     ///
-    /// 設定切換時會連同 [`toolchain_dirs`](Self::toolchain_dirs) 一起更新。
+    /// 這是 [`AppSettings::isolated`](crate::settings::AppSettings::isolated)
+    /// 的執行期鏡像；設定檔才是權威來源。
     pub isolated_toolchain: Arc<Mutex<bool>>,
+    /// 使用者設定（權威來源為 `settings.json`）。
+    pub settings: Arc<Mutex<AppSettings>>,
+    /// 應用程式資料根目錄；設定檔與產物根目錄都掛在它之下。
+    pub app_data_dir: std::path::PathBuf,
+    /// `settings.json` 的完整路徑。
+    pub settings_path: std::path::PathBuf,
     /// 成功編譯紀錄（`projectId` → build 資訊），上傳時作為前置依據。
     ///
     /// **後端權威**：前端上傳時只送 `projectId`／`fqbn`／`port`，
@@ -67,24 +79,40 @@ impl AppState {
     ///
     /// 預設**共用** `arduino-cli` 的系統目錄，讓使用者已安裝的核心直接可用；
     /// 產物（草稿暫存）仍隔離在 `app_data` 之下。
+    ///
+    /// `settings.json` 若存在則以其為準 —— 使用者在設定頁做過的選擇
+    /// 必須跨啟動保留，否則「設定」這個功能等於沒有。
     pub fn new(app_data_dir: std::path::PathBuf) -> Self {
-        Self::with_isolation(app_data_dir, false)
+        let settings_path = AppSettings::file_path(&app_data_dir);
+        let settings = AppSettings::load(&settings_path);
+        Self::from_settings(app_data_dir, settings_path, settings)
     }
 
-    /// 建立狀態並指定是否使用 CodeBridge 專屬（隔離）目錄。
-    pub fn with_isolation(app_data_dir: std::path::PathBuf, isolated: bool) -> Self {
+    /// 由既有的設定物件建立狀態（測試與設定更新路徑共用）。
+    pub fn from_settings(
+        app_data_dir: std::path::PathBuf,
+        settings_path: std::path::PathBuf,
+        settings: AppSettings,
+    ) -> Self {
         // CLI 的實際目錄以 `config get` 為準；CLI 不存在時退回平台預設值。
-        let defaults = resolve_cli(None, None)
+        let defaults = resolve_cli(settings.cli_path.as_deref().map(std::path::Path::new), None)
             .map(|cli| ArduinoCliDirs::probe(&cli.program))
             .unwrap_or_else(|_| ArduinoCliDirs::platform_default());
-        let toolchain_dirs = ToolchainDirs::with_mode(&app_data_dir, &defaults, isolated);
+        let isolated = settings.isolated;
+        let build_root = settings.resolved_build_root(&app_data_dir);
+        let mut toolchain_dirs = ToolchainDirs::with_mode(&app_data_dir, &defaults, isolated);
+        toolchain_dirs.build_root = build_root;
+
         Self {
             serial_ports: Arc::new(Mutex::new(Vec::new())),
-            cli_path_override: Arc::new(Mutex::new(None)),
+            cli_path_override: Arc::new(Mutex::new(settings.cli_path.clone())),
             board_manager_urls: Arc::new(Mutex::new(Vec::new())),
             operations: OperationRegistry::new(),
-            toolchain_dirs,
+            toolchain_dirs: Arc::new(RwLock::new(toolchain_dirs)),
             isolated_toolchain: Arc::new(Mutex::new(isolated)),
+            settings: Arc::new(Mutex::new(settings)),
+            app_data_dir,
+            settings_path,
             last_builds: Arc::new(Mutex::new(HashMap::new())),
             port_lease: Arc::new(Mutex::new(None)),
             serial_monitor: Arc::new(Mutex::new(None)),
@@ -147,8 +175,10 @@ pub fn run() {
                 .app_data_dir()
                 .unwrap_or_else(|_| std::env::temp_dir().join("codebridge"));
             let state = AppState::new(app_data_dir);
-            if let Err(err) = state.toolchain_dirs.ensure() {
-                eprintln!("[CodeBridge] 無法建立工具鏈目錄: {}", err);
+            if let Ok(dirs) = state.toolchain_dirs.read() {
+                if let Err(err) = dirs.ensure() {
+                    eprintln!("[CodeBridge] 無法建立工具鏈目錄: {}", err);
+                }
             }
             app.manage(state);
             // 啟動序列埠熱插拔 watcher（T2-D）：1500ms 輪詢 + 簽章 diff。
@@ -162,6 +192,8 @@ pub fn run() {
             commands::get_version,
             commands::toolchain_detect,
             commands::toolchain_set_cli_path,
+            commands::toolchain_get_dirs,
+            commands::toolchain_set_dirs,
             commands::board_list_detected,
             commands::board_list_all,
             commands::board_details,
@@ -192,7 +224,12 @@ pub fn run() {
 
 /// 建立綁定 `StdProcessRunner` 的工具鏈實例。
 pub fn toolchain(state: &AppState) -> CodeBridgeToolchain<StdProcessRunner> {
-    CodeBridgeToolchain::new(StdProcessRunner::new(), state.toolchain_dirs.clone())
+    let dirs = state
+        .toolchain_dirs
+        .read()
+        .map(|dirs| dirs.clone())
+        .unwrap_or_else(|_| ToolchainDirs::under(&state.app_data_dir));
+    CodeBridgeToolchain::new(StdProcessRunner::new(), dirs)
 }
 
 /// 內建範例所在的資源目錄。
@@ -360,9 +397,70 @@ mod tests {
 
     #[test]
     fn toolchain_dirs_are_under_the_given_root() {
+        // 共用模式下 data_dir 與 config_dir 同層（都由 arduino-cli 決定），
+        // 因此這裡驗證的是「build_root 一定在 app_data 之下」——
+        // 產物隔離是不可退讓的底線。
         let state = state("dirs");
-        assert!(state.toolchain_dirs.config_dir.starts_with(&state.toolchain_dirs.data_dir.parent().unwrap()));
-        assert!(state.toolchain_dirs.data_dir.starts_with(&state.toolchain_dirs.config_dir));
+        let dirs = state.toolchain_dirs.read().unwrap();
+        assert!(dirs.build_root.starts_with(&state.app_data_dir));
+    }
+
+    #[test]
+    fn state_reads_persisted_settings_on_startup() {
+        // 使用者在設定頁做的選擇必須跨啟動保留，否則「設定」等於沒有。
+        let root = std::env::temp_dir().join("codebridge-state-persisted");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("建立暫存目錄");
+        let path = AppSettings::file_path(&root);
+        AppSettings {
+            cli_path: Some("D:/tools/arduino-cli.exe".to_string()),
+            isolated: true,
+            build_root: None,
+        }
+        .save(&path)
+        .expect("寫入設定");
+
+        let state = AppState::new(root.clone());
+        assert_eq!(
+            state.cli_path_override.lock().unwrap().as_deref(),
+            Some("D:/tools/arduino-cli.exe")
+        );
+        assert!(*state.isolated_toolchain.lock().unwrap());
+        // 隔離模式的核心目錄必須在 app_data 之下。
+        let dirs = state.toolchain_dirs.read().unwrap();
+        assert!(dirs.data_dir.starts_with(&root));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn build_root_override_is_applied_from_settings() {
+        let root = std::env::temp_dir().join("codebridge-state-buildroot");
+        let _ = std::fs::remove_dir_all(&root);
+        let state = AppState::from_settings(
+            root.clone(),
+            AppSettings::file_path(&root),
+            AppSettings {
+                build_root: Some(root.join("custom-build").display().to_string()),
+                ..AppSettings::default()
+            },
+        );
+        let dirs = state.toolchain_dirs.read().unwrap();
+        assert_eq!(dirs.build_root, root.join("custom-build"));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn missing_settings_file_keeps_shared_mode() {
+        // 沒有 settings.json 的首次啟動必須是「共用」——
+        // 隔離會讓使用者看不到自己已裝的核心（2026-09-27 的最嚴重 UX 缺陷）。
+        let root = std::env::temp_dir().join("codebridge-state-fresh");
+        let _ = std::fs::remove_dir_all(&root);
+        let state = AppState::new(root.clone());
+        assert!(!*state.isolated_toolchain.lock().unwrap());
+        let dirs = state.toolchain_dirs.read().unwrap();
+        // 共用時核心目錄不得在 app_data 之下（那才是隔離）。
+        assert!(!dirs.data_dir.starts_with(&root));
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

@@ -728,6 +728,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // 7b. 設定中心（T3 階段 1）
+    //     路徑設定決定「編譯時到哪找核心」。使用者看不到自己已裝的核心時，
+    //     會不會設定中心是唯一的自助手段 —— 它必須把「當前值 + 來源」一起顯示，
+    //     使用者才能自行判斷是環境問題還是設定問題。
+    if (window.CodeBridgeSettings) {
+        window.CodeBridgeSettings.init();
+    }
+
     // 7b. 序列監視器（T3）
     //     與編譯輸出共用終端機面板，但控制項與讀取程序獨立。
     //     埠被拔除時自動關閉，所以要訂閱 board detector 的變化。
