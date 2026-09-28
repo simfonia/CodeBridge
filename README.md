@@ -6,6 +6,9 @@
 
 **CodeBridge** 是一個專為教學設計的視覺化 Arduino 程式開發環境，基於 Google Blockly 技術，讓使用者透過拖拉積木的方式產生 Arduino C++ 程式碼。
 
+> 📘 系統規格書見 [`SPEC.md`](SPEC.md)（含 `.cbg` 專案檔格式規格）；
+> 開發規範見 [`AGENTS.md`](AGENTS.md)；檔案結構見 [`FILE_STRUCTURE.md`](FILE_STRUCTURE.md)。
+
 ## 功能特色
 
 ### 雙風格積木系統
@@ -26,6 +29,11 @@
 
 ### 模組化架構
 - 支援動態載入積木模組
+
+### 專案檔（.cbg）
+- 單檔專案格式：Blockly 工作區 XML + 掛在根元素上的 CodeBridge metadata
+- **多行縮排的可讀格式**（每層兩空格），可手動編輯、適合版控與教學
+- 內建 3 個範例專案：Blink、Serial Hello、Plot Waves（序列繪圖示範）
 
 ## 技術架構
 

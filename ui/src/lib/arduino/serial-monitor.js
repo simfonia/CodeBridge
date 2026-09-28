@@ -43,6 +43,12 @@ var CodeBridgeSerialMonitor = (function() {
     /// Monitor 是否因上傳而暫停（會自動重連，非使用者主動關閉）。
     var pausedForUpload = false;
     var listeners = [];
+    /// 序列繪圖（Plotter）的資料訂閱者。
+    ///
+    /// **與 `listeners` 分開維護**：兩者的契約不同 ——
+    /// `listeners` 收的是狀態快照（給 UI 同步），`dataListeners` 收的是
+    /// 每一行原始資料。混在一起會讓 Plotter 被迫過濾狀態事件。
+    var dataListeners = [];
 
     function bridge() { return window.CodeBridgeTauri; }
     function terminal() { return window.CodeBridgeTerminalPanel; }
@@ -264,10 +270,34 @@ var CodeBridgeSerialMonitor = (function() {
         if (!Array.isArray(payload.lines)) return;
         // 多埠並存時只顯示正在監看的那個埠。
         if (connected && payload.port && payload.port !== port) return;
+        // 繪圖訂閱者**先**通知：不論終端機面板是否存在（純繪圖模式），
+        // 曲線都必須照樣更新。
+        notifyDataLines(payload.lines);
         if (!terminal()) return;
         payload.lines.forEach(function(line) {
             terminal().append(timestamp ? stamp() + ' ' + line : line, 'data');
         });
+    }
+
+    /// 通知序列繪圖訂閱者。
+    ///
+    /// 傳的是**未加時間戳的原始行**：`14:32:05.123 23.5` 對繪圖來說
+    /// 是垃圾行，前綴必須留在終端機面板那一側。
+    function notifyDataLines(lines) {
+        if (dataListeners.length === 0) return;
+        lines.forEach(function(line) {
+            dataListeners.forEach(function(listener) {
+                // 單一訂閱者拋錯不得影響其他訂閱者，也不得讓資料事件失敗 ——
+                // 繪圖是附加檢視，它壞掉不代表序列監看該跟著壞。
+                try { listener(line); } catch (error) { /* 訂閱者錯誤不得中斷資料流 */ }
+            });
+        });
+    }
+
+    /// 訂閱序列資料行（供序列繪圖使用）。
+    function onDataLine(listener) {
+        if (typeof listener !== 'function') return;
+        dataListeners.push(listener);
     }
 
     /// 更新狀態列上的位元組計數。
@@ -490,6 +520,8 @@ var CodeBridgeSerialMonitor = (function() {
         syncControls: syncControls,
         getState: getState,
         onChange: onChange,
+        /// 訂閱序列資料行（序列繪圖的唯一接點）。
+        onDataLine: onDataLine,
         handleSerialData: handleSerialData,
         handleSerialState: handleSerialState,
         handlePortsChanged: handlePortsChanged,
@@ -505,6 +537,7 @@ var CodeBridgeSerialMonitor = (function() {
             receivedBytes = 0;
             pausedForUpload = false;
             listeners = [];
+            dataListeners = [];
         }
     };
 })();

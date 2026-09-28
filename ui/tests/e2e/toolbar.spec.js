@@ -215,6 +215,20 @@ test.describe('工具列與 .cbg 專案流程', () => {
     expect(files[BLINK_PATH]).not.toContain('cbg:fqbn');
     expect(files[BLINK_PATH]).not.toContain('cbg:name');
 
+    // 2026-09-28：存檔改用 Blockly.Xml.domToPrettyText()，輸出必須是
+    // 多行縮排而非單行。單行檔對使用者等同不可讀（要手動編輯、要交作業、
+    // 要版控），而 .cbg 是本產品的唯一真實來源，值得用可讀格式落地。
+    const saved = files[BLINK_PATH];
+    const savedLines = saved.split('\n');
+    expect(savedLines.length, '存檔必須是多行格式').toBeGreaterThan(5);
+    // 根元素帶 metadata 且獨佔第一行
+    expect(savedLines[0]).toContain('cbg:format="1"');
+    // 巢狀層級必須有遞增縮排（這是「多行」不只是「有換行」的關鍵）
+    expect(saved).toMatch(/\n {2}<block /);
+    expect(saved).toMatch(/\n {4}</);
+    // 不可出現 XML 宣告
+    expect(saved).not.toContain('<?xml');
+
     const recents = await page.evaluate(() => JSON.parse(localStorage.getItem('codebridgeRecentProjects')));
     expect(recents.map((item) => item.path)).toEqual([BLINK_PATH]);
   });

@@ -1,0 +1,15 @@
+# .cbg 專案檔必須以 LF 行尾落地（SPEC.md §3.1）
+#
+# 沒有這條規則時，Windows 上的 Git 會把 LF 轉成 CRLF 再提交，
+# 讓「使用者存檔 → 產生 LF」與「git 取出 → 變 CRLF」不一致，
+# diff 全檔雜訊，且違反 .cbg 格式規格。
+*.cbg text eol=lf
+
+# 專案文件與原始碼維持各平台慣例（Windows CRLF、macOS/Linux LF）
+*.md text
+*.js text
+*.py text
+*.rs text
+*.json text
+*.html text
+*.css text

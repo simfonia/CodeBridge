@@ -52,11 +52,24 @@ var CodeBridgeProjectIO = (function() {
         if (window.CodeBridgeToolbarUI) window.CodeBridgeToolbarUI.refreshRecents();
     }
 
-    /// 序列化目前工作區（Blockly XML，不含 cbp metadata）。
+    /// 序列化目前工作區（Blockly XML，不含 cbg metadata）。
+    ///
+    /// **為什麼用 `domToPrettyText` 而非 `domToText`**（2026-09-28）：
+    /// `domToText` 會把整個工作區壓成單行，動輒 15 KB 以上且沒有任何換行。
+    /// 使用者要手動編輯 .cbg、要交作業、要 git 版控時完全無法閱讀，
+    /// 而 .cbg 正是本專案的唯一真實來源，值得用可讀的格式落地。
+    ///
+    /// Blockly 13.3.0 官方提供的 `Blockly.Xml.domToPrettyText()` 會依巢狀深度
+    /// 產生兩空格縮排的多行 XML；`Blockly.Xml.domToText()` 仍保留給
+    /// 「需要單行字串做字串比對」的場景（dirty 判斷用的 snapshot 走同一路徑，
+    /// 兩者一致即可）。
+    ///
+    /// 附帶效果：多行格式讓 `<!-- -->` 之類的問題在 diff 中一眼可見，
+    /// 也讓「根元素 metadata 屬性」不再埋在 5000 字元的單行裡。
     function serializeWorkspace() {
         var workspace = context.getWorkspace();
         var dom = Blockly.Xml.workspaceToDom(workspace);
-        return Blockly.Xml.domToText(dom);
+        return Blockly.Xml.domToPrettyText(dom);
     }
 
     /// 以 XML 文字取代整個工作區內容。

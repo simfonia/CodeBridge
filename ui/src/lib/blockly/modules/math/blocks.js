@@ -2,6 +2,26 @@
 /// 對齊 piBlockly 的 blocks/arduino.js (math 相關區段)
 /// 4 個自訂積木 + 3 個內建積木覆寫（統一使用 colour: '%{BKY_...}'）
 
+// math_single 的運算選項。
+//
+// **為什麼在這裡集中定義**：`options` 在 jsonInit 裡是靜態陣列，無法依語系切換。
+// 三角函數符號（sin／cos／tan）在數學語境中各國皆相同，因此刻意**不**走 i18n ——
+// 翻了兩次語言介面卻看到 `sin` 變成別的字串，只會讓學生以為數學定義變了。
+const SINGLE_OPTIONS = [
+  ['sqrt', 'ROOT'],
+  ['abs', 'ABS'],
+  ['-', 'NEG'],
+  ['ln', 'LN'],
+  ['log10', 'LOG10'],
+  ['e^', 'EXP'],
+  ['10^', 'POW10'],
+  // 三角函數：generator 早已支援（產出 `sin(x / 180.0 * PI)`），
+  // 但下拉清單從未暴露 —— 有程式能力卻沒有入口，等於不存在。
+  ['sin', 'SIN'],
+  ['cos', 'COS'],
+  ['tan', 'TAN']
+];
+
 // ============================================================
 // 內建積木覆寫（統一顏色）
 // ============================================================
@@ -68,15 +88,7 @@ Blockly.Blocks['math_single'] = {
         {
           "type": "field_dropdown",
           "name": "OP",
-          "options": [
-            ["sqrt", "ROOT"],
-            ["abs", "ABS"],
-            ["-", "NEG"],
-            ["ln", "LN"],
-            ["log10", "LOG10"],
-            ["e^", "EXP"],
-            ["10^", "POW10"]
-          ]
+          "options": SINGLE_OPTIONS
         },
         {
           "type": "input_value",

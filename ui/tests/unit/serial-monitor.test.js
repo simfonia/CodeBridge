@@ -190,6 +190,57 @@ describe('序列監視器前端模組', () => {
     expect(terminal.appended).toHaveLength(0);
   });
 
+  // ---------------------------------------------------------------
+  // onDataLine：序列繪圖的資料訂閱點
+  // ---------------------------------------------------------------
+
+  test('onDataLine 訂閱者會收到原始資料行（繪圖用）', async () => {
+    const { monitor } = await loadMonitor();
+    const received = [];
+    monitor.onDataLine((line) => received.push(line));
+
+    monitor.handleSerialData({ port: 'COM3', lines: ['23.5', '24.0'] });
+    expect(received).toEqual(['23.5', '24.0']);
+  });
+
+  test('onDataLine 收到的是**未加時間戳**的原始行', async () => {
+    // 繪圖要的是純數值；帶上 "14:32:05.123 " 前綴會讓每一行都變成垃圾行。
+    const { monitor } = await loadMonitor();
+    const received = [];
+    monitor.onDataLine((line) => received.push(line));
+
+    await monitor.setTimestamp(true);
+    monitor.handleSerialData({ port: 'COM3', lines: ['23.5'] });
+    expect(received).toEqual(['23.5']);
+  });
+
+  test('其他埠的資料不會通知繪圖訂閱者', async () => {
+    const { monitor } = await loadMonitor();
+    await monitor.start({ port: 'COM3', baud: 9600 });
+    const received = [];
+    monitor.onDataLine((line) => received.push(line));
+
+    monitor.handleSerialData({ port: 'COM9', lines: ['別的埠'] });
+    expect(received).toEqual([]);
+  });
+
+  test('沒有訂閱者時資料事件不會拋錯（Plotter 可缺席）', async () => {
+    const { monitor, terminal } = await loadMonitor();
+    expect(() => monitor.handleSerialData({ port: 'COM3', lines: ['x'] })).not.toThrow();
+    // 終端機面板仍要照常收到資料 —— 繪圖是附加檢視，不是取代。
+    expect(terminal.appended).toHaveLength(1);
+  });
+
+  test('_reset 會清掉資料訂閱者（避免測試間洩漏）', async () => {
+    const { monitor } = await loadMonitor();
+    const received = [];
+    monitor.onDataLine((line) => received.push(line));
+    monitor._reset();
+
+    monitor.handleSerialData({ port: 'COM3', lines: ['23.5'] });
+    expect(received).toEqual([]);
+  });
+
   test('狀態事件更新連線旗標', async () => {
     const { monitor } = await loadMonitor();
     await monitor.start({ port: 'COM3', baud: 9600 });

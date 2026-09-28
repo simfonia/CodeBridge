@@ -344,8 +344,17 @@
             <block type="text_length"></block>
         </category>
         <sep></sep>
-        <!-- 變數 -->
-        <category name="%{BKY_VARIABLES_CATEGORY}" custom="VARIABLE"></category>
+        <!-- 變數：固定 4 顆 + 建立變數按鈕（對齊 piBlockly toolbox.xml）
+             不可改回 custom="VARIABLE"：該動態分類會為每一個變數各生一對
+             variables_get / variables_set，變數一多 flyout 就被塞爆，
+             且宣告積木（global / local）永遠不會出現在 flyout 中。 -->
+        <category name="%{BKY_VARIABLES_CATEGORY}">
+            <button text="%{BKY_NEW_VARIABLE}" callbackKey="CREATE_VARIABLE"></button>
+            <block type="variables_declare_global"></block>
+            <block type="variables_declare_local"></block>
+            <block type="variables_get"></block>
+            <block type="variables_set"></block>
+        </category>
         <!-- 陣列 -->
         <category name="%{BKY_ARRAY_CATEGORY}">
             <block type="array_declare_global">
@@ -441,13 +450,40 @@
                          一個「天生灰掉」的按鈕會誤以為尚未實作。 -->
                     <button class="terminal-tool-btn serial-toggle-btn" id="btn-serial-reset" data-action="serial-reset-board" title="%{BKY_SERIAL_RESET_BOARD}">%{BKY_SERIAL_RESET_BOARD}</button>
                     <button class="terminal-tool-btn serial-toggle-btn" id="btn-serial-monitor" data-action="toggle-serial-monitor" title="%{BKY_SERIAL_START}">%{BKY_SERIAL_START}</button>
+                    <!-- 序列繪圖開關：與序列監視器共用同一條連線，開啟時右側
+                         會長出波形欄（見 #terminalBody 的左右分欄）。 -->
+                    <button class="terminal-tool-btn serial-toggle-btn" id="btn-plotter" data-action="toggle-plotter" title="%{BKY_PLOT_OPEN}">%{BKY_PLOT_OPEN}</button>
                 </div>
-                <div id="terminalContent"></div>
-                <div id="serialInputBar">
-                    <input type="text" id="serial-input" autocomplete="off"
-                           placeholder="%{BKY_SERIAL_INPUT_PLACEHOLDER}"
-                           aria-label="%{BKY_SERIAL_INPUT_LABEL}">
-                    <button class="terminal-tool-btn" id="btn-serial-send" data-action="serial-send" title="%{BKY_SERIAL_SEND}">%{BKY_SERIAL_SEND}</button>
+                <!-- ★ 分欄容器：左＝Monitor 文字，右＝Plotter 波形。
+                     刻意多包這一層：#terminalArea 已是 flex column，若直接把
+                     #plotPane 放進去會變成「標題 + 橫向雙欄 + 輸入行」錯位，
+                     輸入行會橫跨兩欄。這層把「文字區 + 輸入行」綁成左欄。 -->
+                <div id="terminalBody">
+                    <div id="terminalTextPane">
+                        <div id="terminalContent"></div>
+                        <div id="serialInputBar">
+                            <input type="text" id="serial-input" autocomplete="off"
+                                   placeholder="%{BKY_SERIAL_INPUT_PLACEHOLDER}"
+                                   aria-label="%{BKY_SERIAL_INPUT_LABEL}">
+                            <button class="terminal-tool-btn" id="btn-serial-send" data-action="serial-send" title="%{BKY_SERIAL_SEND}">%{BKY_SERIAL_SEND}</button>
+                        </div>
+                    </div>
+                    <div id="plotDivider" role="separator" aria-orientation="vertical" title="%{BKY_PLOT_RESIZE_HINT}"></div>
+                    <div id="plotPane">
+                        <div id="plotToolbar">
+                            <label class="serial-field" for="plotWindowSelect">
+                                <span>%{BKY_PLOT_WINDOW}</span>
+                                <select id="plotWindowSelect" title="%{BKY_PLOT_WINDOW}"></select>
+                            </label>
+                            <button class="terminal-tool-btn serial-toggle-btn" id="btn-plot-pause" data-action="plot-pause" title="%{BKY_PLOT_PAUSE}">%{BKY_PLOT_PAUSE}</button>
+                            <button class="terminal-tool-btn serial-toggle-btn" id="btn-plot-clear" data-action="plot-clear" title="%{BKY_PLOT_CLEAR}">%{BKY_PLOT_CLEAR}</button>
+                            <span id="plot-status" data-tone="idle"></span>
+                        </div>
+                        <div id="plotCanvasWrap">
+                            <canvas id="plotCanvas" aria-label="%{BKY_PLOT_CANVAS_LABEL}"></canvas>
+                        </div>
+                        <div id="plotLegend" aria-label="%{BKY_PLOT_LEGEND_LABEL}"></div>
+                    </div>
                 </div>
                 </div>
             </div>
@@ -667,6 +703,14 @@
 
     <!-- ====== 序列監視器（T3） ====== -->
     <script src="src/lib/arduino/serial-monitor.js"></script>
+
+    <!-- ====== 序列繪圖（T3 Phase 2） ====== -->
+    <!-- 載入順序有意義：parse → store → render → panel。
+         plot-panel 透過 window 讀取前三者，順序反了會取不到。 -->
+    <script src="src/lib/plot/plot-parse.js"></script>
+    <script src="src/lib/plot/plot-store.js"></script>
+    <script src="src/lib/plot/plot-render.js"></script>
+    <script src="src/lib/plot/plot-panel.js"></script>
 
     <!-- ====== 板子／序列埠自動偵測（T2-D） ====== -->
     <script src="src/lib/arduino/board-detector.js"></script>

@@ -1,0 +1,274 @@
+<xml xmlns:cbg="https://codebridge.app/xml" cbg:format="1" cbg:app="0.2.0" xmlns="https://developers.google.com/blockly/xml">
+  <variables>
+    <variable id="var-angle">angleValue</variable>
+    <variable id="var-squareValue">squareValue</variable>
+    <variable id="var-sine">sineValue</variable>
+    <variable id="var-noise">noiseValue</variable>
+  </variables>
+  <comment id="0R|E8~4c7-:3Ew2X)^AJ" x="190" y="-570" w="499" h="251">序列繪圖示範：方波 + 正弦波 + 隨機雜訊。每輪輸出格式為 label:value，例如 square:100, sine:50.00, noise:42，序列繪圖會解析成三條具名曲線。── 教學設計的三個刻意選擇 ── 1. 相位用看得見的變數，不用 millis()：週期若藏在 millis() 裡學生看不到；用 angle 變數就能把「每輪 +5 度、滿 360 歸零」直接對應到一個完整週期。 2. 先算波形、最後才推進相位：若算完立刻 angle = angle + 5，學生會對不上「這筆資料是第幾度」；改成「用當前角度算完三個值 → 印出 → 才推進相位」。 3. 三個值都落在 0..100：讓三條曲線疊在一起時可直接目視比較；正弦若用原生的 -1~1，會被方波壓成一條看不見的線。</comment>
+  <block type="variables_declare_global" id="demo-decl-angle" x="210" y="-170">
+    <field name="TYPE">int</field>
+    <field name="VAR" id="var-angle">angleValue</field>
+    <comment pinned="true" h="60" w="440" x="-92" y="-288">【0. 變數宣告】型別宣告區。四個變數各拖一顆，用「下一個」串成一條。注意變數不能取名 square：Arduino 的 math.h 已經定義了 double square(double)，取同名會編譯失敗，所以這裡叫 squareValue。</comment>
+    <value name="VALUE">
+      <shadow type="math_number" id="demo-decl-angle-init">
+        <field name="NUM">0</field>
+      </shadow>
+    </value>
+    <next>
+      <block type="variables_declare_global" id="demo-decl-square">
+        <field name="TYPE">int</field>
+        <field name="VAR" id="var-squareValue">squareValue</field>
+        <comment pinned="true" h="53" w="288" x="-146" y="-210">方波值（squareValue）：只有 0 或 100，用 int 即可。</comment>
+        <value name="VALUE">
+          <shadow type="math_number" id="demo-decl-square-init">
+            <field name="NUM">0</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="variables_declare_global" id="demo-decl-sine">
+            <field name="TYPE">float</field>
+            <field name="VAR" id="var-sine">sineValue</field>
+            <comment pinned="true" h="60" w="440" x="-258" y="-128">正弦值會有小數（50 + 50 * sin），必須用 float；用 int 結果會被截斷成 0。</comment>
+            <value name="VALUE">
+              <shadow type="math_number" id="demo-decl-sine-init">
+                <field name="NUM">0</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="variables_declare_global" id="demo-decl-noise">
+                <field name="TYPE">int</field>
+                <field name="VAR" id="var-noise">noiseValue</field>
+                <comment pinned="true" h="60" w="440" x="-263" y="-54">隨機雜訊：random(0, 100)。</comment>
+                <value name="VALUE">
+                  <shadow type="math_number" id="demo-decl-noise-init">
+                    <field name="NUM">0</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+  <block type="initializes_setup" id="demo-setup" x="210" y="10">
+    <comment pinned="false" h="60" w="300" x="-22" y="-111">以 9600 啟用序列埠，讓電腦可以收到資料</comment>
+    <statement name="CONTENT">
+      <block type="arduino_serial_begin" id="demo-begin">
+        <field name="BAUD">9600</field>
+      </block>
+    </statement>
+    <next>
+      <block type="initializes_loop" id="demo-loop">
+        <comment pinned="false" h="80" w="440" x="30" y="-133">每輪依序：算方波 → 算正弦 → 取隨機 → 印出 → 推進相位 → 等待 50ms</comment>
+        <statement name="CONTENT">
+          <block type="controls_if" id="demo-square-if">
+            <mutation else="1"></mutation>
+            <comment pinned="false" h="180" w="420" x="349" y="146">【1. 方波】角度在 0~180 之間為高（100），180~360 之間為低（0）。這裡刻意不接 next：Blockly 的 if/else 是兩條互斥分支，後續步驟若接在 else 底下，只有 angle 大於等於 180 的那一半才會執行，正弦、隨機、印出、推進相位會全部被綁死在 else 分支裡，畫面上會看到「半個週期完全沒有資料」。正確做法是把後續步驟接在 if 區塊的 next（外面），讓兩條分支都執行完再往下走。</comment>
+            <value name="IF0">
+              <block type="logic_compare" id="demo-square-cond">
+                <field name="OP">LT</field>
+                <value name="A">
+                  <block type="variables_get" id="demo-square-angle">
+                    <field name="VAR" id="var-angle">angleValue</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <shadow type="math_number" id="demo-square-half">
+                    <field name="NUM">180</field>
+                  </shadow>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="demo-square-high">
+                <field name="VAR" id="var-squareValue">squareValue</field>
+                <value name="VALUE">
+                  <shadow type="math_number" id="demo-square-high-num">
+                    <field name="NUM">100</field>
+                  </shadow>
+                </value>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="variables_set" id="demo-square-low">
+                <field name="VAR" id="var-squareValue">squareValue</field>
+                <value name="VALUE">
+                  <shadow type="math_number" id="demo-square-low-num">
+                    <field name="NUM">0</field>
+                  </shadow>
+                </value>
+              </block>
+            </statement>
+            <next>
+              <block type="variables_set" id="demo-sine-set">
+                <field name="VAR" id="var-sine">sineValue</field>
+                <comment pinned="false" h="60" w="420" x="190" y="-20">【2. 正弦波】sin 取 -1~1，乘 50 放大後再加 50 平移 → 0~100，與方波同個量測範圍</comment>
+                <value name="VALUE">
+                  <block type="math_arithmetic" id="demo-sine-offset">
+                    <field name="OP">ADD</field>
+                    <value name="A">
+                      <shadow type="math_number" id="demo-sine-mid">
+                        <field name="NUM">50</field>
+                      </shadow>
+                    </value>
+                    <value name="B">
+                      <block type="math_arithmetic" id="demo-sine-scale">
+                        <field name="OP">MULTIPLY</field>
+                        <value name="A">
+                          <shadow type="math_number" id="demo-sine-amp">
+                            <field name="NUM">50</field>
+                          </shadow>
+                        </value>
+                        <value name="B">
+                          <block type="math_single" id="demo-sine-sin">
+                            <field name="OP">SIN</field>
+                            <value name="NUM">
+                              <block type="variables_get" id="demo-sine-angle">
+                                <field name="VAR" id="var-angle">angleValue</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="demo-noise-set">
+                    <field name="VAR" id="var-noise">noiseValue</field>
+                    <comment pinned="false" h="60" w="360" x="190" y="-20">【3. 隨機雜訊】0~100 的隨機值，讓圖表看起來更接近真實感測器資料</comment>
+                    <value name="VALUE">
+                      <block type="math_random_int" id="demo-noise-random">
+                        <value name="MIN">
+                          <shadow type="math_number" id="demo-noise-min">
+                            <field name="NUM">0</field>
+                          </shadow>
+                        </value>
+                        <value name="MAX">
+                          <shadow type="math_number" id="demo-noise-max">
+                            <field name="NUM">100</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="arduino_serial_print" id="demo-print">
+                        <comment pinned="false" h="60" w="400" x="190" y="-20">【4. 輸出一行 label:value】用「名稱:數值」逗號分隔，序列繪圖會據此分出三條具名曲線</comment>
+                        <value name="VALUE">
+                          <block type="text_join" id="demo-join">
+                            <mutation items="5"></mutation>
+                            <value name="ADD0">
+                              <block type="text" id="demo-join-label1">
+                                <field name="TEXT">square:</field>
+                              </block>
+                            </value>
+                            <value name="ADD1">
+                              <block type="variables_get" id="demo-join-square">
+                                <field name="VAR" id="var-squareValue">squareValue</field>
+                              </block>
+                            </value>
+                            <value name="ADD2">
+                              <block type="text" id="demo-join-sep1">
+                                <field name="TEXT">, sine:</field>
+                              </block>
+                            </value>
+                            <value name="ADD3">
+                              <block type="variables_get" id="demo-join-sine">
+                                <field name="VAR" id="var-sine">sineValue</field>
+                              </block>
+                            </value>
+                            <value name="ADD4">
+                              <block type="text" id="demo-join-sep2">
+                                <field name="TEXT">, noise:</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="arduino_serial_print" id="demo-print-noise">
+                            <value name="VALUE">
+                              <block type="variables_get" id="demo-join-noise">
+                                <field name="VAR" id="var-noise">noiseValue</field>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="arduino_serial_print_newline" id="demo-newline">
+                                <next>
+                                  <block type="variables_set" id="demo-angle-step">
+                                    <field name="VAR" id="var-angle">angleValue</field>
+                                    <comment pinned="false" h="60" w="360" x="190" y="-20">【5. 推進相位】印完才推進相位：讓每一筆資料都對應一個明確的角度</comment>
+                                    <value name="VALUE">
+                                      <block type="math_arithmetic" id="demo-angle-add">
+                                        <field name="OP">ADD</field>
+                                        <value name="A">
+                                          <block type="variables_get" id="demo-angle-get">
+                                            <field name="VAR" id="var-angle">angleValue</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="math_number" id="demo-angle-step-num">
+                                            <field name="NUM">5</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="controls_if" id="demo-wrap">
+                                        <comment pinned="false" h="180" w="420" x="190" y="-20">超過 360 度就歸零 → 波形每 72 輪（360÷5）完整重複一次。等待必須接在 if 之後（next），不可放進 DO0 裡：若放進 DO0，只有 angle 大於 360 的那一輪會 delay，其餘 71 輪會無間隔地狂印序列資料，把序列埠灌爆。</comment>
+                                        <value name="IF0">
+                                          <block type="logic_compare" id="demo-wrap-cond">
+                                            <field name="OP">GT</field>
+                                            <value name="A">
+                                              <block type="variables_get" id="demo-wrap-angle">
+                                                <field name="VAR" id="var-angle">angleValue</field>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <shadow type="math_number" id="demo-wrap-max">
+                                                <field name="NUM">360</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <statement name="DO0">
+                                          <block type="variables_set" id="demo-wrap-set">
+                                            <field name="VAR" id="var-angle">angleValue</field>
+                                            <value name="VALUE">
+                                              <shadow type="math_number" id="demo-wrap-zero">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </statement>
+                                        <next>
+                                          <block type="arduino_delay" id="demo-delay">
+                                            <comment pinned="false" h="60" w="380" x="190" y="-20">【6. 等待】50ms 一輪 → 每秒約 20 筆，繪圖的預設 10 秒時間窗剛好看得到數個週期</comment>
+                                            <value name="TIME">
+                                              <shadow type="math_number" id="demo-delay-num">
+                                                <field name="NUM">50</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </next>
+  </block>
+</xml>

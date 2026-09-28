@@ -74,7 +74,17 @@ CodeBridge 透過 Arduino CLI 完成 core、library、compile、upload 與 board
 - plot data parser、ring buffer、downsampling 與 renderer 必須分離。
 
 ### 專案與編輯模式
-- 專案由 `.ino`、Blockly `.xml` 與 CodeBridge project metadata 組成。
+- 專案由 Blockly XML 與 CodeBridge project metadata 組成為單一 `.cbg` 檔；`.ino` 由積木產生，不落地。
+- **專案檔格式規格見 [`SPEC.md` §3](../../SPEC.md#3-cbg-專案檔格式)**，以下為摘要：
+  - 檔案形狀：UTF-8 無 BOM、LF 行尾、多行縮排 XML（每層兩空格），由 `Blockly.Xml.domToPrettyText()` 產生。**不可**用 `domToText()` 壓成單行。
+  - 根元素屬性順序固定為 `xmlns:cbg` → `cbg:format` → `cbg:app` → `xmlns`，且根元素必須在第一行。
+  - metadata 只有 `cbg:format`（格式版本）與 `cbg:app`（寫檔版本，純診斷用）兩欄。
+    `name`／`fqbn`／`port`／`baud`／`libraries` 已於 2026-09-28 移除：
+    檔名才是權威、第三方 clone 板偵測不到 fqbn、序列埠屬本機環境狀態（曾造成上傳 bug）。
+  - 教學說明一律寫在 Blockly 的 `<comment>`（積木註解或工作區註解）。
+    **禁止** `<?xml ?>` 宣告與 `<!-- -->` XML 註解 —— Blockly 13.3.0 載入時會靜默丟棄，
+    使用者一存檔就永久消失（`03_plot-waves.cbg` 曾因此遺失 23 行教學說明）。
+  - 內建範例必須與使用者存檔的檔案形狀完全一致，由單元測試自動驗證。
 - 視覺模式以 XML 為積木來源，產生 code 為產物。
 - C++ 編輯模式的手動修改不得在未提示下被積木覆蓋。
 - 練習模式使用隔離草稿，不修改 `.ino` 或 XML。

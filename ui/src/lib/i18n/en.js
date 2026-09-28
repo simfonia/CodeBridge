@@ -154,6 +154,20 @@ var UI_EN = {
     SERIAL_RECEIVED_BYTES: '%1 bytes this session',
     SERIAL_BYTES_HINT: 'The counter resets when you reopen the monitor, press "Restart board", or change the baud rate. Pressing the board\'s physical RESET button does NOT reset it — that only reboots the board; the serial connection stays open. To see the boot message clearly, use the terminal panel\'s Clear button first.',
     
+    // Serial Plotter (T3 Phase 2)
+    PLOT_OPEN: 'Plotter',
+    PLOT_CLOSE: 'Close plotter',
+    PLOT_PAUSE: 'Pause',
+    PLOT_RESUME: 'Resume',
+    PLOT_CLEAR: 'Clear',
+    PLOT_WINDOW: 'Window',
+    PLOT_WAITING: 'Waiting for data…',
+    PLOT_HEX_HINT: 'No plot in HEX mode — turn HEX off',
+    PLOT_PAUSED_UPLOAD: 'Paused for upload, will resume automatically',
+    PLOT_RESIZE_HINT: 'Drag to resize the two panes',
+    PLOT_CANVAS_LABEL: 'Serial data waveform chart',
+    PLOT_LEGEND_LABEL: 'Chart legend (click to show or hide a series)',
+
     // Practice Mode
     PRACTICE_ENTER: '✍️ Practice',
     PRACTICE_EXIT: '❌ Exit Practice',

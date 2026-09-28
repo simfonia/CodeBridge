@@ -102,7 +102,16 @@ function initBlockly() {
             snap: true
         }
     });
-    
+
+    // Toolbox 的「建立變數」按鈕（對齊 piBlockly main.js:924）。
+    //
+    // Blockly 原本的 `custom="VARIABLE"` 動態分類會**自動**註冊這個 callback
+    // （見 blockly.js 的 `flyoutCategory`），但改用固定 4 顆積木後按鈕改由
+    // toolbox XML 宣告，就必須自行註冊，否則點了按鈕完全沒有反應。
+    workspace.registerButtonCallback('CREATE_VARIABLE', function () {
+        Blockly.Variables.createVariableButtonHandler(workspace);
+    });
+
     return workspace;
 }
 
@@ -743,6 +752,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (typeof Blockly === 'undefined') return;
             Blockly.svgResize(Blockly.getMainWorkspace());
         });
+    }
+
+    // 7d. 序列繪圖（T3 Phase 2）
+    //     與序列監視器**共用同一條序列連線**（Windows 上 COM 埠為獨佔資源，
+    //     另開一條必然 AccessDenied）。因此它只是 Monitor 資料流的圖形檢視：
+    //     訂閱 `onDataLine` 取得每一行原文，其餘交給 plot 模組自行處理。
+    //     必須在 SerialMonitor.init 之後 —— 訂閱點掛在那個模組上。
+    if (window.CodeBridgePlotPanel) {
+        window.CodeBridgePlotPanel.init();
     }
 
     var initialState = projectStore.getState();

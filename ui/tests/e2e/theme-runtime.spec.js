@@ -416,9 +416,11 @@ test('exposes a semantic block palette manifest for every toolbox block type', a
   });
 
   expect(result.missing).toEqual([]);
-  // Variables 為 dynamic 分類，toolbox 內沒有固定 block，故 block role 不含 variables。
+  // Variables 改為固定 4 顆積木（對齊 piBlockly），故 block role 正式含 variables。
+  // 原本用 `custom="VARIABLE"` 動態分類時，toolbox 內沒有固定 block，
+  // 因此這個斷言刻意不含 'variables'。
   expect(result.roles).toEqual(
-    expect.arrayContaining(['analog', 'array', 'control', 'digital', 'functions', 'logic', 'loops', 'math', 'serial', 'structure', 'text', 'time'])
+    expect.arrayContaining(['analog', 'array', 'control', 'digital', 'functions', 'logic', 'loops', 'math', 'serial', 'structure', 'text', 'time', 'variables'])
   );
   expect(result.engineerSerial).toBe('#1d7fd8');
   expect(result.angelSerial).toBe('#38bdf8');

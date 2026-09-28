@@ -5,7 +5,9 @@
 - [目前待辦](#目前待辦)
 - [計畫文件](#計畫文件)
 - [2026-09-28](#2026-09-28)
+  - [.cbg 檔案格式規格化與多行存檔](#2026-09-28cbg-檔案格式規格化與多行存檔)
   - [修正重整後使用者回報的兩個缺陷](#2026-09-28修正重整後使用者回報的兩個缺陷)
+  - [序列繪圖（Serial Plotter）](#2026-09-28序列繪圖serial-plotter)
   - [.cbg 模式重整與上傳依賴端口重定案](#2026-09-28cbg-模式重整與上傳依賴端口重定案)
   - [序列監視器（Serial Monitor）](#2026-09-28序列監視器serial-monitor)
 - [2026-09-27](#2026-09-27)
@@ -30,6 +32,7 @@
 | 計畫 | 檔案 | 狀態 |
 |---|---|---|
 | **序列監視器（T3 Phase 1）** | [`log/plan/SerialMonitor.md`](plan/SerialMonitor.md) | **實作完成（2026-09-28）** —— 單元測試通過，待實機驗證 |
+| **序列繪圖（T3 Phase 2）** | [`log/plan/SerialPlotter.md`](plan/SerialPlotter.md) | **實作完成（2026-09-28）** —— 左右分欄，單元與 E2E 全過，待實機驗證 |
 | **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-27）** —— 預設共用已上線並實機驗證 |
 | Arduino CLI 編譯與上傳（Phase T2） | [`log/plan/ArduinoCompileUpload.md`](plan/ArduinoCompileUpload.md) | 已完成（2026-09-27） |
 | 工具列實作與 .cbg 專案 | [`log/plan/ToolbarImplementation.md`](plan/ToolbarImplementation.md) | 已完成 |
@@ -50,13 +53,15 @@
       - 2026-09-28 第一輪：修正「Monitor 一開啟就死掉」（`Err(TimedOut)` 誤判為斷線）✅
       - 2026-09-28 第二輪：修正「埠未釋放」+「baud 錯誤無反應」+「上傳暫停無提示」✅
       - **待第三輪實機驗證**
-- [ ] Serial Plotter（序列繪圖）—— 需另立計畫
+- [x] Serial Plotter（序列繪圖）：**已於 2026-09-28 完成**（左右分欄、CSV/`label:value`/TSV/布林、ring buffer、min/max 下抽樣、圖例切換、時間窗 3/10/30s、窄視窗堆疊），詳見 [序列繪圖章節](#2026-09-28序列繪圖serial-plotter)
+- [ ] Serial Plotter **實機驗證**（以真實感測器資料確認曲線與圖例正確）
 - [x] `btn-run` / `btn-stop` 已於 T2-C 上線，並在 T2-D/T2-E 補齊板子／序列埠選擇與完整上傳流程（**已於 2026-09-27 完成並實機驗證通過**）
 - [x] Phase 4 `btn-diagnose` 與設定選單擴充 → **已併入 T3 設定中心計畫**，詳見下方章節
 - [ ] `.cbg` Windows 副檔名註冊與雙擊開檔（argv 解析、NSIS/WiX 自訂腳本）
 - [ ] **打包後驗證內建範例**：`select_examples_dir()` 已處理開發與打包兩種資源佈局（包含空殼目錄陷阱），但尚未以打包版實測
 - [ ] **實機確認手動選板後的上傳**：CH340 clone 板無法自動偵測（後端認不出），必須靠 `board-detector.manualFqbn` 覆寫層
 - [ ] `APP_VERSION` 目前硬編為 `0.2.0`，應改為單一 package / Tauri version 來源（`cbg:app` 已引用此值）
+- [ ] **實機驗證 Blockly 註解 round-trip**：開啟 `03_plot-waves.cbg` → 存檔 → 確認教學註解仍在
 - [ ] 匯出 `.ino` 檔（選配；貼到 IDE 的需求已由「複製程式碼」滿足）
 - [ ] 工具列組態治理：讓 `btn-exit-practice`、`btn-cheat-close` 也經過 `data-action` 契約（目前由 practice-mode.js 自行綁定）
 - [ ] 總提供 `chevron-down` 與 `history` 圖示（下拉與最近專案圖示）
@@ -117,6 +122,292 @@
 ---
 
 # 2026-09-28
+
+## 2026-09-28：.cbg 檔案格式規格化與多行存檔
+
+### 狀態
+
+已完成。使用者回報兩項問題：（1）`03_plot-waves.cbg` 的 metadata 不符規範；
+（2）`.cbg` 存檔時擠在 1 行，要求格式化成多行易讀格式。
+
+### 已完成
+
+- [x] **診斷 `03_plot-waves.cbg` metadata 不符的具體項目**（對照 `01_blink.cbg`）：
+  1. 根元素屬性順序不同（`xmlns=` 在前 vs `serialize()` 產生的 `xmlns:cbg` 在前）
+  2. 含 `<?xml version="1.0" encoding="UTF-8"?>` 宣告
+  3. 根元素前有 23 行教學說明的 XML 註解
+  4. `<statement>`／`<next>` 之間有 8 處行內 `<!-- -->` 註解
+  5. CRLF 行尾（01/02 為無 BOM 單行）
+  6. block 註解為 `pinned="false"`（01 為 `pinned="true"`）
+- [x] **重寫 `03_plot-waves.cbg`**：改用 Blockly `<comment>` 承載全部教學說明
+  （1 個工作區註解 + 7 個積木註解），移除 XML 宣告與全部 XML 註解，
+  根元素屬性順序對齊 `serialize()` 輸出，LF 行尾，pretty 多行縮排（228 行）
+- [x] **`01_blink.cbg` / `02_serial-hello.cbg` 同步 pretty 化**（58 / 33 行）
+- [x] **存檔改用 `Blockly.Xml.domToPrettyText()`**
+  （`ui/src/lib/project/project-io.js` 的 `serializeWorkspace()`）
+- [x] **新建 `SPEC.md` 系統規格書**，`.cbg` 檔案格式為其中 §3 完整章節
+- [x] `log/plan/CodeBridgeV2.md`「專案與編輯模式」加摘要與指向 SPEC.md 的連結
+- [x] `AGENTS.md` 新增「.cbg 專案檔格式規範 (Critical)」章節 + Blockly v13 規範補一條
+- [x] `FILE_STRUCTURE.md` / `README.md` 同步更新
+- [x] **新增 `.gitattributes`**：`*.cbg text eol=lf`。
+      沒有這條規則時 Windows 上的 Git 會把 `.cbg` 的 LF 轉成 CRLF 再提交，
+      讓「使用者存檔產生 LF」與「git 取出變 CRLF」不一致，diff 全檔雜訊
+      且違反 .cbg 格式規格（Rust `project_save()` 雖會再正規化，但 repo 內的檔案本身該是對的）
+- [x] **測試**（red → green）：`project-store.test.js` 新增 `.cbg 檔案格式契約` describe 區塊，
+  含「三個內建範例皆符合規格」測試（自動掃描 examples 目錄，違規即紅燈）
+- [x] **E2E**：`toolbar.spec.js`「儲存會寫出 .cbg 內容」補多行縮排斷言
+  （行數 > 5、根元素 metadata 在第一行、有 2/4 空格遞增縮排、無 XML 宣告）
+- [x] **修正 Vite 熱更新**：`ui/vite.config.js` 的 `server.watch.ignored`
+  原本寫成否定模式 `['!**/dist/**']`（行為與註解相反，等於忽略整個 workspace），
+  改為正向模式並加入 `**/src-tauri/resources/**`：
+  `.cbg` 是 Rust bundle 資源，開發模式前端走 IPC 讀取，
+  改它們觸發整頁重載只會洗掉使用者未儲存的積木。已實測確認規則生效
+- [x] **修正變數沒有型別定義**（使用者回報範例 3 產生的 .ino 無變數宣告）：
+  - **根因一**：`scopeDefiningRootBlocks` 白名單漏了 `variables_declare_global`。
+    `main.js` 的 `updateOrphanBlocks()` 會把白名單外的根層積木標記 orphan 而**停用**，
+    停用積木不產碼 → `// Global variables` 空，且**無任何錯誤訊息**。
+    修正：`_core.js` 補上該型別（與既有的 `array_declare_global` 對稱）
+  - **根因二（使用者第二次回報：未完全對齊 piBlockly）**：原本是「每個變數各自一個
+    獨立根層積木、各自寫一個 `global_vars_` entry」，**與 piBlockly 的模型不同**。
+    piBlockly 的 `variables_declare_global` 與 `coding_raw_definition` **共用**
+    `processDefinitionStack`（`piBlockly/media/generators/_lib.js`）：
+    宣告積木以 `next` 串成連續堆疊，由堆頂一次產出整條堆疊、寫成單一 entry，
+    非堆頂積木 `return ''` 避免重複產碼。
+    修正：`_core.js` 新增 `DEFINITION_BLOCK_TYPES` / `globalVariableDefinition()` /
+    `processDefinitionStack()`，兩個模組的 generator 改為引用它
+  - **範例 3 補上四個宣告積木（堆疊式）**（原本只有 variables_get/set）。
+    `sine` 必須是 `float` —— `50 + 50 * sin()` 若宣告為 `int` 會被截斷成 0，
+    程式能跑但正弦曲線恆為 0，是最危險的靜默錯誤
+  - **根因三（使用者第三次回報：真正對齊 piBlockly）**：
+    `ui/index.html` 的 Variables 分類用 Blockly 內建的 `custom="VARIABLE"` **動態分類**，
+    它會為工作區裡**每一個變數**各生一對 `variables_get`／`variables_set`，
+    導致 ① 變數一多 flyout 被塞爆 ② **宣告積木（global／local）永遠不出現在 flyout**，
+    學生看不到「要先宣告型別」→ 產生的 .ino 沒有型別定義。
+    piBlockly（`media/toolbox.xml:301-307`）是**固定 4 顆 + 建立變數按鈕**。
+    修正：`index.html` 改為固定 4 顆 + `<button callbackKey="CREATE_VARIABLE">`；
+    `main.js` 補 `registerButtonCallback('CREATE_VARIABLE', ...)`
+    （Blockly 動態分類會自動註冊，改固定分類後必須自行註冊，否則按鈕沒反應）
+  - **測試**：`plotter.spec.js` 新增 5 項（堆疊一次產出 ×1、堆疊夾雜
+    coding_raw_definition ×1、根層不被停用、區域宣告在 loop 內、
+    示範專案四變數型別且 `sine` 為 `float`）；
+    **新增 `variables-toolbox.spec.js` 6 項**（固定分類非動態、4 顆積木與順序、
+    建立變數按鈕與 callbackKey、點擊按鈕真的建立變數、變數暴增時積木數不變、
+    4 顆皆取得 variables 語意角色）
+  - **文件**：`AGENTS.md` 新增「定義堆疊模型 (piBlockly 對齊)」「孤兒積木白名單」
+    「變數分類：固定 4 顆積木 (piBlockly 對齊)」三章節；
+    `SPEC.md` 積木契約表補「定義堆疊」「根層白名單」「變數分類」三列
+  - **相容性**：`.cbg` 的 `variables_get`／`variables_set` XML 格式
+    （`field name="VAR" id="..."`）未變，既有專案零遷移成本
+
+### 技術深挖 (Technical Deep Dive)
+
+#### 為什麼 XML 註解是危險的，而不是只是「不理想」
+
+Blockly 13.3.0 的 `domToWorkspace()` 只處理**元素節點**（`mapSupportedXmlTags`
+逐個 child 判斷 tagName），註解節點（nodeType 8）直接被跳過。
+`workspaceToDom()` 反向也不會產生註解。
+
+**結論：`<!-- ... -->` 裡的文字在載入的瞬間就消失了，只存在於原始檔案。**
+使用者開啟範例 → 編輯 → 存檔，那 23 行教學說明就從檔案裡被洗掉了，
+而且**沒有任何錯誤或警告**。對一個以教學為訴求的產品，這比壞掉更糟：
+作者以為說明會傳下去，實際上第一位使用者就把它刪了。
+
+因此規格把它列為 Critical 禁止事項，並要求教學說明一律寫在 Blockly 的 `<comment>`
+（積木註解或直接掛在 `<xml>` 下的工作區註解），那是 Blockly 真正會序列化的結構。
+
+#### 為什麼用 `domToPrettyText()` 而不是自己寫 formatter
+
+Blockly 13.3.0 官方就提供 `Blockly.Xml.domToPrettyText(dom)`，實作是
+「先 `domToText()` 展開自閉合標籤 → 以 `<` 切段逐片加兩空格縮排 →
+合併同層單行元素 → 去開頭換行」。自己寫一個只會產生**與 Blockly 輸出不同**的格式，
+而範例檔若與使用者存檔結果不一致，就會出現「範例開起來是 A，存出來是 B」的幽靈差異。
+
+驗證方式：`temp/pretty-cbg.mjs` 逐字複刻該演算法（註明出處為 minified 檔的
+對應行），用它產生三個範例檔，再由 E2E 測試證明這些檔案能被 Blockly 載入
+並產生預期的程式碼（`plotter.spec.js` 的「示範專案可由 Blockly 13.3.0 載入」
+與「示範輸出的三個標籤都能被序列繪圖解析成獨立曲線」）。
+
+#### metadata 注入對多行格式的相容性
+
+`project-store.js` 的 `findRootTag()` 用 `/<xml\b[^>]*>/` 找根標籤。
+`[^>]*` 會跨行匹配，所以多行格式不會讓它抓不到根元素；
+但 `serialize()` 是用 `text.replace(tag, injected)` 做**字串**替換，
+若根標籤文字同時出現在內文（例如某個欄位剛好存了這段字串）就會誤替換。
+目前 `domToPrettyText` 產出的根標籤必定在第一行且獨一無二，因此安全；
+新增測試「多行格式可注入 metadata，且根元素仍是第一行」把這點鎖住。
+
+### 驗證結果
+
+- `npm run test:unit`：247 項全過
+- `npx playwright test`：**156 項全過**（含新增 `variables-toolbox.spec.js` 6 項、
+  `vite-watch.spec.js` 2 項）
+- `npm run build`：成功
+
+⚠️ **本輪踩到的自我傷害**：驗證 Vite 忽略規則時，我手動把 `<!-- probe -->` 寫進
+`01_blink.cbg` 做對照，測試跑完卻忘了還原，被「內建範例格式契約」測試抓到。
+**驗證用的探測一定要寫進 `temp/` 或用可還原的方式**，
+`.cbg` 是被打包進產品的資源，不能拿來做實驗。
+
+實際產出的 `// Global variables`：
+
+```cpp
+int angle = 0;
+int square = 0;
+float sine = 0;    // 必須 float，int 會讓 sin() 結果被截斷成 0
+int noise = 0;
+```
+
+### 下次啟動方向 (Next Steps)
+
+1. 實機驗證：開啟 `03_plot-waves.cbg` → 確認四個宣告積木在畫面上未變灰（未被停用）
+2. 盤點其他模組是否也有「可擺根層但漏在白名單外」的積木型別
+   （本輪只修了 `variables_declare_global`；`scopeDefiningRootBlocks` 僅 9 項）
+
+---
+
+## 2026-09-28：序列繪圖（Serial Plotter，T3 Phase 2）
+
+### 狀態
+
+已完成。計畫：[`log/plan/SerialPlotter.md`](../plan/SerialPlotter.md)。
+
+### 已完成
+
+- [x] **四個前端模組**（`ui/src/lib/plot/`），Rust 端**零改動**
+  - `plot-parse.js`：文字行 → 資料點。支援 `label:value`、CSV、TSV、布林、負數與科學記號；垃圾行安靜忽略
+  - `plot-store.js`：ring buffer（每 series 3600 點）、時間窗切片、Y 軸自適應含 0、**min/max 對包絡**下抽樣
+  - `plot-render.js`：Canvas 2D 自繪（零新增 dependency）、DPR 縮放、斷線斷開、單點以圓點表示
+  - `plot-panel.js`：左右分欄開闔、自動撐高、rAF 合併重繪、圖例、分隔條拖曳、窄視窗堆疊
+- [x] **`serial-monitor.js` 新增 `onDataLine(listener)`**：繪圖的唯一接點，收到**未加時間戳**的原始行
+- [x] **DOM 重構**：`index.html` 新增 `#terminalBody` 分欄容器、`#plotPane`、`#plotDivider`、`#plotToolbar`、`#plotCanvas`、`#plotLegend`
+- [x] **CSS**：`style.css` 新增分欄／堆疊／圖例／canvas 樣式（沿用終端機深色系，零新增色碼）
+- [x] **按鈕契約**：`btn-plotter` / `btn-plot-pause` / `btn-plot-clear` 全部 `implemented: true`
+- [x] **i18n**：`PLOT_*` 共 12 個 key，中英對齊
+- [x] `math_single` 補上 **SIN／COS／TAN** 下拉選項（generator 早已支援但積木未暴露）
+- [x] **示範專案** `src-tauri/resources/examples/03_plot-waves.cbg`：方波 + 正弦 + 隨機雜訊
+- [x] **測試**：Vitest 244 項（新增 76 項）、Playwright 19 項（Plotter 16 + 示範專案 3）
+
+### 技術深挖 (Technical Deep Dive)
+
+**為什麼零 Rust 改動**
+
+`AppState::port_lease` 是單一持有者模型。Plotter 若在後端另開 plot session，必須複製整套租約協調、
+上傳暫停／重連、埠消失自動關閉的邏輯 —— 那是已實測穩定化的程式碼，複製只會製造兩份會漂移的邏輯。
+**Plotter 是 Monitor 資料流的圖形檢視，不是另一個裝置連線。** 因此只在前端加一個訂閱點。
+
+**為什麼需要 `#terminalBody` 這一層**
+
+`#terminalArea` 已是 `flex column`（標題／控制列在上，內容撐滿）。若直接把 `#plotPane` 放進去會變成
+「標題 + 橫向雙欄 + 輸入行」錯位，輸入行會橫跨兩欄。多包一層把「文字區 + 輸入行」綁成左欄、
+plotter 綁成右欄，語意才乾淨。`terminal-panel.js` 全用 `getElementById` 取得元素，多包一層不影響。
+
+**自動撐高必須與使用者拖曳的高度分開記錄**
+
+若直接 `setHeight(320)`，使用者拖到 500px 的高度就被改掉；反之若關閉時無條件還原，
+使用者在開繪圖期間手動調到 400px 也會被還原成 200px。兩者都讓使用者覺得「面板在跟我作對」。
+因此只有**當我們自己執行過自動撐高**時才在關閉時還原，且只還原一次（`autoRaised` 旗標）。
+
+**下抽樣用 min/max 對包絡而不是抽稀**
+
+「每 N 點取 1 點」會讓**尖峰直接消失**。對感測器資料而言峰值往往正是使用者要找的東西
+（「剛才那一下尖峰是什麼？」）。因此每個像素 bucket 拆成 min 與 max 兩點輸出，
+畫面縮小時仍能看見訊號的完整輪廓。
+
+**踩到的坑：IIFE 內的函式名稱會遮蔽全域同名變數**
+
+初版 `plot-render.js` 寫了 `function devicePixelRatio() { ... typeof devicePixelRatio ... }` ——
+函式宣告提升讓 IIFE 內的函式**遮蔽**了全域的 `devicePixelRatio`，
+`typeof devicePixelRatio` 永遠拿到函式本身而非 number，比例恆為 1。
+症狀是高 DPI 螢幕上線條糊掉，而成因極難從畫面回推。修正為 `readPixelRatio()` + `globalThis` 取值。
+
+**踩到的坑：圖例不該跟著 rAF 走**
+
+初版把圖例更新放在 `draw()` 裡（rAF 回呼），導致資料進來後圖例晚一幀才出現。
+圖例反映的是**資料結構變化**（不是像素重繪），必須同步更新；只有 canvas 重繪才需要 rAF 節流。
+
+**踩到的坑：時間戳必須留在終端機那一側**
+
+`onDataLine` 傳的是**未加時間戳**的原始行。帶上 `14:32:05.123 ` 前綴的話，
+每一行都會被 parser 當成垃圾行丟掉，圖表永遠是空的。
+
+**HEX 模式不繪圖**
+
+HEX 顯示的是位元組串（`48 65 6C`），解析沒有意義且會把圖表畫成滿版雜訊。
+因此 HEX 時跳過解析並在右欄顯示明確提示。
+
+### 示範專案（03_plot-waves.cbg）：方波 + 正弦 + 隨機
+
+Plotter 需要一個「一開啟就有東西看」的教學入口，因此新增內建範例。
+每輪輸出 `square:100, sine:50.00, noise:42` 一行，繪圖會分成三條具名曲線。
+
+**教學設計的三個刻意選擇**
+
+1. **相位用看得見的 `angle` 變數，不用 `millis()`** ——
+   「週期由相位決定」若藏在 `millis()` 裡學生看不到。
+2. **先算波形、最後才推進相位** —— 讓每一筆資料都對應一個明確的角度。
+3. **三個值都落在 0..100** —— 正弦若用原生的 -1..1 會被方波壓成一條看不見的線。
+
+#### 踩到的坑 5：generator 支援 ≠ 積木有入口
+
+組正弦波時發現 `math_single` 的下拉選項只有 sqrt／abs／ln／log10／e^／10^，**沒有 sin** ——
+但 `generators.js` 早就有 `case 'SIN'` 產出 `sin(x / 180.0 * PI)`。
+有程式能力卻沒有 UI 入口，等於功能不存在。
+
+這類「generator 有、block 沒有」的落差沒有任何編譯期錯誤，
+因此補了一條 E2E 斷言專門守住 `math_single` 的選項清單。
+
+#### 踩到的坑 6：Blockly 的 if/else 是互斥分支，後續步驟不能接在 else 裡
+
+示範第一次組出來的結構是「if/else 決定方波 → else 底下接正弦、隨機、印出、推進相位」。
+看起來很自然，實際產生的 C++ 是：
+
+```cpp
+if (angle < 180) {
+  square = 100;
+} else {
+  square = 0;
+  sine = ...;      // ← 只有 angle >= 180 的那一半會跑到
+  noise = ...;
+  Serial.print(...);
+}
+```
+
+也就是**半個週期完全沒有資料**。程式能編譯、能執行，只是圖表少了半圈。
+
+正確做法是把後續步驟接在 **if 區塊的 `next`**（兩條分支之外），
+讓兩條分支都執行完再往下走。這個缺陷是靠**整段產碼快照**抓到的 ——
+逐行 `toContain` 完全看不出「少了一個大括號」。
+
+#### 踩到的坑 7：Blockly 沒有三運算子積木
+
+原本想把方波寫成 `angle < 180 ? 100 : 0`。但 `logic_operation` 的選項只有 AND／OR，
+寫 `<field name="OP">IF</field>` 會得到兩條載入警告
+（「Cannot set the dropdown's value to an unavailable option」與
+「Ignoring non-existent input C」）。改用 `controls_if` 的 if/else 兩段式。
+
+#### 踩到的坑 8：產碼快照必須先移除 ID marker 與行尾空白
+
+Blockly 產生器會在變數名後插入 `/* // __BLOCKLY_ID:… */`，
+把 `sin(angle / 180.0 * PI)` 拆成 `sin(angle` + marker + `/ 180.0 * PI)`。
+語意相同但字串比對必失敗 —— 容易誤判成「generator 產錯了」。
+移除 marker 後還會留下多餘的行尾空白，需一併收掉再做整段比對。
+
+### 驗證結果
+
+- `npm run test:unit`：Vitest **244 passed**（13 個檔案）
+- `npx playwright test`：Plotter 專項 **16 passed**；全量 140 項通過
+- `npm run build`：成功（`dist/src/lib/plot/` 已產生）
+- `cargo test`：**257 + 7 passed**，0 failed（零回歸，Rust 未改動）
+- 備份：`backup/plotter_20260928_142048`
+
+### 下次啟動方向 (Next Steps)
+
+1. **實機驗證**：以 CH340 UNO clone 燒錄一段 `Serial.print(x, ",")` 的程式，
+   確認曲線、圖例標籤、時間窗切換與上傳暫停／續畫皆正確
+2. 確認分隔條拖曳在 4K 螢幕上的手感（左右各最小 260px）
+3. 工程／天使兩套 preset 下的繪圖區配色確認（目前沿用終端機深色系，理應無衝突）
+
+---
 
 ## 2026-09-28：.cbg 模式重整與上傳依賴端口重定案
 

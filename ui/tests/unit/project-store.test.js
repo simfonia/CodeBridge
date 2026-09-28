@@ -119,6 +119,82 @@ describe('.cbg 專案 metadata 序列化', () => {
   });
 });
 
+// .cbg 檔案格式契約（見 SPEC.md「.cbg 專案檔格式」）
+//
+// 2026-09-28：存檔改用 Blockly.Xml.domToPrettyText()，輸出由單行改為
+// 兩空格縮排的多行 XML。下列測試把「檔案長什麼樣」鎖成公開契約 ——
+// 內建範例與使用者存檔的檔案必須是同一種形狀。
+describe('.cbg 檔案格式契約', () => {
+  const PRETTY_XML = [
+    '<xml xmlns="https://developers.google.com/blockly/xml">',
+    '  <block type="initializes_setup" id="setup1" x="20" y="20">',
+    '    <statement name="CONTENT">',
+    '      <block type="arduino_delay" id="delay1">',
+    '        <value name="TIME">',
+    '          <shadow type="math_number" id="num1">',
+    '            <field name="NUM">250</field>',
+    '          </shadow>',
+    '        </value>',
+    '      </block>',
+    '    </statement>',
+    '  </block>',
+    '</xml>'
+  ].join('\n');
+
+  test('多行格式可注入 metadata，且根元素仍是第一行', async () => {
+    const project = await loadProjectModule();
+    const text = project.serialize(PRETTY_XML, {});
+    const [firstLine] = text.split('\n');
+
+    // metadata 掛在根元素上，因此根元素必須在第一行；
+    // 若注入後把根元素推到後面，說明 regex 替換到了別處。
+    expect(firstLine).toBe(
+      '<xml xmlns:cbg="https://codebridge.app/xml" cbg:format="1" '
+      + 'cbg:app="0.2.0" xmlns="https://developers.google.com/blockly/xml">'
+    );
+    // 內層縮排不應被 metadata 注入破壞
+    expect(text).toContain('    <statement name="CONTENT">');
+    expect(text.split('\n')).toHaveLength(PRETTY_XML.split('\n').length);
+  });
+
+  test('parse 可還原多行格式的 metadata，且不誤傷內文同名標籤', async () => {
+    const project = await loadProjectModule();
+    const parsed = project.parse(project.serialize(PRETTY_XML, {}));
+
+    expect(parsed.meta.format).toBe(1);
+    expect(parsed.meta.app).toBe('0.2.0');
+    // body 保留原有的多行結構（除根元素 metadata 屬性外不動）
+    expect(parsed.body).toContain('    <statement name="CONTENT">');
+    expect(parsed.body.split('\n')).toHaveLength(PRETTY_XML.split('\n').length);
+  });
+
+  test('三個內建範例皆符合規格：根元素 metadata 順序、無 XML 宣告與 XML 註解', async () => {
+    // 2026-09-28：`03_plot-waves.cbg` 原本用 `<?xml ?>` 宣告 + 根元素前的
+    // XML 註解 + 8 處行內 `<!-- -->` 註解。Blockly 的 domToWorkspace
+    // 只認元素節點，**這些註解在載入時就被丟棄**，使用者一存檔就永久消失。
+    // 教學說明必須放在 Blockly 的 <comment>，才會被序列化回去。
+    const { readFileSync, readdirSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const directory = join(process.cwd(), '..', 'src-tauri', 'resources', 'examples');
+
+    for (const file of readdirSync(directory).filter((name) => name.endsWith('.cbg'))) {
+      const text = readFileSync(join(directory, file), 'utf8');
+      const [firstLine] = text.split('\n');
+
+      expect(firstLine, `${file} 的根元素必須在第一行且帶 metadata`).toBe(
+        '<xml xmlns:cbg="https://codebridge.app/xml" cbg:format="1" '
+        + 'cbg:app="0.2.0" xmlns="https://developers.google.com/blockly/xml">'
+      );
+      expect(text, `${file} 不可含 XML 宣告（Blockly 不會產生，且存檔後會消失）`)
+        .not.toContain('<?xml');
+      expect(text, `${file} 不可含 XML 註解（載入時被丟棄，存檔後永久消失）`)
+        .not.toContain('<!--');
+      // 多行縮排：至少要有巢狀層級的縮排，而非單行
+      expect(text.split('\n').length, `${file} 應為多行縮排格式`).toBeGreaterThan(3);
+    }
+  });
+});
+
 describe('專案狀態與 dirty 判斷', () => {
   test('新建專案為未命名且非 dirty', async () => {
     const project = await loadProjectModule();

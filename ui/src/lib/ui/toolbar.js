@@ -253,6 +253,17 @@ var CodeBridgeToolbarUI = (function() {
         },
         'serial-reset-board': function() {
             return window.CodeBridgeSerialMonitor ? window.CodeBridgeSerialMonitor.resetBoard() : false;
+        },
+        // 序列繪圖（T3 Phase 2）。未載入 plot-panel 時（模組缺席）
+        // 一律回 false，不丟例外 —— 按鈕不該讓整個事件委派中斷。
+        'toggle-plotter': function() {
+            return window.CodeBridgePlotPanel ? window.CodeBridgePlotPanel.toggle() : false;
+        },
+        'plot-pause': function() {
+            return window.CodeBridgePlotPanel ? window.CodeBridgePlotPanel.togglePause() : false;
+        },
+        'plot-clear': function() {
+            return window.CodeBridgePlotPanel ? window.CodeBridgePlotPanel.clear() : false;
         }
     };
 

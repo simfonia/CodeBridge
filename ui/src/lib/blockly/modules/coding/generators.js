@@ -52,14 +52,18 @@ if (typeof Blockly.Arduino !== 'undefined') {
 
   // ============================================================
   // coding_raw_definition - 全局作用域原始程式碼
-  // 放入 global_vars_ bucket，支援 ID 標記定位
+  //
+  // 對齊 piBlockly：與 `variables_declare_global` 共用
+  // processDefinitionStack，兩者都是 C++ 的「全域宣告」，
+  // 可合法混在同一条堆疊上（int x = 0; 接 const int LED = 13;）。
+  //
+  // 這裡刻意不自行加 ID marker：整條堆疊由堆頂積木一次產出，
+  // marker 掛在堆頂才對應到「這一整段宣告」的來源積木；
+  // 逐顆加 marker 會讓 marker 數量與 global_vars_ 的 entry 結構不一致。
+  // 定位需求由堆頂積木的 marker 滿足。
   // ============================================================
-  Blockly.Arduino.forBlock['coding_raw_definition'] = function(block) {
-    var code = block.getFieldValue('CODE') || '';
-    var idMarker = ' ' + Blockly.Arduino.ID_MARKER + block.id + Blockly.Arduino.ID_MARKER_END;
-    Blockly.Arduino.global_vars_['user_definition_' + block.id] = code + idMarker;
-    return '';
-  };
+  Blockly.Arduino.forBlock['coding_raw_definition'] =
+    Blockly.Arduino.processDefinitionStack;
 
   // ============================================================
   // coding_raw_wrapper - 原始 C++ 包裹 (容器型)

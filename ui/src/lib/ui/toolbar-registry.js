@@ -37,6 +37,13 @@ var CodeBridgeToolbar = (function() {
         'toggle-serial-monitor': { id: 'btn-serial-monitor', implemented: true, handledBy: 'serial', labelKey: 'SERIAL_START' },
         'serial-reset-board': { id: 'btn-serial-reset', implemented: true, handledBy: 'serial', labelKey: 'SERIAL_RESET_BOARD' },
         'serial-send': { id: 'btn-serial-send', implemented: true, handledBy: 'serial', labelKey: 'SERIAL_SEND' },
+        // 序列繪圖（T3 Phase 2）：與序列監視器共用同一條連線，
+        // 開啟時終端機面板分成左右兩欄（左文字、右波形）。
+        // `plot-pause` / `plot-clear` 的處理者是 plot 模組而非 serial，
+        // 刻意分開標註，避免日後誤以為它們與序列連線狀態有關。
+        'toggle-plotter': { id: 'btn-plotter', implemented: true, handledBy: 'plot', labelKey: 'PLOT_OPEN' },
+        'plot-pause': { id: 'btn-plot-pause', implemented: true, handledBy: 'plot', labelKey: 'PLOT_PAUSE' },
+        'plot-clear': { id: 'btn-plot-clear', implemented: true, handledBy: 'plot', labelKey: 'PLOT_CLEAR' },
         'practice-mode': { id: 'btn-practice', implemented: true, handledBy: 'practice', labelKey: 'PRACTICE_ENTER' },
         'practice-cheat': { id: 'btn-cheat', implemented: true, handledBy: 'practice', labelKey: 'PRACTICE_CHEAT' },
 

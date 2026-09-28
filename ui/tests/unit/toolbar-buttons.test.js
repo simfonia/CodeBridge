@@ -23,6 +23,9 @@ const IMPLEMENTED_ACTIONS = [
   'new-project',
   'open-example',
   'open-project',
+  // 序列繪圖（T3 Phase 2）。'p' < 'p'，plot-* 排在 practice-* 之前。
+  'plot-clear',
+  'plot-pause',
   'practice-cheat',
   'practice-mode',
   'refresh-serial',
@@ -41,6 +44,7 @@ const IMPLEMENTED_ACTIONS = [
   // 注意：排序比較的是破折號後面的第一個字母，'s' < 't'，
   // 因此 'toggle-serial-monitor' 排在 'toggle-terminal' **之前**。
   // 此清單是 sort() 後的快照，不可依「感覺上的先後」手動重排。
+  'toggle-plotter',
   'toggle-serial-monitor',
   'toggle-terminal'
 ];

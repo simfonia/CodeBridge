@@ -480,6 +480,161 @@ body.resizing-terminal #terminalArea {
     color: #d8f0d8;
 }
 
+/* ===== 序列繪圖（T3 Phase 2） ===== */
+/*
+ * `#terminalBody` 是分欄容器：左＝Monitor 文字、右＝Plotter 波形。
+ * 顏色一律沿用終端機既有的深色系，不引入新色碼 —— 兩套 preset 的終端機
+ * 本來就各自可讀，繪圖面板跟著走就不會打架。
+ */
+#terminalBody {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    min-height: 0;
+    /* 左欄寬度：預設 50/50，分隔條拖曳時由 plot-panel.js 改寫成 px。
+       用百分比當預設值，開啟繪圖時不需要額外寫任何 style。 */
+    --plot-left-width: 50%;
+}
+
+#terminalTextPane {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#plotDivider {
+    width: 5px;
+    flex: 0 0 5px;
+    cursor: col-resize;
+    background: #3c3c3c;
+    /* 命中區域要夠大：5px 對滑鼠來說偏細，但拉太寬會吃掉左欄空間。 */
+    user-select: none;
+}
+
+#plotDivider:hover,
+#plotDivider[data-dragging="true"] {
+    background: #35c7d4;
+}
+
+#plotPane {
+    /* 預設關閉。開啟時由 plot-panel.js 設為 flex 並加上 .is-split。 */
+    display: none;
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    min-height: 0;
+    border-left: 1px solid #3c3c3c;
+}
+
+#terminalBody.is-split #terminalTextPane {
+    /* 固定 basis 讓 CSS 變數（預設 50%，拖曳後為 px）成為唯一真相來源；
+       `flex-shrink: 0` 保證拖曳值不會被瀏覽器壓回去。 */
+    flex: 0 0 var(--plot-left-width);
+    width: var(--plot-left-width);
+}
+
+#terminalBody.is-stacked {
+    /* 視窗太窄時兩欄各剩一點都不可用 → 改上下堆疊（繪圖在上）。 */
+    flex-direction: column-reverse;
+}
+
+#terminalBody.is-stacked #plotDivider {
+    display: none;
+}
+
+#terminalBody.is-stacked #plotPane {
+    flex: 0 0 50%;
+    width: 100%;
+    border-left: none;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+#terminalBody.is-stacked #terminalTextPane {
+    flex: 1 1 auto;
+    width: 100%;
+}
+
+#plotToolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+}
+
+#plotWindowSelect {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    font-size: 11px;
+    padding: 1px 4px;
+}
+
+#plotCanvasWrap {
+    flex: 1;
+    min-height: 0;
+    /* 繪圖區背景刻意比面板深一階，讓格線與曲線有對比。 */
+    background: #181818;
+}
+
+#plotCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#plotLegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    max-height: 44px;
+    overflow: auto;
+}
+
+.plot-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: #e0e0e0;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.plot-legend-swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    /* 顏色由 plot-render.js 於執行期指派（依 series 登錄順序）。 */
+    background: #888;
+}
+
+/* 隱藏的 series：色塊與文字都要變淡，不能只靠顏色消失表示。 */
+.plot-legend-item.is-off {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+#plot-status {
+    font-size: 11px;
+    color: #8a8a8a;
+    margin-left: auto;
+}
+
+#plot-status[data-tone="warn"] {
+    color: #f0d98c;
+}
+
 /* Toolbox 上方積木搜尋框（對齊 Cocoya） */
 .blocklyToolboxDiv {
     z-index: 140 !important;
@@ -1220,3 +1375,9 @@ input:checked + .slider:before {
     color: #d4d4d4;
     white-space: pre;
 }
+
+/* p */
+
+/* p2 */
+
+/* p3 */

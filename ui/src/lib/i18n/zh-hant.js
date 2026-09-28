@@ -154,7 +154,19 @@ var UI_ZH_HANT = {
     SERIAL_RECEIVED_BYTES: '本次連線已接收 %1 bytes',
     SERIAL_BYTES_HINT: '數字在「重新開啟監視器」、「重新啟動開發板」或「切換波特率」時歸零。按開發板上的實體 RESET 鍵不會歸零 —— 那只是讓板子重新開機，序列連線並未中斷。要看開機訊息，請用終端機面板的「清除」按鈕先清空畫面。',
     
-    // 練習模式
+    // 序列繪圖（T3 Phase 2）
+    PLOT_OPEN: '開啟繪圖',
+    PLOT_CLOSE: '關閉繪圖',
+    PLOT_PAUSE: '暫停',
+    PLOT_RESUME: '繼續',
+    PLOT_CLEAR: '清除',
+    PLOT_WINDOW: '時間窗',
+    PLOT_WAITING: '等待資料…',
+    PLOT_HEX_HINT: 'HEX 模式下不繪圖，請關閉 HEX',
+    PLOT_PAUSED_UPLOAD: '上傳中暫停，稍後自動續畫',
+    PLOT_RESIZE_HINT: '拖曳可調整左右欄比例',
+    PLOT_CANVAS_LABEL: '序列資料波形圖',
+    PLOT_LEGEND_LABEL: '波形圖圖例（點擊可顯示或隱藏該 series）',
     PRACTICE_ENTER: '✍️ 練習',
     PRACTICE_EXIT: '❌ 退出練習',
     PRACTICE_TITLE: '✍️ 程式碼撰寫練習',

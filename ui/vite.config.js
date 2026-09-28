@@ -47,8 +47,32 @@ export default defineConfig({
   },
   server: {
     watch: {
-      // 不要監視 dist 目錄
-      ignored: ['!**/dist/**']
+      /**
+       * 忽略不影響前端開發的檔案，避免無謂的 HMR 與整頁重載。
+       *
+       * **為什麼忽略 `**\/*.cbg`**
+       *
+       * `.cbg` 是 CodeBridge 的專案檔（Blockly 工作區 XML）。使用者按存檔時
+       * 路徑是**自己選的**，可能落在 `src-tauri/resources/examples/`、
+       * 專案根目錄或任何子目錄 —— 所以不能用「特定目錄」來過濾，
+       * 必須依副檔名判斷。
+       *
+       * 這些檔案對前端開發毫無意義：開發模式的前端走 `read_example` IPC
+       * 從 Rust 端讀內建範例，從不 fetch .cbg；而使用者自己存檔的 .cbg
+       * 只在下次開啟時才會被讀。**重載頁面換不到任何東西，
+       * 卻會把使用者尚未存檔的積木布局整個洗掉** —— 代價遠大於收益。
+       *
+       * （Rust 端的重新編譯由 Tauri CLI 自己的 watcher 負責，與 Vite 無關。）
+       */
+      ignored: [
+        '**/dist/**',
+        '**/src-tauri/target/**',
+        '**/*.cbg',
+        '**/backup/**',
+        '**/temp/**',
+        '**/log/**',
+        '**/.git/**'
+      ]
     }
   }
 });

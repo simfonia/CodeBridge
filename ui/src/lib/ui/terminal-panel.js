@@ -167,6 +167,21 @@ var CodeBridgeTerminalPanel = (function() {
         });
     }
 
+    /// 通知外部「容器高度被別人改變了」。
+    ///
+    /// 序列繪圖開啟時會自動撐高終端機面板（見 plot-panel.js），
+    /// 那不是面板自己的開闔動作，因此 `setOpen` 不會觸發這裡。
+    /// 公開成方法讓外部可以沿用同一條 svgResize 路徑，
+    /// 而不必自己去摸 Blockly。
+    function notifyWorkspaceResize() {
+        if (typeof setTimeout === 'function') {
+            // 延遲一幀：等 CSS 高度套用後再量，量到的才是實際值。
+            setTimeout(emitResize, 0);
+        } else {
+            emitResize();
+        }
+    }
+
     function setOpen(next) {
         var host = panel();
         if (!host) return;
@@ -271,6 +286,8 @@ var CodeBridgeTerminalPanel = (function() {
         getState: getState,
         onChange: onChange,
         onWorkspaceResize: onWorkspaceResize,
+        /// 通知外部容器高度被外部改變（序列繪圖自動撐高時使用）。
+        notifyWorkspaceResize: notifyWorkspaceResize,
         /// 僅供單元測試重置模組狀態（不影響 DOM）。
         _reset: function() { totalLines = 0; paused = false; open = false; userHeight = null; listeners = []; resizeListeners = []; }
     };

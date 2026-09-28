@@ -5,7 +5,9 @@
 ```
 CodeBridge/
 ├── .gitignore           # Git 忽略檔案
+├── .gitattributes       # 行尾規則（*.cbg 強制 LF，避免 Git 在 Windows 轉成 CRLF 違反 SPEC.md §3.1）
 ├── package.json         # 根目錄 npm 配置
+├── SPEC.md              # 系統規格書（產品規格權威來源，含 .cbg 檔案格式規格）
 ├── FILE_STRUCTURE.md    # 本檔案
 ├── AGENTS.md            # 專案規範
 │
@@ -111,15 +113,20 @@ CodeBridge/
 │   │       │   └── loader.js     # 模組載入器（語系選擇 + 風格切換）
 │   │       ├── tauri/           # Tauri IPC 橋接層
 │   │       │   └── bridge.js    # invoke / 選檔對話框 / 錯誤正規化 / 環境降級
-│   │       ├── project/         # .cbg 專案層（唯一真實來源為 Blockly XML）
+│   │       ├── project/         # .cbg 專案層（唯一真實來源為 Blockly XML，格式規格見 SPEC.md §3）
 │   │       │   ├── plain-code.js    # 去除 ID marker 取得可寫檔與可貼 IDE 的 plain code
-│   │       │   ├── project-store.js # .cbg metadata 序列化、dirty 狀態、最近專案與草稿
-│   │       │   └── project-io.js    # New/Open/Save/Save As/範例/複製 的流程編排
+│   │       │   ├── project-store.js # .cbg metadata 序列化（cbg:format／cbg:app）、dirty 狀態、最近專案與草稿
+│   │       │   └── project-io.js    # New/Open/Save/Save As/範例/複製 的流程編排（存檔用 domToPrettyText 多行格式）
 │   │       ├── arduino/          # Arduino CLI 工具鏈（T2）
 │   │       │   ├── compile-controller.js # 編譯／上傳狀態機、單飛、取消、診斷標記
 │   │       │   ├── board-detector.js    # 板子／序列埠自動偵測（熱插拔、偏好埠、自動切板、上傳前比對）
 │   │       │   ├── board-picker.js      # 開發板選擇面板（搜尋過濾、手動選板、錯誤降級）
-│   │       │   └── serial-monitor.js    # 序列監視器（開關、baud、HEX、時間戳、開發者輸入行、多埠過濾）
+│   │       │   └── serial-monitor.js    # 序列監視器（開關、baud、HEX、時間戳、開發者輸入行、多埠過濾、onDataLine 繪圖訂閱點）
+│   │       ├── plot/             # 序列繪圖（T3 Phase 2，與序列監視器共用同一條連線）
+│   │       │   ├── plot-parse.js    # 文字行 → 資料點（label:value / CSV / TSV / 布林 / 垃圾行忽略）
+│   │       │   ├── plot-store.js    # ring buffer、時間窗切片、Y 軸範圍、min/max 對包絡下抽樣
+│   │       │   ├── plot-render.js   # Canvas 2D 繪圖（格線、座標軸、折線、單點、斷線斷開、DPR）
+│   │       │   └── plot-panel.js    # 左右分欄開闔、自動撐高、rAF 排程、圖例、分隔條、窄視窗堆疊
 │   │       ├── ui/              # 工具列 UI 元件
 │   │       │   ├── toolbar-registry.js # 按鈕 registry（id / implemented / handledBy）
 │   │       │   ├── toolbar.js         # data-action 派發、dirty 指示、最近清單與範例
@@ -142,6 +149,8 @@ CodeBridge/
 │
 │   ├── resources/           # Tauri bundle 資源（打包時匣內的檔案）
 │   │   └── examples/        # 內建範例 .cbg，由 Rust read_dir() 掃描（檔名數字前綴＝排序，不需 manifest.json）
+│   │                        #   格式必須符合 SPEC.md §3：多行縮排、根元素 metadata 屬性在第一行、無 XML 宣告／XML 註解
+│   │                        #   01_blink / 02_serial-hello / 03_plot-waves（序列繪圖示範：方波+正弦+隨機）
 ├── libraries/           # Arduino 函式庫快取
 ├── modules/             # 積木模組快取
 ├── log/
@@ -176,9 +185,9 @@ CodeBridge/
 ## 測試與 CI
 - `ui/tests/support/`：`classic-script.js`（以 vm 載入 classic script 的單元測試幫手）與 `tauri-mock.js`（Tauri runtime 與記憶體檔案系統 stub）。
 - `ui/playwright.config.mjs`：system Edge Playwright 配置，自動啟動 Vite。
-- `ui/tests/e2e/`：Engineer／Angel theme、Blockly runtime、v12 XML migration 與 generator golden tests、工具列與 .cbg 專案流程（`toolbar.spec.js`）、編譯／上傳流程（`compile-flow.spec.js`）、工作區滾輪與終端機面板外觀（`workspace-wheel.spec.js`）。
+- `ui/tests/e2e/`：Engineer／Angel theme、Blockly runtime、v12 XML migration 與 generator golden tests、工具列與 .cbg 專案流程（`toolbar.spec.js`）、編譯／上傳流程（`compile-flow.spec.js`）、序列監視器（`serial-monitor.spec.js`）、序列繪圖分欄佈局（`plotter.spec.js`）、工作區滾輪與終端機面板外觀（`workspace-wheel.spec.js`）。
 - `ui/tests/fixtures/blockly-v12/`：可由 Blockly 13.3.0 載入的 setup/loop、controls、text、variables、array、functions 與 workspace comment fixtures。
-- `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試、plain code 去除 marker、.cbg 專案狀態與 dirty、工具列按鈕契約、編譯控制器（`compile-controller.test.js`）與終端機面板（`terminal-panel.test.js`）。
+- `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試、plain code 去除 marker、.cbg 專案狀態與 dirty、工具列按鈕契約、編譯控制器（`compile-controller.test.js`）、終端機面板（`terminal-panel.test.js`）、序列監視器（`serial-monitor.test.js`）與序列繪圖四個模組（`plot-parse` / `plot-store` / `plot-render` / `plot-panel`）。
 - `src-tauri/tests/arduino_cli_smoke.rs`：對**真實** `arduino-cli` 的端對端整合測試（找不到 CLI 時自動跳過；只呼叫不需網路的子命令）。
 - `cargo test`：Arduino CLI 模組單元測試（command builder、parser、diagnostics、encoding 寬容解碼、draft 落地、串流 runner、compile/upload pipeline）。
 - `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI。
