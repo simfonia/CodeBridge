@@ -12,7 +12,9 @@ CodeBridge 是一個 Tauri 桌面應用程式，為高中生教學設計的 Bloc
 ### 核心架構
 - **目標平台**：Tauri 2.0 桌面應用 (Windows/macOS/Linux)
 - **目標語言**：Arduino C++ (.ino)
-- **前端框架**：Svelte + TypeScript + Blockly v13.3.0 + Vite
+- **前端框架**：**Vanilla JavaScript（UMD script，無框架）** + Blockly v13.3.0 + Vite
+  - 前端沒有 Svelte，也沒有 TypeScript 編譯步驟；`ui/src/app.ts`、`ui/src/main.ts`
+    是未接線的骨架（`index.html` 只載入 `src/main.js`），不要當成實際架構
 - **後端框架**：Rust + Tauri
 
 ### .cbg 專案檔格式規範 (Critical)
@@ -245,7 +247,8 @@ CI 會自動執行 `npm test` 與 build，但**不會自動替開發者產生 TD
 - 可從 piBlockly-modules 動態載入
 
 ### 代碼風格
-- **Frontend**: TypeScript + Svelte
+- **Frontend**: Vanilla JavaScript（UMD script）。新程式碼沿用既有 `var CodeBridgeXxx = (function(){...})()` 模式，
+  並掛到 `window` 供 `index.html` 以 `<script>` 載入。不要引入框架或建置步驟。
 - **Backend**: Rust (Tauri)
 
 ### Engineer／Angel 體驗主題系統

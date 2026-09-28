@@ -387,22 +387,41 @@ body.resizing-terminal #terminalArea {
     padding: 1px 4px;
 }
 
-/* 開關鈕：與終端機工具列同語言，但寬度自適應文字。 */
+/* 開關鈕：與終端機工具列同語言，但寬度自適應文字。
+ *
+ * 顏色一律走語意 token（由 presets.css 依 preset 提供），
+ * 不可寫死色碼 —— 寫死的淺色文字在 Angel（candy-light）淺色面板上會看不見，
+ * 使用者會誤以為按鈕沒有反應。啟用樣式見 presets.css 的
+ * `.terminal-tool-btn.is-active`。
+ */
 .serial-toggle-btn {
     width: auto;
     padding: 0 10px;
     font-size: 11px;
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--cb-text, #e0e0e0);
+    border: 1px solid var(--cb-border, rgba(255, 255, 255, 0.15));
+    background: var(--cb-surface-raised, none);
 }
 
-.serial-toggle-btn[data-active="true"] {
-    background: #2d6a2d;
-    border-color: #4a9a4a;
+/* 繪圖開關（#btn-plotter）與暫停鈕（#btn-plot-pause）的啟用樣式。
+ *
+ * 這裡宣告 `.serial-toggle-btn.is-active` 而非只依賴 presets.css 的
+ * `.terminal-tool-btn.is-active`：兩者特異性相同，而 style.css 在
+ * presets.css **之前**載入，後者會覆蓋前者。放在 style.css 才是確定生效的位置。
+ * presets.css 那條則負責圖示（`img`）與其他 `.terminal-tool-btn` 的統一外觀。
+ * 顏色同樣走 token，不寫死色碼。 */
+.serial-toggle-btn.is-active {
+    background: color-mix(in srgb, var(--cb-primary, #4a9a4a) 22%, transparent);
+    border-color: var(--cb-primary, #4a9a4a);
+    box-shadow: inset 0 0 0 1px var(--cb-primary, #4a9a4a);
+    color: var(--cb-primary, #7fd77f);
 }
 
-.serial-toggle-btn[data-active="true"]:hover {
-    background: #357a35;
+.serial-toggle-btn.is-paused {
+    background: color-mix(in srgb, var(--cb-dirty-ring, #d98324) 24%, transparent);
+    border-color: var(--cb-dirty-ring, #d98324);
+    box-shadow: inset 0 0 0 1px var(--cb-dirty-ring, #d98324);
+    color: var(--cb-dirty-ring, #f0a35e);
 }
 
 /* 連線狀態燈：文字 + 顏色雙重編碼，不單靠顏色辨識（可讀性與色盲友善）。 */
@@ -1105,6 +1124,44 @@ input:checked + .slider:before {
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     min-height: 1.5em;
     transition: background-color 0.2s;
+    counter-increment: line;
+}
+
+/* 行號（2026-09-28 新增）
+ *
+ * 用 CSS counter 而非在 JS 裡插入節點，因此：
+ * - `innerHTML` 仍只含高亮後的程式碼，不會混入行號文字
+ * - 診斷標記（diag-*）與選取範圍的計算不受影響
+ * - 從 DOM 複製貼上時仍會帶上行號（預期行為：看得到行號才有對照價值）
+ * - 「複製程式碼」按鈕走 plainCode 模組，不經過 DOM，輸出不含行號
+ *
+ * 靠 `counter-reset: line`（#codeContent）+ `counter-increment`（.code-line）
+ * 配對計數，因此新增或刪除積木時行號自動重算，不需維護任何狀態。
+ * 顏色走 token，與選取／診斷高亮共存。 */
+.code-line::before {
+    content: counter(line);
+    display: inline-block;
+    /* 位數對齊：3 字元足夠應付一般專案的行數 */
+    min-width: 3ch;
+    margin-right: 12px;
+    padding-right: 8px;
+    text-align: right;
+    color: var(--cb-text-muted, #9a9a9a);
+    opacity: 0.65;
+    user-select: none;
+    -webkit-user-select: none;
+    border-right: 1px solid var(--cb-border, rgba(0, 0, 0, 0.08));
+}
+
+/* 被選取／有診斷標記的行，行號要跟著一起被強調，
+ * 否則「紅底那一行是第幾行」反而不夠醒目。 */
+.code-line.highlight-line::before,
+.code-line.diag-error::before,
+.code-line.diag-warning::before,
+.code-line.diag-note::before {
+    opacity: 1;
+    color: inherit;
+    font-weight: 600;
 }
 
 .code-line.highlight-line {

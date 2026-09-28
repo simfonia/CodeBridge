@@ -110,6 +110,9 @@ var UI_EN = {
     CLI_DIAGNOSTIC_ERROR: 'Error',
     CLI_DIAGNOSTIC_WARNING: 'Warning',
     CLI_DIAGNOSTIC_NOTE: 'Note',
+    // Summary header for diagnostics coming from the core / libraries ({0} = count)
+    CLI_DIAGNOSTIC_EXTERNAL_HEADER: '{0} more message(s) from the core or libraries (not your code)',
+
     
     // Long-running operations
     CLI_OPERATION_COMPILE: 'Compile',

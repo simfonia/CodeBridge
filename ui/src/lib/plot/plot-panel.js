@@ -286,6 +286,10 @@ var CodeBridgePlotPanel = (function() {
 
         raiseForPlot();
         syncLayout();
+        // 開關鈕的啟用樣式與文字要在這裡同步。
+        // 少了這行，按鈕不會反映「已開啟」—— 使用者看起來就是
+        // 「按了沒反應、功能也沒開」，實際上功能正常只是按鈕沒變色。
+        syncControls();
         bindControls();
         // 繪圖與監看共用同一條序列連線：使用者只想看圖時，
         // 不該還得再按一次「開啟監視器」。
@@ -348,7 +352,12 @@ var CodeBridgePlotPanel = (function() {
         paused = false;
         syncLayout();
         restoreHeightIfNeeded();
-        syncStatus();
+        // **必須是 syncControls() 而非只 syncStatus()**：
+        // syncControls 才會把 `is-active` 從開關鈕上移除。
+        // 只呼叫 syncStatus 的話，按鈕會一直停在「已開啟」的樣式 ——
+        // 這正是使用者回報「按鈕狀態沒有正常切換」的原因。
+        // （`syncControls` 內部已包含 `syncStatus`。）
+        syncControls();
         emit();
         return true;
     }
@@ -394,16 +403,30 @@ var CodeBridgePlotPanel = (function() {
 
     /// 依狀態同步控制列外觀（開關鈕、暫停鈕、視窗長度下拉）。
     function syncControls() {
+        // **用 `is-active` class 而非 `data-active` 屬性**：
+        // `presets.css` 的啟用樣式（`.terminal-tool-btn.is-active`）走語意 token
+        //（`--cb-primary`），而舊的 `[data-active="true"]` 選擇器寫死在
+        // `style.css` 裡的深綠 `#2d6a2d`。
+        //
+        // 差別在 Angel（candy-light）preset 下才看得出來：硬編碼的深綠
+        // 加上硬編碼的淺色文字（`.serial-toggle-btn { color: #e0e0e0 }`）
+        // 落在淺色面板上幾乎看不見 —— 使用者會說「按鈕狀態沒有切換」，
+        // 但 `data-active` 屬性確實有變。統一走 class 後兩個 preset 都有正確對比。
+        //
+        // 同時補 `aria-pressed`：這是 toggle button 的標準屬性，
+        // 螢幕閱讀器據此播報「已按下／未按下」，不只靠顏色表達狀態。
         var toggle = byId('btn-plotter');
         if (toggle) {
-            toggle.setAttribute('data-active', open ? 'true' : 'false');
+            toggle.classList.toggle('is-active', open);
+            toggle.setAttribute('aria-pressed', open ? 'true' : 'false');
             var label = text(open ? 'PLOT_CLOSE' : 'PLOT_OPEN', open ? '關閉繪圖' : '開啟繪圖');
             toggle.textContent = label;
             toggle.title = label;
         }
         var pauseButton = byId('btn-plot-pause');
         if (pauseButton) {
-            pauseButton.setAttribute('data-active', paused ? 'true' : 'false');
+            pauseButton.classList.toggle('is-paused', paused);
+            pauseButton.setAttribute('aria-pressed', paused ? 'true' : 'false');
             var pauseLabel = text(paused ? 'PLOT_RESUME' : 'PLOT_PAUSE', paused ? '繼續' : '暫停');
             pauseButton.textContent = pauseLabel;
             pauseButton.title = pauseLabel;
@@ -513,7 +536,10 @@ var CodeBridgePlotPanel = (function() {
             }
         }
         syncLayout();
-        syncStatus();
+        // **必須呼叫 syncControls**：按鈕的啟用 class 與文字是在這裡初始化的。
+        // 少了這行，頁面一載入時按鈕還沒被 sync 過，
+        // 狀態會停留在 HTML 的初始樣式（無 is-active）而與實際狀態脫節。
+        syncControls();
         return getState();
     }
 

@@ -235,6 +235,52 @@ var CodeBridgeCompile = (function() {
         terminal().append(line, severityKind(diagnostic.severity));
     }
 
+    /// 把診斷分成「自己草稿的」與「核心／函式庫的」兩組。
+    ///
+    /// **為什麼要分區**（2026-09-28 使用者回報）：
+    /// CodeBridge 以 `--warnings all` 編譯（教學場景要看完整訊息），
+    /// 而成功編譯時 **AVR 核心自己也會產生警告** —— 例如
+    /// `cores/arduino/new.cpp` 的 `unused parameter 'tag'`。
+    ///
+    /// 那些警告與使用者的 `.ino` 毫無關係，但原樣印出來會讓學生困惑：
+    /// 「我哪來的 new.cpp？」而且會淹掉真正屬於自己程式碼的訊息。
+    ///
+    /// **但也不該假裝它不存在** —— 真實的編譯確實有這種噪音，
+    /// 讓學習者提早知道是好的。因此合併成一行摘要，點得開看細節。
+    function splitDiagnostics(inoFileName, diagnostics) {
+        var own = [];
+        var external = [];
+        (Array.isArray(diagnostics) ? diagnostics : []).forEach(function(diagnostic) {
+            if (!diagnostic) return;
+            if (inoFileName && diagnostic.file === inoFileName) own.push(diagnostic);
+            else external.push(diagnostic);
+        });
+        return { own: own, external: external };
+    }
+
+    /// 輸出診斷到終端機：自己的直接列，外部的收成可展開的摘要。
+    function renderDiagnostics(inoFileName, diagnostics) {
+        if (!terminal()) return;
+        var groups = splitDiagnostics(inoFileName, diagnostics);
+
+        groups.own.forEach(appendDiagnostic);
+
+        if (groups.external.length > 0) {
+            var header = text('CLI_DIAGNOSTIC_EXTERNAL_HEADER', '另有 {0} 則來自核心或函式庫的訊息（與你的程式碼無關）');
+            terminal().append(
+                header.replace('{0}', String(groups.external.length)),
+                'info'
+            );
+            // 只列檔名與訊息，讓學生知道是哪個元件在講話；
+            // 完整原文仍保留在上方的編譯輸出（stderr）中。
+            groups.external.forEach(function(diagnostic) {
+                var line = '  ' + diagnostic.file + ':' + diagnostic.line + ' ' +
+                    (diagnostic.message || '');
+                terminal().append(line, 'info');
+            });
+        }
+    }
+
 
     // ---------------------------------------------------------------
     // 事件處理
@@ -339,7 +385,7 @@ var CodeBridgeCompile = (function() {
         if (!isOwnOperation(eventOperationId(payload))) return;
         lastDiagnostics = Array.isArray(payload.diagnostics) ? payload.diagnostics.slice() : [];
         applyDiagnostics(payload.inoFileName, lastDiagnostics);
-        lastDiagnostics.forEach(appendDiagnostic);
+        renderDiagnostics(payload.inoFileName, lastDiagnostics);
         // 事件順序是 operation-status → compile-diagnostics。若這裡無條件
         // setBusy(false)，會在「上傳已啟動但尚未結束」時解除 busy ——
         // 執行按鈕恢復可用、使用者以為流程結束，而 avrdude 還在燒錄。
@@ -570,6 +616,8 @@ var CodeBridgeCompile = (function() {
         resolveProjectId: resolveProjectId,
         applyDiagnostics: applyDiagnostics,
         clearDiagnosticMarks: clearDiagnosticMarks,
+        splitDiagnostics: splitDiagnostics,
+        renderDiagnostics: renderDiagnostics,
         handleOperationStatus: handleOperationStatus,
         handleCompileDiagnostics: handleCompileDiagnostics,
         /// 僅供單元測試重置模組狀態。

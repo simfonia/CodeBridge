@@ -20,8 +20,15 @@ test.beforeEach(async ({ page }) => {
   await setUiLocale(page, 'zh-hant');
 });
 
-/** 展開終端機面板（預設收合，點擊會被 Blockly 攔截）。 */
+/**
+ * 展開終端機面板（預設收合，點擊會被 Blockly 攔截）。
+ *
+ * **必須先等工作區就緒**（`CodeBridgeProject` 就位）再點：面板收合時高度為 0，
+ * 控制列上的按鈕全部疊在 `#terminal-resizer` 的座標上，此時點擊會誤觸
+ * `btn-plotter` 而開啟繪圖。等待之後元素才各自歸位。
+ */
 async function openTerminal(page) {
+  await page.waitForFunction(() => Boolean(window.CodeBridgeProject));
   await page.locator('#terminal-toggle').click();
 }
 
@@ -58,6 +65,59 @@ test('繪圖面板預設關閉，開關鈕位於序列控制列', async ({ page 
 
   await expect(page.locator('#btn-plotter')).toBeVisible();
   await expect(page.locator('#plotPane')).toBeHidden();
+});
+
+test('開關鈕的啟用狀態會隨繪圖開關切換（以 class 而非 data-active 表達）', async ({ page }) => {
+  await installTauriMock(page);
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(window.CodeBridgeProject));
+
+  // **回歸測試**：使用者回報「開啟繪圖按鈕狀態沒有正常切換，但功能正常」。
+  // 根因是樣式寫死在 `[data-active="true"]`（深綠 #2d6a2d + 淺色文字），
+  // 在 Angel 淺色 preset 下幾乎看不見。改用 `is-active` class 走語意 token。
+  //
+  // **不點擊實體按鈕、改用程式呼叫切換**：終端機面板展開有動畫，
+  // 展開瞬間按鈕仍在位移，此時 Playwright 的座標點擊可能落在別的元素上，
+  // 造成「測試自己把繪圖打開了」的競態（實測確實發生過）。
+  // 這裡驗的是**狀態對映**，不是滑鼠點擊的物理座標。
+  const readButton = () => page.evaluate(() => {
+    const button = document.getElementById('btn-plotter');
+    return {
+      isActive: button.classList.contains('is-active'),
+      pressed: button.getAttribute('aria-pressed'),
+      label: button.textContent.trim()
+    };
+  });
+  const toggle = () => page.evaluate(() => window.CodeBridgePlotPanel.toggle());
+
+  const initial = await readButton();
+  expect(initial, '初始應為關閉狀態').toMatchObject({ isActive: false, pressed: 'false' });
+
+  // 開啟 → 出現 is-active
+  await toggle();
+  expect(await readButton()).toMatchObject({ isActive: true, pressed: 'true' });
+
+  // 關閉 → is-active 必須真的移除，不能留下殘留樣式
+  await toggle();
+  expect(await readButton()).toMatchObject({ isActive: false, pressed: 'false' });
+});
+
+test('繪圖時間窗預設為 3 秒', async ({ page }) => {
+  await installTauriMock(page);
+  await page.goto('/');
+  await openTerminal(page);
+
+  // 2026-09-28 由 10 秒改為 3 秒：序列資料速率低，10 秒視窗會讓
+  // 「上一輪」與「這一輪」擠在一起，看不出波形正在變化。
+  const windowSize = await page.evaluate(() => window.CodeBridgePlotStore.DEFAULT_WINDOW);
+  expect(windowSize).toBe(200); // 3 秒 @ 60Hz
+
+  const choices = await page.evaluate(() => window.CodeBridgePlotStore.WINDOW_CHOICES);
+  expect(choices[0], '最短選項就是預設值').toBe(200);
+
+  // 開啟繪圖後下拉選單的預設選項也要跟著是 3 秒
+  await page.locator('#btn-plotter').click();
+  await expect(page.locator('#plotWindowSelect')).toHaveValue('200');
 });
 
 test('開啟繪圖後終端機分成左右兩欄，文字與波形同時可見', async ({ page }) => {
@@ -527,8 +587,8 @@ test('區域變數宣告積木會在 loop 內產生型別定義', async ({ page 
 });
 
 test('示範專案（03_plot-waves.cbg）產生的程式碼必須有四個變數的型別定義', async ({ page }) => {
-  // Red 2026-09-28：範例 3 使用了 angle/squareValue/sine/noise 四個變數，
-  // 但產出的 `// Global variables` 區段是空的，貼到 Arduino IDE 編譯不過。
+  // Red 2026-09-28：範例 3 使用了 angleValue/squareValue/sineValue/noiseValue
+  // 四個變數，但產出的 `// Global variables` 區段是空的，貼到 Arduino IDE 編譯不過。
   //
   // 注意 `squareValue` 不是 `square`：Arduino 的 math.h 定義了
   // `double square(double)`，C++ 識別字不能與已宣告的全域函式同名
@@ -554,7 +614,13 @@ test('示範專案（03_plot-waves.cbg）產生的程式碼必須有四個變數
 
   const globalSection = code.split('// Global variables')[1]?.split('void setup')[0] ?? '';
   // 四個變數都必須有型別定義，否則 .ino 無法編譯
-  ['angle', 'squareValue', 'sine', 'noise'].forEach((name) => {
+  //
+  // 名稱帶 `Value` 後綴（angleValue / sineValue / noiseValue）不只為了可讀性：
+  // 識別字必須避開 `<math.h>` 已宣告的全域函式。`square` 已被
+  // `double square(double)` 佔用，取同名會得到
+  // "'int square' redeclared as different kind of symbol"。
+  // 序列輸出的 label（`"square:"`）是字串常數，與此無關。
+  ['angleValue', 'squareValue', 'sineValue', 'noiseValue'].forEach((name) => {
     expect(globalSection, `${name} 缺少全域型別定義`).toMatch(
       new RegExp(`(int|float|double|String|bool)\\s+${name}\\s*=`)
     );
@@ -563,9 +629,10 @@ test('示範專案（03_plot-waves.cbg）產生的程式碼必須有四個變數
   // 序列繪圖的 label 欄位是字串常數（`"square:"`），不在此限。
   expect(globalSection, '不可宣告名為 square 的變數（與 math.h 衝突）')
     .not.toMatch(/\bint\s+square\b/);
-  // sine 必須是 float：50 + 50 * sin(...) 會產生小數，
+  // sineValue 必須是 float：50 + 50 * sin(...) 會產生小數，
   // 若宣告成 int，Serial.print 永遠只會印出 0（整數截斷），曲線會是一條死掉的直線。
-  expect(globalSection, 'sine 必須是 float，否則小數被截斷成 0').toMatch(/float\s+sine\s*=/);
+  expect(globalSection, 'sineValue 必須是 float，否則小數被截斷成 0')
+    .toMatch(/float\s+sineValue\s*=/);
 });
 
 // ============================================================
@@ -615,26 +682,27 @@ test('示範專案可由 Blockly 13.3.0 載入並產生可編譯的程式碼', a
   const code = removeIdMarkers(result.code);
 
   // `sin()` 必須轉成弧度 —— 積木的語意是「輸入角度」，
-  // 直接產出 `sin(angle)` 會得到週期被放大 360×2π 倍的錯誤波形。
-  expect(code).toContain('sin(angle / 180.0 * PI)');
+  // 直接產出 `sin(angleValue)` 會得到週期被放大 360×2π 倍的錯誤波形。
+  expect(code).toContain('sin(angleValue / 180.0 * PI)');
   // 方波以 if/else 兩段式表達（Blockly 沒有三運算子積木）。
-  expect(code).toContain('if (angle < 180)');
+  expect(code).toContain('if (angleValue < 180)');
   expect(code).toContain('squareValue = 100;');
   expect(code).toContain('squareValue = 0;');
   // 正弦平移放大後的完整算式。
-  expect(code).toContain('sine = (50 + 50 * sin(angle / 180.0 * PI));');
+  expect(code).toContain('sineValue = (50 + 50 * sin(angleValue / 180.0 * PI));');
   expect(code).toContain('random(0, 100)');
   expect(code).toContain('Serial.begin(9600)');
+  // label 是字串常數（`"square:"`），與 `squareValue` 的識別字命名無關。
   expect(code).toContain('Serial.print((String("square:")');
   expect(code).toContain('String(squareValue)');
   expect(code).toContain('String(", sine:")');
   expect(code).toContain('String(", noise:")');
   expect(code).toContain('Serial.println();');
   // 相位歸零條件。
-  expect(code).toContain('if (angle > 360)');
-  expect(code).toContain('angle = 0;');
+  expect(code).toContain('if (angleValue > 360)');
+  expect(code).toContain('angleValue = 0;');
 
-  // `delay(50)` 必須在 `if (angle > 360)` **之外**。
+  // `delay(50)` 必須在 `if (angleValue > 360)` **之外**。
   //
   // 這是本測試抓到的真實缺陷：若 delay 被接在 if 的 DO0 底下，
   // 只有「角度超過 360」的那一輪（每 72 輪一次）會等待，
@@ -643,7 +711,7 @@ test('示範專案可由 Blockly 13.3.0 載入並產生可編譯的程式碼', a
   //
   // 以「取大括號區段」判定，而非比對縮排或整段字串：
   // 縮排是排版細節，改個 formatter 就會讓斷言無故失敗。
-  const wrapIndex = code.indexOf('if (angle > 360)');
+  const wrapIndex = code.indexOf('if (angleValue > 360)');
   const wrapBraceStart = code.indexOf('{', wrapIndex);
   const delayIndex = code.indexOf('delay(50)');
   expect(wrapIndex).toBeGreaterThan(-1);
@@ -657,22 +725,26 @@ test('示範專案可由 Blockly 13.3.0 載入並產生可編譯的程式碼', a
   // 因此以整段比對鎖住，而不是逐行 `toContain`（後者會漏掉「多出來的陳述式」）。
   //
   // 這條快照抓到過一個真實缺陷：後續步驟原本接在 `else` 分支底下，
-  // 導致 `angle < 180` 的那一半完全不會更新資料 —— 圖表會出現「半個週期空白」。
+  // 導致 `angleValue < 180` 的那一半完全不會更新資料 —— 圖表會出現「半個週期空白」。
+  //
+  // 快照裡的 `Serial.print` 是**兩行**：`text_join` 積木只涵蓋三個欄位，
+  // `noiseValue` 由後續的 `Serial.print(noiseValue)` 補印 —— 兩行合起來
+  // 才是完整的一筆資料。若誤以為是單行，會錯刪掉最後一個欄位。
   const loopBody = code.slice(code.indexOf('void loop()')).trimEnd();
   expect(loopBody).toBe(`void loop() {
-  if (angle < 180) {
+  if (angleValue < 180) {
     squareValue = 100;
   } else {
     squareValue = 0;
   }
-  sine = (50 + 50 * sin(angle / 180.0 * PI));
-  noise = random(0, 100);
-  Serial.print((String("square:") + String(squareValue) + String(", sine:") + String(sine) + String(", noise:")));
-  Serial.print(noise);
+  sineValue = (50 + 50 * sin(angleValue / 180.0 * PI));
+  noiseValue = random(0, 100);
+  Serial.print((String("square:") + String(squareValue) + String(", sine:") + String(sineValue) + String(", noise:")));
+  Serial.print(noiseValue);
   Serial.println();
-  angle = (angle + 5);
-  if (angle > 360) {
-    angle = 0;
+  angleValue = (angleValue + 5);
+  if (angleValue > 360) {
+    angleValue = 0;
   }
   delay(50);
 }`);

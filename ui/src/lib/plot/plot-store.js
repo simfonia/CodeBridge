@@ -24,8 +24,13 @@ var CodeBridgePlotStore = (function() {
     /// 每個 series 的預設容量（≈10 秒 @60Hz）。
     var DEFAULT_MAX_POINTS = 3600;
 
-    /// 預設時間窗長度。
-    var DEFAULT_WINDOW = 600;
+    /// 預設時間窗長度（3 秒 @ 60Hz）。
+    ///
+    /// 2026-09-28 由 600（10 秒）改為 200（3 秒）：
+    /// 序列繪圖的資料速率通常只有每秒數筆到數十筆，10 秒視窗會讓
+    /// 「上一輪」與「這一輪」擠在一起，看不出波形正在變化。
+    /// 3 秒對齊 `WINDOW_CHOICES` 的最短選項，學習者一開啟就看到有意義的波形。
+    var DEFAULT_WINDOW = 200;
 
     /// 可選的時間窗長度（3 / 10 / 30 秒 @60Hz）。
     var WINDOW_CHOICES = [200, 600, 1800];

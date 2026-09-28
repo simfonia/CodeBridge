@@ -110,6 +110,8 @@ var UI_ZH_HANT = {
     CLI_DIAGNOSTIC_ERROR: '錯誤',
     CLI_DIAGNOSTIC_WARNING: '警告',
     CLI_DIAGNOSTIC_NOTE: '提示',
+    // 核心／函式庫診斷的摘要標題（{0} 為筆數）
+    CLI_DIAGNOSTIC_EXTERNAL_HEADER: '另有 {0} 則來自核心或函式庫的訊息（與你的程式碼無關）',
     
     // 長作業
     CLI_OPERATION_COMPILE: '編譯',

@@ -1,6 +1,13 @@
 /// CodeBridge Arduino 模組 - 積木定義
 /// 影子積木 + 結構 + I/O + 時間 + 序列通訊
 
+/// `arduino_serial_begin` 的預設鮑率。
+///
+/// 9600 是初學者最常用的設定，Arduino IDE 的預設值也是它。
+/// 獨立在模組層宣告，讓 serial-monitor 的 baud 清單與此保持一致
+/// （見 `ui/tests/e2e/serial-monitor.spec.js`「波特率選項與積木的 BAUD 清單一致」）。
+var DEFAULT_BAUD = '9600';
+
 // ============================================================
 // 影子積木 - 腳位輸入
 // ============================================================
@@ -307,6 +314,15 @@ Blockly.Blocks['arduino_serial_begin'] = {
                 {
                     type: 'field_dropdown',
                     name: 'BAUD',
+                    // **清單維持遞增**（便於掃描與記憶），但預設值是 9600。
+                    //
+                    // Blockly 的 field_dropdown 一律選第一個 option，所以「改預設」
+                    // 與「維持遞增」是衝突的。解法是保持 options 原本不動，
+                    // 在 jsonInit 之後用 setFieldValue 指定預設值 ——
+                    // 這樣既不改變清單順序（下拉選單仍由小到大），
+                    // 也不會讓「預設」綁死在清單的第一項。
+                    //
+                    // 9600 是最常見的初學者設定，Arduino IDE 預設值也是它。
                     options: [
                         ['%{BKY_ARDUINO_SERIAL_BAUD_300}', '300'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_1200}', '1200'],
@@ -327,6 +343,7 @@ Blockly.Blocks['arduino_serial_begin'] = {
             tooltip: '%{BKY_ARDUINO_SERIAL_BEGIN_TOOLTIP}',
             helpUrl: ''
         });
+        this.setFieldValue(DEFAULT_BAUD, 'BAUD');
         this.setColour(CodeBridgeBlockPalette.getColourForRole('serial'));
     }
 };

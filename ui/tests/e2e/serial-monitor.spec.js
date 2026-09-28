@@ -15,6 +15,93 @@ test.beforeEach(async ({ page }) => {
 });
 
 /**
+ * `arduino_serial_begin` 積木的鮑率欄位（2026-09-28 使用者回報修正）。
+ *
+ * 使用者要求：**預設值改成 9600，但下拉清單順序維持遞增不動**。
+ *
+ * 這兩件事在 Blockly 裡是衝突的 —— `field_dropdown` 一律選第一個 option。
+ * 常見的錯誤解法是把 9600 搬到清單第一項，代價是清單順序被打亂
+ * （9600, 300, 1200...），使用者往下拉時順序是亂的。
+ * 正確解法是保留 options 原序、在 `jsonInit` 之後 `setFieldValue`。
+ *
+ * 所以這裡要同時斷言兩件事，缺一不可。
+ */
+test('Serial.begin 預設鮑率為 9600，且下拉清單維持遞增順序', async ({ page }) => {
+  await installTauriMock(page);
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(window.Blockly?.getMainWorkspace?.()));
+
+  const result = await page.evaluate(() => {
+    const workspace = window.Blockly.getMainWorkspace();
+    const block = workspace.newBlock('arduino_serial_begin');
+    const value = block.getFieldValue('BAUD');
+    // 下拉清單的實際順序（Blockly 由 options 陣列建構）
+    const options = block.getField('BAUD').getOptions().map((o) => o[1]);
+    block.dispose();
+    return { value, options };
+  });
+
+  expect(result.value, '預設鮑率').toBe('9600');
+
+  // 清單必須是嚴格遞增，且 9600 在其中
+  const numeric = result.options.map(Number);
+  expect(numeric, '清單保持遞增順序，未因改預設而重排').toEqual(
+    [...numeric].sort((a, b) => a - b)
+  );
+  expect(result.options).toContain('9600');
+  expect(result.options[0], '9600 沒有被搬到第一項').not.toBe('9600');
+});
+
+/**
+ * 程式碼預覽面板的行號（2026-09-28 新增）。
+ *
+ * 行號用 CSS counter 實作（`#codeContent` 的 `counter-reset` 配對
+ * `.code-line` 的 `counter-increment`），行號是 `::before` pseudo-element。
+ *
+ * **斷言方式的重要陷阱**：`getComputedStyle(el, '::before').content`
+ * 回傳的是**未解析的 `counter(line)`**，不是算出來的數字 ——
+ * 瀏覽器不會把 counter 展開成具體數值。所以不能斷言「content 包含 1」。
+ *
+ * 這裡分兩件事驗：
+ * 1. `content` 是 `counter(line)`（而非 `none`）→ 證明行號樣式有套用；
+ *    計數本身由 CSS 語意保證，不在測試裡重算。
+ * 2. 行號**不在 DOM 文字裡** → 這是選用 counter 而非插入節點的關鍵好處，
+ *    「複製程式碼」不會混入行號數字。
+ */
+test('程式碼預覽面板每行都有行號，且行號不混入程式碼文字', async ({ page }) => {
+  await installTauriMock(page);
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(window.CodeBridgeProject));
+
+  const lines = await page.evaluate(() => {
+    const rows = Array.from(document.querySelectorAll('#codeContent .code-line'));
+    return rows.slice(0, 5).map((row, i) => {
+      const style = getComputedStyle(row, '::before');
+      return {
+        index: row.getAttribute('data-line-index'),
+        content: style.content,
+        display: style.display,
+        width: style.width,
+        text: row.textContent
+      };
+    });
+  });
+
+  expect(lines.length, '預覽面板要有渲染出程式碼行').toBeGreaterThan(0);
+
+  lines.forEach((row, i) => {
+    expect(row.index, `第 ${i} 行的 data-line-index`).toBe(String(i));
+    // 證明 ::before 真的產生了行號（content 非 none）
+    expect(row.content, `第 ${i} 行要有行號 pseudo-element`).not.toBe('none');
+    expect(row.content).toBe('counter(line)');
+    // 行號不在文字內容裡，所以程式碼文字不會混入行號數字
+    expect(row.text, `第 ${i} 行的文字不得混入行號`).not.toMatch(
+      new RegExp(`^\\s*${i + 1}\\s`)
+    );
+  });
+});
+
+/**
  * 展開終端機面板。
  *
  * **必須展開**：面板預設收合，收合時位於 Blockly 工作區之下，

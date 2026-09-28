@@ -139,8 +139,8 @@ CodeBridge/
 │   │       ├── i18n/             # UI 翻譯（獨立於積木訊息）
 │   │       │   ├── zh-hant.js    # 正體中文 UI 文字（TLB_xxx, MSG_xxx, PRACTICE_xxx）
 │   │       │   └── en.js         # 英文 UI 文字
-│   │       ├── components/       # Svelte 元件
-│   │       ├── stores/           # 狀態管理
+│   │       ├── components/       # 空目錄（早期 Svelte 骨架的殘留，無檔案）
+│   │       ├── stores/           # 空目錄（同上）
 │   │       └── modules/          # 積木模組管理
 │   │           └── core_manifest.json # 模組載入清單
 │   └── public/
@@ -174,7 +174,8 @@ CodeBridge/
 ```
 
 ## 核心技術
-- **前端**：Svelte + TypeScript + Blockly v13.3.0 + Vite
+- **前端**：**Vanilla JavaScript（UMD script，無框架）** + Blockly v13.3.0 + Vite。
+  沒有 Svelte 與 TypeScript 建置步驟；`ui/src/app.ts`、`ui/src/main.ts` 是未接線的骨架
 - **後端**：Rust + Tauri 2.0
 - **Arduino 整合**：Arduino CLI 採 **B 方案（外部依賴 + 引導安裝）**，不內嵌打包 GPL-3.0 執行檔；CodeBridge 負責 core、library、board discovery、compile 與 upload，並以 `--config-dir` 將資料隔離於 `<app_data>/arduino`
 - **模組責任**：CodeBridge 提供 C++、Coding 與 Arduino 基礎核心積木；新的 `codebridge-modules` repository 提供硬體、感測器、致動器、第三方 library 與教學模組

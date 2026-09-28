@@ -228,6 +228,64 @@ test.describe('編譯／上傳流程', () => {
     await expect.poll(() => page.evaluate(() => window.CodeBridgeCompile.isBusy())).toBe(false);
   });
 
+  // ============================================================
+  // 核心／函式庫診斷分流（2026-09-28）
+  // ============================================================
+
+  test('終端機把使用者草稿的診斷與核心／函式庫的診斷分開呈現', async ({ page }) => {
+    await openReadyProject(page);
+
+    // 直接驗證分流函式 —— 這是本次修正的核心契約。
+    const groups = await page.evaluate(() => window.CodeBridgeCompile.splitDiagnostics('Blink.ino', [
+      { file: 'Blink.ino', line: 10, severity: 'error', message: 'expected ;' },
+      { file: '/cores/arduino/new.cpp', line: 42, severity: 'warning', message: "unused parameter 'tag'" },
+      { file: '/libraries/Wire/src/Wire.cpp', line: 7, severity: 'warning', message: 'lib warning' }
+    ]));
+
+    expect(groups.own, '使用者草稿的診斷要獨立成組').toHaveLength(1);
+    expect(groups.own[0].message).toBe('expected ;');
+    expect(groups.external, '核心與函式庫的診斷要另一組').toHaveLength(2);
+    expect(groups.external.map((d) => d.file)).toEqual([
+      '/cores/arduino/new.cpp',
+      '/libraries/Wire/src/Wire.cpp'
+    ]);
+  });
+
+  test('核心警告以摘要呈現，且不再冒充使用者錯誤', async ({ page }) => {
+    await openReadyProject(page);
+
+    await page.evaluate(() => {
+      // 模擬真實情境：編譯成功，只有 AVR 核心自己的 unused parameter 警告。
+      window.CodeBridgeCompile.renderDiagnostics('Blink.ino', [
+        { file: '/cores/arduino/new.cpp', line: 42, column: 25, severity: 'warning',
+          message: "unused parameter 'tag' [-Wunused-parameter]" }
+      ]);
+    });
+
+    const output = await page.locator('#terminalContent').innerText();
+
+    // 摘要標題必須出現，讓使用者知道「這些不是你的錯」
+    expect(output).toContain('來自核心或函式庫的訊息');
+    // 但也不能把原文藏起來 —— 學習者該知道工具鏈確實有噪音
+    expect(output).toContain("unused parameter 'tag'");
+  });
+
+  test('使用者 .ino 的診斷仍原樣輸出，不被併進核心摘要', async ({ page }) => {
+    await openReadyProject(page);
+
+    await page.evaluate(() => {
+      window.CodeBridgeCompile.renderDiagnostics('Blink.ino', [
+        { file: 'Blink.ino', line: 3, column: 5, severity: 'error', message: "expected ';' before '}'" }
+      ]);
+    });
+
+    const output = await page.locator('#terminalContent').innerText();
+    expect(output).toContain("Blink.ino:3:5");
+    expect(output).toContain("expected ';' before '}'");
+    // 只有自己的診斷時不該出現核心摘要
+    expect(output).not.toContain('來自核心或函式庫的訊息');
+  });
+
   test('清除診斷標記會移除所有 severity 的樣式', async ({ page }) => {
     await openReadyProject(page);
     await page.locator('#btn-run').click();

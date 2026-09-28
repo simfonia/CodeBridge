@@ -190,13 +190,16 @@ describe('序列繪圖：資料儲存（ring buffer）', () => {
   });
 
   test('setWindow 記憶視窗長度，無效值退回預設', async () => {
-    const { createStore } = await loadStore();
+    const { createStore, DEFAULT_WINDOW } = await loadStore();
     const store = createStore();
     store.setWindow(1800);
     expect(store.getState().windowSize).toBe(1800);
     // 不可讓視窗變成 NaN。
     store.setWindow(0);
-    expect(store.getState().windowSize).toBe(600);
+    // 用常數斷言而非寫死數字，日後調預設值時這條測試不必跟著改。
+    // （2026-09-28 預設由 600（10 秒）改為 200（3 秒）。）
+    expect(store.getState().windowSize).toBe(DEFAULT_WINDOW);
+    expect(DEFAULT_WINDOW, '預設時間窗對應 3 秒 @ 60Hz').toBe(200);
   });
 
   test('push 忽略 NaN 與非有限值（不可污染 ring buffer）', async () => {
