@@ -151,7 +151,9 @@ var CodeBridgeToolbarUI = (function() {
             row.className = 'dropdown-item';
             row.setAttribute('data-action', 'load-example');
             row.setAttribute('data-index', String(index));
-            row.textContent = example.title || example.name || example.file;
+            // `name` 由 Rust 端 display_name 剝掉排序前綴後提供；
+            // `title` 相容舊 manifest 資料。
+            row.textContent = example.name || example.title || example.file;
             list.appendChild(row);
         });
     }
@@ -238,7 +240,20 @@ var CodeBridgeToolbarUI = (function() {
         'toggle-terminal': function() { return terminal().toggle(); },
         'terminal-pause': function() { return terminal().togglePaused(); },
         'terminal-clear': function() { return terminal().clear(); },
-        'terminal-close': function() { return terminal().close(); }
+        'terminal-close': function() { return terminal().close(); },
+        // 序列監視器：開關與送出。控制列本身（baud／HEX／時間戳）
+        // 由 serial-monitor.js 直接綁定，因為它們是該模組自己的狀態。
+        'toggle-serial-monitor': function() {
+            return window.CodeBridgeTerminalPanel && window.CodeBridgeSerialMonitor
+                ? window.CodeBridgeSerialMonitor.toggle()
+                : false;
+        },
+        'serial-send': function() {
+            return window.CodeBridgeSerialMonitor ? window.CodeBridgeSerialMonitor.submitInput() : false;
+        },
+        'serial-reset-board': function() {
+            return window.CodeBridgeSerialMonitor ? window.CodeBridgeSerialMonitor.resetBoard() : false;
+        }
     };
 
     function onClick(event) {

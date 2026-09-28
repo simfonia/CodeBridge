@@ -140,6 +140,21 @@ async function loadController(setup) {
   const toast = { shown: [], showKey(key, options) { toast.shown.push({ key, options }); } };
   sandbox.window.CodeBridgeToast = toast;
   controller.init({ store, getCode: () => setup.code || '' });
+  // 序列埠／開發板的假下拉：2026-09-28 起，上傳以「使用者眼前的選擇」為準，
+  // 不再讀可能過期的專案 metadata。
+  //
+  // 預設沿用 store 的 meta，讓既有測試的語意不變；需要驗證「下拉優先於 meta」
+  // 的測試則透過 `setup.detector` 明確指定。
+  const state0 = setup.state || { path: '', name: 'Blink', meta: {} };
+  const meta0 = state0.meta || {};
+  sandbox.window.CodeBridgeBoardDetector = setup.detector || {
+    getState: () => ({
+      port: meta0.port || '',
+      fqbn: meta0.fqbn || '',
+      metaFqbn: meta0.fqbn || ''
+    }),
+    verifyBoardForUpload: () => Promise.resolve(true)
+  };
   return { controller, bridge, terminal, store, toast };
 }
 
@@ -228,6 +243,48 @@ describe('編譯控制器', () => {
       .map((entry) => entry.fallback)
       .join('\n');
     expect(messages).toContain('開發板');
+  });
+
+  test('上傳以序列埠下拉的當前值為準，不讀專案 metadata', async () => {
+    // 2026-09-28 決策（修正「UI 顯示 COM4 但上傳報尚未選擇序列埠」）：
+    // 序列埠是**使用者身邊的硬體狀態**，不是專案內容。metadata 可能過期
+    // （啟動快照、下拉已換埠），而下拉是使用者眼前的真相 —— 燒到他看到的埠。
+    //
+    // 這裡刻意讓下拉（COM7）與 metadata（COM3）不同，驗證程式碼以前者為準。
+    const loaded = await loadController({
+      state: { path: '', name: 'Blink', meta: { port: 'COM3' } },
+      code: 'void setup() {}\nvoid loop() {}',
+      plainCode: { strip: (code) => code },
+      bridge: { responses: { compile_start: 'op-compile', upload_ready: true, upload_start: 'op-upload' } },
+      detector: { getState: () => ({ port: 'COM7', fqbn: 'arduino:avr:uno', metaFqbn: '' }) }
+    });
+    await loaded.controller.run();
+    loaded.bridge.listeners['codebridge://operation-status']({
+      operationId: 'op-compile', kind: 'compile', state: 'succeeded', lines: []
+    });
+    await flush();
+
+    const upload = loaded.bridge.calls.find((call) => call.command === 'upload_start');
+    expect(upload.args.payload.port).toBe('COM7');
+  });
+
+  test('沒有序列埠時不送出 upload_start 並回報', async () => {
+    // 下拉空 + metadata 也空 → 明確回報，不送出必然失敗的請求。
+    const loaded = await loadController({
+      state: { path: '', name: 'Blink', meta: {} },
+      code: 'void setup() {}\nvoid loop() {}',
+      plainCode: { strip: (code) => code },
+      bridge: { responses: { compile_start: 'op-compile', upload_ready: true } },
+      detector: { getState: () => ({ port: '', fqbn: 'arduino:avr:uno', metaFqbn: '' }) }
+    });
+    await loaded.controller.run();
+    loaded.bridge.listeners['codebridge://operation-status']({
+      operationId: 'op-compile', kind: 'compile', state: 'succeeded', lines: []
+    });
+    await flush();
+
+    expect(loaded.bridge.calls.filter((c) => c.command === 'upload_start')).toHaveLength(0);
+    expect(loaded.toast.shown.map((t) => t.key)).toContain('CLI_ERROR_NO_PORT');
   });
 
   test('compile_start 與 upload_start 都以 { payload } 包裝送出', async () => {

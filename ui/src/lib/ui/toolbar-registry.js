@@ -31,6 +31,12 @@ var CodeBridgeToolbar = (function() {
         'terminal-pause': { id: 'btn-pause-terminal', implemented: true, handledBy: 'terminal', labelKey: 'TLB_PAUSE_SCROLL' },
         'terminal-clear': { id: 'btn-clear-terminal', implemented: true, handledBy: 'terminal', labelKey: 'TLB_CLEAR_CONSOLE' },
         'terminal-close': { id: 'btn-close-terminal', implemented: true, handledBy: 'terminal', labelKey: 'TLB_CLOSE_PANEL' },
+        // 序列監視器（T3）：與終端機共用面板，但處理者是 serial-monitor 模組。
+        // 波特率／HEX／時間戳三個控制項刻意**不進 registry** —— 它們不是
+        // data-action 派送的按鈕，而是由 serial-monitor.js 直接綁定的表單元件。
+        'toggle-serial-monitor': { id: 'btn-serial-monitor', implemented: true, handledBy: 'serial', labelKey: 'SERIAL_START' },
+        'serial-reset-board': { id: 'btn-serial-reset', implemented: true, handledBy: 'serial', labelKey: 'SERIAL_RESET_BOARD' },
+        'serial-send': { id: 'btn-serial-send', implemented: true, handledBy: 'serial', labelKey: 'SERIAL_SEND' },
         'practice-mode': { id: 'btn-practice', implemented: true, handledBy: 'practice', labelKey: 'PRACTICE_ENTER' },
         'practice-cheat': { id: 'btn-cheat', implemented: true, handledBy: 'practice', labelKey: 'PRACTICE_CHEAT' },
 

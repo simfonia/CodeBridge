@@ -4,6 +4,10 @@
 
 - [目前待辦](#目前待辦)
 - [計畫文件](#計畫文件)
+- [2026-09-28](#2026-09-28)
+  - [修正重整後使用者回報的兩個缺陷](#2026-09-28修正重整後使用者回報的兩個缺陷)
+  - [.cbg 模式重整與上傳依賴端口重定案](#2026-09-28cbg-模式重整與上傳依賴端口重定案)
+  - [序列監視器（Serial Monitor）](#2026-09-28序列監視器serial-monitor)
 - [2026-09-27](#2026-09-27)
   - [T3 設定中心與核心目錄共用化（計畫）](#2026-09-27t3-設定中心與核心目錄共用化計畫)
   - [T2-E 使用者回報修正（三項阻擋性缺陷）](#2026-09-27t2-e-使用者回報修正三項阻擋性缺陷)
@@ -25,6 +29,7 @@
 
 | 計畫 | 檔案 | 狀態 |
 |---|---|---|
+| **序列監視器（T3 Phase 1）** | [`log/plan/SerialMonitor.md`](plan/SerialMonitor.md) | **實作完成（2026-09-28）** —— 單元測試通過，待實機驗證 |
 | **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-27）** —— 預設共用已上線並實機驗證 |
 | Arduino CLI 編譯與上傳（Phase T2） | [`log/plan/ArduinoCompileUpload.md`](plan/ArduinoCompileUpload.md) | 已完成（2026-09-27） |
 | 工具列實作與 .cbg 專案 | [`log/plan/ToolbarImplementation.md`](plan/ToolbarImplementation.md) | 已完成 |
@@ -40,10 +45,18 @@
 > 各章節內仍保留原始清單以維持歷史紀錄，兩者若有差異以本章節為準。
 
 ### 工具列後續（2026-09-26 本輪凍結，需另開一輪）
-- [ ] Phase 3 Serial Monitor：`btn-terminal` 已作為**編譯輸出面板**上線，序列監視器（port/baud/重連/HEX/時間戳）仍待 T3
+- [x] Phase 3 Serial Monitor：**已於 2026-09-28 完成**（port/baud/重連/HEX/時間戳/開發者輸入行），詳見 [序列監視器章節](#2026-09-28序列監視器serial-monitor)
+- [ ] 序列監視器**實機驗證**（CH340 UNO clone 實測序列輸出、上傳前後自動重連）
+      - 2026-09-28 第一輪：修正「Monitor 一開啟就死掉」（`Err(TimedOut)` 誤判為斷線）✅
+      - 2026-09-28 第二輪：修正「埠未釋放」+「baud 錯誤無反應」+「上傳暫停無提示」✅
+      - **待第三輪實機驗證**
+- [ ] Serial Plotter（序列繪圖）—— 需另立計畫
 - [x] `btn-run` / `btn-stop` 已於 T2-C 上線，並在 T2-D/T2-E 補齊板子／序列埠選擇與完整上傳流程（**已於 2026-09-27 完成並實機驗證通過**）
 - [x] Phase 4 `btn-diagnose` 與設定選單擴充 → **已併入 T3 設定中心計畫**，詳見下方章節
 - [ ] `.cbg` Windows 副檔名註冊與雙擊開檔（argv 解析、NSIS/WiX 自訂腳本）
+- [ ] **打包後驗證內建範例**：`select_examples_dir()` 已處理開發與打包兩種資源佈局（包含空殼目錄陷阱），但尚未以打包版實測
+- [ ] **實機確認手動選板後的上傳**：CH340 clone 板無法自動偵測（後端認不出），必須靠 `board-detector.manualFqbn` 覆寫層
+- [ ] `APP_VERSION` 目前硬編為 `0.2.0`，應改為單一 package / Tauri version 來源（`cbg:app` 已引用此值）
 - [ ] 匯出 `.ino` 檔（選配；貼到 IDE 的需求已由「複製程式碼」滿足）
 - [ ] 工具列組態治理：讓 `btn-exit-practice`、`btn-cheat-close` 也經過 `data-action` 契約（目前由 practice-mode.js 自行綁定）
 - [ ] 總提供 `chevron-down` 與 `history` 圖示（下拉與最近專案圖示）
@@ -100,6 +113,194 @@
 - [ ] 若未來 Blockly 支援可安全建立 headless temporary block，可移除 `controls_for` 的暫時實例化 skip，改為更完整的欄位文字索引
 - [ ] 若 Variables dynamic category 需要被搜尋，可新增 definition adapter，不直接掃描所有全域 block types
 - [ ] 若需要真正的 runtime 整合測試，可考慮以 `arduino-cli` 官方 binary 作為 CI fixture，或維持目前的 `FakeProcessRunner` 純單元測試策略
+
+---
+
+# 2026-09-28
+
+## 2026-09-28：.cbg 模式重整與上傳依賴端口重定案
+
+### 狀態
+
+已完成，全數測試通過。
+
+### 已完成
+
+- [x] **metadata 精簡**：`META_FIELDS` 只保留 `app`；命名空間 `cbp:` → `cbg:`；舊 `cbp:` 檔仍可開啟
+- [x] **裝置狀態移出檔案**：`name`／`fqbn`／`port`／`baud`／`libraries` 不再序列化
+- [x] **上傳以下拉為準**：`compile-controller.currentDevice()` 讀 `board-detector.getState()`
+- [x] **移除 `verifyBoardForUpload`**（使用者已確認）：`fqbn` 由所選埠推導，比較恆等
+- [x] **內建範例改直接掃目錄**（對齊 #WaveCode）：Rust `list_examples`／`read_example`，
+      範例搬至 `src-tauri/resources/examples/`，刪除 `manifest.json`
+- [x] **Tauri resources**：`tauri.conf.json` 加入 `resources/examples/*`
+- [x] **回歸測試**：單元（下拉優先於 metadata）與 E2E（開檔後改選 COM4，上傳燒 COM4）
+
+### 技術深挖
+
+**為什麼不能把裝置狀態寫進 .cbg**
+
+原始痛點「UI 顯示 COM4，上傳卻報尚未選擇序列埠」的根因不是任何一邊會歸零，而是兩個來源
+看不一樣：下拉 `#serial-selector`（使用者眼前的值）與 `meta.port`（打檔瞬間，可能老化）。
+舊實作另有更惱人的體質——`pullInitialPorts` 只在下拉值「變化」時才寫入 meta，而使用者手動
+選了同一個埠時 value 未變，導致 meta 不受更新、上傳拒絕。
+
+新設計把裝置狀態從檔案移置來源，下拉即唯一來源；偏好埠改存 localStorage。
+
+**為什麼範例改用 Rust 掃描**
+
+靜態檔案伺服器沒有「列出目錄」的 API，`fetch('examples/')` 拿不到檔案清單，舊方案必須手維
+`manifest.json`。改用 Tauri 資源目錄後 `fs::read_dir()` 真的能列檔，並以檔名前綴決定排序。
+
+### 驗證結果
+
+- Rust：253 + 7 passed
+- Vitest：9 檔全過（182 項）
+- Playwright：123 passed
+- Build：成功
+
+### 下次啟動方向 (Next Steps)
+
+1. 打包後實測 `resources/examples/*` 的資源路徑（`select_examples_dir()` 已涵蓋兩種佈局）
+2. `APP_VERSION` 改為單一 package / Tauri version 來源
+3. 實機確認上傳與 Serial Monitor 在 COM4 上的實際行為
+
+## 2026-09-28：修正重整後使用者回報的兩個缺陷
+
+### 狀態
+
+已完成，全數測試通過。使用者實測回報兩個缺陷，均已修正。
+
+### 使用者回報
+
+1. 新專案的積木下測試，選了 UNO 板，按上傳，出現「尚未選擇開發板」
+2. 範例按鈕下拉：「目前沒有內建範例」
+
+### 根因與修正
+
+- [x] **選了板卻報未選擇開發板**：`board-picker` 仍把 fqbn 寫進 meta，但上傳讀
+      `board-detector`（只從後端偵測推導）。新增 `manualFqbn` 覆寫層
+      （`setManualFqbn()`），`getState().fqbn` 回傳 `manualFqbn || fqbnForPort(port)`。
+      必要之處在於 CH340 clone 板後端認不出，自動偵測本來就是空的。
+- [x] **範例清單永遠是空的**：`examples_dir()` 用 `is_dir()` 挑目錄，命中 Cargo 留下的
+      空殼 `target/debug/examples/`。抽出 `select_examples_dir()` 改以「含 `.cbg`」為準。
+
+### 技術深挖
+
+**「單一來源」的重整不等於自動消滅第二個來源**
+
+移除 `board-detector` 對 meta 的寫入，卻忘了 `board-picker` 還在寫。移除一條路徑
+不等於建立單一來源——必須確認**所有**寫入者都改到新去處，否則只是把不一致換方向。
+
+**自動偵測不能當作唯一真相**
+
+後端認不出 clone 板時自動偵測本來就是空的，使用者的手動選擇才是這時候的真相。
+「手動 > 自動」的覆寫層是必要的，不能想著「反正會自動偵測」。
+
+**空殼目錄：存在 ≠ 可用**
+
+`is_dir()` 只能證明目錄存在，不能證明裡面有東西。資源掃描類程式碼要用「內容符合
+預期」當判準，這個陷阱特別容易出現在 build 工具產生的中間目錄上。
+
+### 驗證結果
+
+- Rust：257 + 7 passed（新增 4 項 `select_examples_dir` 測試）
+- Vitest：9 檔全過（新增 3 項手動選板測試）
+- Playwright：124 passed（新增「選板後上傳帶著選定板型」端對端測試）
+- Build：成功
+
+### 下次啟動方向 (Next Steps)
+
+1. 實機確認選板後的上傳（尤其 CH340 clone 板無法自動偵測的情境）
+2. 打包版確認範例清單
+3. 實機確認 Serial Monitor 在 COM4 上的實際行為
+
+## 2026-09-28：序列監視器（Serial Monitor）
+
+### 狀態
+
+**T3 Phase 1 實作完成。** 完整設計見
+**[`log/plan/SerialMonitor.md`](../plan/SerialMonitor.md)**。
+
+### 已確認的產品決策
+
+| 決策點 | 結論 |
+|---|---|
+| 面板配置 | 編譯輸出與序列輸出**共用一個面板**（`#terminalContent`），以 `terminal-line--data` 視覺區隔 |
+| 上傳後重連 | **預設自動重連為開啟** |
+| baud 變更 | **自動重啟 Monitor**（序列埠 baud 在開啟時綁定，無熱改 API） |
+
+### 已完成
+
+- [x] Rust 端 `serial_monitor.rs`：`LineFramer`（回傳原始位元組）、`hex_encode` / `format_line`、
+      `pump<R: Read>`（泛型化 `Read`，測試不需硬體）、`Session`、`MonitorConfig` / `MonitorStatus`
+- [x] Tauri 命令：`serial_monitor_start` / `stop` / `send` / `status`
+- [x] 事件：`codebridge://serial-data`（批次）、`codebridge://serial-state`
+- [x] **埠租約協調**：`AppState` 新增 `serial_monitor` / `monitor_wants`；
+      upload 前中斷 Monitor、終態後自動重連（150ms 冷卻）
+- [x] 前端 `serial-monitor.js`：開關、baud、HEX、時間戳、開發者輸入行、多埠過濾
+- [x] UI：控制列、輸入行、CSS、`toolbar.js` / registry 契約、`main.js` 初始化
+- [x] i18n 中英各 19 個 key（移除 `SERIAL_MONITOR_NOT_IMPLEMENTED`）
+- [x] 測試：Rust 26 項、Vitest 16 項、Playwright 10 項
+
+### 實機除錯（2026-09-28）
+
+- [x] **Monitor 一開啟就死掉**（使用者回報：上傳成功後立刻 `SERIAL_ERROR_READ|Operation timed out`、
+      終端機永遠「未連線」、`Serial.println()` 無輸出）
+      - 根因：`SerialPort::timeout(50ms)` 到期回 **`Err(TimedOut)`**，語意是「沒資料」不是「失敗」；
+        原 `pump()` 把所有 `Err` 當斷線而 `break` → 板子安靜 50ms 就死
+      - 修正：新增 `is_no_data()` 區分 `TimedOut`／`WouldBlock` 與真斷線
+      - 補 3 項測試（假 reader 會回 `Err`），並明確斷言 `BrokenPipe`／`NotFound` 不算「沒資料」
+- [x] 上傳重連時 HEX 設定遺失（`start_session` 的 `hex` 被寫死為 `false`）→ `hex` 移入 `MonitorConfig`
+- [x] **埠未釋放**（使用者回報：手動關閉後仍「無法開啟序列埠」、切 baud 失敗、上傳前沒自動關閉）
+      - 根因：`stop_monitor` / `release_port_for_upload` 只設 stop 旗標就返回，
+        讀取 thread 仍活著、`SerialPort` 仍持有 Windows COM handle → `AccessDenied`
+      - 修正：`AppState` 新增 `monitor_thread: JoinHandle`，停止路徑一律 **join**
+        + `PORT_RELEASE_COOLDOWN_MS = 120ms` 冷卻
+- [x] **baud 錯誤時完全沒反應**（資料卡在 `LineFramer` 緩衝，因錯 baud 下極少出現 `\n`）
+      - 修正：新增 `IDLE_FLUSH_MS = 250`，閒置逾時強制切出殘餘位元組（對齊 Arduino IDE）
+- [x] **「上傳暫停中」顯示成「未連線」** → 狀態燈改為三態（已連線／上傳暫停中／未連線）
+- [x] **上傳後沒切回「已連線」** → `start_session` 補送 `SERIAL_STATE(connected)`；重連失敗改送 `failed`（原本 `let _ =` 完全靜默）
+- [x] **連按上傳鈕沒視覺回饋** → `main.js` 將 `#btn-run` 的 `disabled`/`aria-busy` 綁到 `state.busy`（單飛保護本來就有效）
+- [x] **收合終端機面板不重繪 Blockly** → `terminal-panel.js` 新增 `onWorkspaceResize`，`main.js` 註冊 `Blockly.svgResize`
+- [x] **錯誤 baud 沒有訊息** → **非 bug，是 USB-UART 物理特性**（CH340 重組時脈，收到的仍是正確文字）。
+      真正原因是開機訊息早已印完 → 新增 `reset_on_open`（DTR 觸發 UNO reset）、
+      UI 開關「開啟時重啟板」+ 按鈕「重新啟動開發板」
+- [x] **上傳鈕不會變灰** → `#btn-run` 是 `<div>`，而 HTML `disabled` **只對表單元素有效**：
+      `div.disabled = true` 不會產生 `[disabled]` attribute，CSS 永遠匹配不到
+      → 改為 `<button type="button">` + `.toolbar-btn` 補瀏覽器預設樣式 reset
+- [x] **「印出空白行」無法診斷** → 畫面無法分辨「板子沒送資料」與「解碼成空」
+      → `pump` 的 sink 改帶位元組數、`SerialData` 新增 `bytes`、
+      狀態列顯示「等待資料…」／「已接收 N bytes」（每次開啟歸零）
+- [x] **N bytes 但文字全空白** → `decode_output` 的 **Big5 分支是總函式**（任何位元組
+      序列都能「成功」解碼），baud 不符的垃圾位元組被解成**控制字元**（0x00–0x1F），
+      終端機裡完全不可見 → 新增 `make_control_chars_visible()` 轉成 `<0xNN>`
+- [x] ⚠️ **更正錯誤判斷**：前三輪記錄的「CH340 硬體重組時脈，錯誤 baud 仍收到
+      正確文字」是**錯的**。CH340 是 UART-to-USB 橋接器，baud 設定會下發給晶片
+      設定取樣時脈，不符即產生垃圾位元組
+- [x] **序列資料不該走 Big5 fallback**（使用者提問揭露）→ 新增序列專用 `decode_serial()`
+      = UTF-8 → latin-1。Big5/GBK 只適用於**編譯器輸出**（Windows cp950）；
+      序列資料固定是 UTF-8（Arduino `String` 內部），且 Big5 是總函式會把任何
+      非 UTF-8 資料**猜成中文**，使用者看到無關漢字反而更難診斷
+- [x] **DTR reset 在 clone 板無效** → 硬體限制（reset 電容線常被省略），非程式問題。
+      tooltip 改為誠實說明並建議手按 RESET 鍵
+- [x] **位元組歸零時機不明確** → 文案改為「本次連線已接收 N bytes」+
+      tooltip 說明歸零條件（歸零只對應「開新連線」，面板收合不影響連線）
+- [x] 計時 flaky：`pump_flushes_a_line...` 原本 sleep 300ms 對 250ms 門檻無餘裕
+      （連跑三次失敗一次）→ 改用 `IDLE_FLUSH_MS * 3`
+
+### 驗證結果
+
+- `cargo test`：**247 passed**（+2）
+- `npx vitest run tests/unit`：**179 passed**（+4）
+- `npx playwright test --workers=1`：**122 passed**（全數通過）
+- `npm run build`：成功
+- 文件：[`log/plan/SerialMonitor.md`](../plan/SerialMonitor.md)、[`log/mappings/SerialMonitor.html`](../mappings/SerialMonitor.html)
+
+### 下次啟動方向 (Next Steps)
+
+1. **實機驗證**（必要）：CH340 UNO clone 實測序列輸出、上傳前後自動重連、拔線自動斷線
+2. Serial Plotter（需另立計畫）
+3. 回到 T3 設定中心階段 1 待做部分（`settings.json` 持久化）
 
 ---
 

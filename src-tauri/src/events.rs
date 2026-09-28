@@ -36,6 +36,10 @@ pub mod names {
     pub const BOARD_DETECTED: &str = "codebridge://board-detected";
     /// 工具鏈可執行狀態改變（安裝／移除 core、library）。
     pub const TOOLCHAIN_CHANGED: &str = "codebridge://toolchain-changed";
+    /// 序列資料批次（序列監視器讀到的行）。
+    pub const SERIAL_DATA: &str = "codebridge://serial-data";
+    /// 序列監視器連線狀態改變（開啟／關閉／拔線）。
+    pub const SERIAL_STATE: &str = "codebridge://serial-state";
 }
 
 /// 一個被偵測到的板子（`arduino-cli board list` 的 port → fqbn 對應）。
@@ -103,6 +107,25 @@ impl BoardsDetected {
             .map(|item| item.fqbn.clone())
             .unwrap_or_default()
     }
+}
+
+/// 一批序列資料。
+///
+/// **批次而非逐行**：序列埠在 115200 下每秒可達上千行，逐行 emit 會把 IPC
+/// 塞爆。前端一次 append 一批，仍能維持流暢的視覺更新。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SerialData {
+    /// 來源序列埠（多埠並存時前端據此過濾）。
+    pub port: String,
+    /// 本批的行（由舊到新；已完成解碼或 HEX 轉換）。
+    pub lines: Vec<String>,
+    /// 累計收到的位元組數。
+    ///
+    /// **為什麼要回報**：使用者看到「印出空白行」時無法分辨「板子完全沒送
+    /// 資料」與「送了資料但解碼成空」—— 兩者畫面完全一樣。顯示這個數字
+    /// 才能立刻判斷問題在板子（0 bytes）還是在波特率／解碼（有 bytes）。
+    pub bytes: u64,
 }
 
 /// 序列埠輪詢週期（毫秒）。

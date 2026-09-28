@@ -20,7 +20,9 @@ const BLINK_PATH = 'C:/projects/Blink.cbg';
 
 const BLINK_PROJECT = [
   '<?xml version="1.0" encoding="UTF-8"?>',
-  '<xml xmlns="https://developers.google.com/blockly/xml" xmlns:cbp="https://codebridge.app/xml" cbp:format="1" cbp:name="Blink" cbp:fqbn="arduino:avr:uno" cbp:port="COM3">',
+  // 2026-09-28 起 metadata 只承載 format 與 app。序列埠／開發板是
+  // 「使用者身邊的硬體狀態」，不進檔案 —— 見 openReadyProject 的說明。
+  '<xml xmlns="https://developers.google.com/blockly/xml" xmlns:cbg="https://codebridge.app/xml" cbg:format="1" cbg:app="0.2.0">',
   '  <block type="initializes_setup" id="setup-from-file" x="20" y="20">',
   '    <statement name="CONTENT">',
   '      <block type="arduino_delay" id="delay-from-file" x="20" y="20">',
@@ -35,8 +37,45 @@ const BLINK_PROJECT = [
   '</xml>'
 ].join('\n');
 
-/** 開啟一個帶有 fqbn 與 port 的既有專案，讓編譯流程具備完整前置條件。 */
-
+/**
+ * 開啟一個已具備完整前置條件的專案：工作區有程式碼，且序列埠下拉已選好。
+ *
+ * **為什麼要另外設定下拉**（2026-09-28 決策）：
+ * 序列埠與開發板是使用者身邊的硬體，不是專案內容。它們不再存進 `.cbg`
+ * metadata —— 舊做法曾造成「UI 顯示 COM4，但上傳報尚未選擇序列埠」，
+ * 因為下拉（使用者眼前的真相）與 metadata（過期的記憶）不一致。
+ *
+ * 這裡走真實路徑：後端回報連接埠 → detector 填入下拉 → 使用者選取。
+ * E2E 刻意不 stub `board-detector`，才能真正驗到上傳用的是下拉的值。
+ */
+async function openReadyProject(page) {
+  await installTauriMock(page, {
+    files: { [BLINK_PATH]: BLINK_PROJECT },
+    // 板型對應走 `codebridge://board-detected` 事件（見 handleBoardsDetected），
+    // 埠清單則由 `get_serial_ports` 帶回（見 pullInitialPorts）。
+    // 給兩個埠，才能驗「上傳用的是使用者當下選的那個」。
+    cli: { ports: ['COM3', 'COM4'] }
+  });
+  await setUiLocale(page, 'zh-hant');
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(window.CodeBridgeProject && window.CodeBridgeCompile));
+  await page.evaluate(async (path) => {
+    await window.CodeBridgeProjectIO.openPath(path);
+  }, BLINK_PATH);
+  await emitMockEvent(page, 'codebridge://board-detected', {
+    // 兩個埠都要有板型對應：`fqbn` 由所選埠推導，缺了會擋在
+    // `CLI_ERROR_NO_FQBN`，測不到「埠選對了沒」這件事。
+    boards: [
+      { port: 'COM3', fqbn: 'arduino:avr:uno', name: 'Arduino Uno' },
+      { port: 'COM4', fqbn: 'arduino:avr:mega', name: 'Arduino Mega' }
+    ],
+    unknown: []
+  });
+  // 等偵測回填下拉後再選取，模擬使用者挑好開發板連接埠。
+  await expect(page.locator('#serial-selector option[value="COM3"]')).toHaveCount(1);
+  await page.locator('#serial-selector').selectOption('COM3');
+  await page.waitForTimeout(300);
+}
 /**
  * 模擬後端的編詯完成事件。
  *
@@ -48,17 +87,6 @@ async function emitCompileSucceeded(page, operationId = 'op-compile') {
   await emitMockEvent(page, 'codebridge://operation-status', {
     operationId, kind: 'compile', state: 'succeeded', lines: []
   });
-}
-
-async function openReadyProject(page) {
-  await installTauriMock(page, { files: { [BLINK_PATH]: BLINK_PROJECT } });
-  await setUiLocale(page, 'zh-hant');
-  await page.goto('/');
-  await page.waitForFunction(() => Boolean(window.CodeBridgeProject && window.CodeBridgeCompile));
-  await page.evaluate(async (path) => {
-    await window.CodeBridgeProjectIO.openPath(path);
-  }, BLINK_PATH);
-  await page.waitForTimeout(300);
 }
 
 function terminalLines(page) {
@@ -101,6 +129,24 @@ test.describe('編譯／上傳流程', () => {
     expect(compile.args.payload.code).not.toContain('__BLOCKLY_ID');
 
     expect(calls[2].args.payload.port).toBe('COM3');
+  });
+
+  test('上傳燒到下拉當前選定的埠，即使與開檔時不同', async ({ page }) => {
+    // 回歸測試（2026-09-28）。原始症狀：使用者眼前顯示 COM4，上傳卻燒到
+    // 別的埠（或報「尚未選擇序列埠」）。根因是上傳讀了 `.cbg` metadata 裡的
+    // port 快照，而下拉已被改過 —— 記憶與真相不一致。
+    //
+    // 這裡刻意改選 COM4 執行，斷言上傳用的是 COM4，也就是使用者看到的值。
+    await openReadyProject(page);
+    await page.locator('#serial-selector').selectOption('COM4');
+
+    await page.locator('#btn-run').click();
+    await emitCompileSucceeded(page);
+    await page.waitForFunction(() => window.CodeBridgeCompile.getState().operationId === 'op-upload');
+
+    const calls = await readCliCalls(page);
+    const upload = calls.find((call) => call.command === 'upload_start');
+    expect(upload.args.payload.port).toBe('COM4');
   });
 
   test('執行時終端機自動展開並顯示編譯與上傳訊息', async ({ page }) => {

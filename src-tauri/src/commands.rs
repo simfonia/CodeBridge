@@ -21,6 +21,7 @@ use crate::arduino::runner::{ProcessRunner, RunRequest, RunResult, StdProcessRun
 use crate::arduino::{CliError, InstallHint, ToolchainStatus, ARDUINO_CLI_DOWNLOAD_URL};
 use crate::events::names as event_names;
 use crate::events::EventSink;
+use crate::serial_monitor;
 use crate::{resolve_cli_for, toolchain, AppState};
 
 /// CLI 查詢的共用逾時；board listall 在首次索引下載時可能較慢。
@@ -446,6 +447,25 @@ pub async fn upload_start(
         .and_then(|builds| builds.get(&payload.project_id).cloned())
         .ok_or_else(|| "CLI_ERROR_BUILD_STALE|尚未編譯，請先執行一次編譯".to_string())?;
 
+    // 序列埠是獨佔資源：Monitor 若正佔著同一個埠，avrdude 必然失敗。
+    // 因此上傳前先中斷 Monitor，並記住原本的設定供上傳後重連。
+    let suspended_monitor = release_port_for_upload(&state, &payload.port);
+    if suspended_monitor.is_some() {
+        // 讓使用者看見「Monitor 已被暫停」，否則他會以為自動暫停沒有發生。
+        let _ = app.emit_to(
+            MAIN_WINDOW_LABEL,
+            event_names::SERIAL_STATE,
+            serial_monitor::MonitorStatus {
+                connected: false,
+                port: payload.port.clone(),
+                baud: 0,
+                hex: false,
+                reset_on_open: false,
+                error: Some("SERIAL_PAUSED_FOR_UPLOAD|".to_string()),
+            },
+        );
+    }
+
     // 佔用序列埠：避免兩個作業同時操作同一個埠（會直接讓 avrdude 失敗）。
     if !state.try_acquire_port(&payload.port) {
         return Err(format!(
@@ -462,6 +482,7 @@ pub async fn upload_start(
 
     let app_for_task = app.clone();
     let id_for_task = id.clone();
+    let resume_monitor = suspended_monitor.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let state = app_for_task.state::<AppState>();
         let cancel = cell.lock().expect("operation lock").cancel_flag.clone();
@@ -494,6 +515,33 @@ pub async fn upload_start(
         // 釋放序列埠 —— 無論成功與否都必須釋放，否則埠會被永久鎖死。
         state.release_port(&port);
         state.operations.prune_finished();
+
+        // 上傳結束後自動重連 Monitor（2026-09-28 決策：預設開啟）。
+        // 必須在釋放埠**之後**，否則重連會撞到自己剛拿到的鎖。
+        if let Some(config) = resume_monitor {
+            // Windows 驅動釋放 handle 需要時間；立刻重開會得到 AccessDenied。
+            std::thread::sleep(std::time::Duration::from_millis(150));
+            let resumed_state = app_for_task.state::<AppState>();
+            // 只有在埠確實空閒時才重連；仍被佔用代表使用者又開了別的作業。
+            let free = resumed_state
+                .port_lease
+                .lock()
+                .map(|lease| lease.is_none())
+                .unwrap_or(false);
+            if free {
+                // 沿用原本的 HEX 設定（已含在 `config` 裡）：使用者選了 HEX
+                // 卻在一次上傳後悄悄失效，是很難察覺的行為倒退。
+                if let Err(err) = start_session(&app_for_task, &resumed_state, &config) {
+                    // 重連失敗**不可靜默**：狀態燈會停在「上傳暫停中」，
+                    // 使用者無從得知該手動重開。回報明確錯誤。
+                    let _ = app_for_task.emit_to(
+                        MAIN_WINDOW_LABEL,
+                        event_names::SERIAL_STATE,
+                        serial_monitor::MonitorStatus::failed(&config, &err),
+                    );
+                }
+            }
+        }
     });
 
     Ok(id)
@@ -768,6 +816,384 @@ pub fn operation_cancel(state: State<AppState>, id: String) -> Result<bool, Stri
     Ok(state.operations.cancel(&id))
 }
 
+// ---------------------------------------------------------------
+// 內建範例（對齊 #WaveCode 的目錄掃描模式）
+// ---------------------------------------------------------------
+
+/// 內建範例的副檔名。
+const EXAMPLE_EXT: &str = "cbg";
+
+/// 一筆內建範例。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExampleInfo {
+    /// 顯示名稱（由檔名去掉數字前綴與副檔名而來）。
+    pub name: String,
+    /// 檔名（含前綴，用於排序與除錯）。
+    pub file: String,
+    /// 絕對路徑（供 `read_example` 讀取）。
+    pub path: String,
+}
+
+/// 從檔名取出顯示名稱：去掉數字前綴（`01_` / `10-`）與副檔名。
+///
+/// **為什麼要剝前綴**：檔名帶前綴是為了排序（對齊 #WaveCode），
+/// 但「01_」對使用者毫無意義，只會出現在 UI 上讓人困惑。
+fn display_name(file_stem: &str) -> String {
+    let without_order = file_stem
+        .trim_start_matches(|c: char| c.is_ascii_digit())
+        .trim_start_matches(['_', '-', ' ']);
+    // 前綴吃掉整個檔名的極端情況（純數字檔名）要退回原名。
+    if without_order.is_empty() {
+        file_stem.to_string()
+    } else {
+        without_order.to_string()
+    }
+}
+
+/// 列出內建範例（掃描 `resources/examples` 目錄）。
+///
+/// **為什麼在 Rust 端掃描**：靜態檔案伺服器沒有「列出目錄」的 API，
+/// 前端 `fetch('examples/')` 拿不到檔案清單。放在 Tauri 資源目錄後，
+/// `fs::read_dir()` 就能真的列出檔案。
+///
+/// 排序直接依檔名（含數字前綴），因此 `10_blink` 會排在 `02_x` 後面 ——
+/// 新增範例只要放檔案，不必改任何索引檔。
+#[tauri::command]
+pub fn list_examples(app: AppHandle) -> Result<Vec<ExampleInfo>, String> {
+    let dir = crate::examples_dir(&app).ok_or_else(|| "PROJECT_ERROR_READ_FAILED|找不到內建範例目錄".to_string())?;
+    let mut entries: Vec<ExampleInfo> = std::fs::read_dir(&dir)
+        .map_err(|err| format!("PROJECT_ERROR_READ_FAILED|{err}"))?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let path = entry.path();
+            if !path.is_file() {
+                return None;
+            }
+            let is_example = path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| ext.eq_ignore_ascii_case(EXAMPLE_EXT))
+                .unwrap_or(false);
+            if !is_example {
+                return None;
+            }
+            let file = entry.file_name().to_str()?.to_string();
+            let stem = file.strip_suffix(EXAMPLE_EXT).unwrap_or(&file);
+            Some(ExampleInfo {
+                name: display_name(stem.strip_suffix('.').unwrap_or(stem)),
+                file,
+                path: path.to_str()?.to_string(),
+            })
+        })
+        .collect();
+    entries.sort_by(|a, b| a.file.cmp(&b.file));
+    Ok(entries)
+}
+
+/// 讀取一筆內建範例的內容。
+#[tauri::command]
+pub fn read_example(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|err| format!("PROJECT_ERROR_READ_FAILED|{err}"))
+}
+
+// ---------------------------------------------------------------
+// 序列監視器
+// ---------------------------------------------------------------
+
+/// 啟動序列監視器。
+///
+/// **為什麼要先關掉既有 session**：序列埠是獨佔資源，重複 `open()` 同一個
+/// COM 埠在 Windows 上必然失敗。使用者重複點「開啟」時，預期是「重啟」，
+/// 而不是看到一個神祕的錯誤。
+#[tauri::command]
+pub fn serial_monitor_start(
+    app: AppHandle,
+    state: State<AppState>,
+    port: String,
+    baud: Option<u32>,
+    hex: Option<bool>,
+    reset_on_open: Option<bool>,
+) -> Result<serial_monitor::MonitorStatus, String> {
+    let config = serial_monitor::MonitorConfig::with_options(
+        &port,
+        baud.unwrap_or(serial_monitor::DEFAULT_BAUD),
+        hex.unwrap_or(false),
+        reset_on_open.unwrap_or(false),
+    );
+    if !config.is_valid() {
+        return Err("SERIAL_ERROR_NO_PORT|尚未選擇序列埠".to_string());
+    }
+
+    stop_monitor(&state, true);
+
+    // 與 upload 共用同一把鎖：誰先拿到誰用。若被作業佔用就明確拒絕，
+    // 不可靜默搶占 —— 使用者需要知道為什麼開不起來。
+    if let Some(leased) = state.leased_port() {
+        if leased != config.port {
+            return Err(format!(
+                "CLI_ERROR_PORT_BUSY|{leased} 正被編譯／上傳作業使用"
+            ));
+        }
+    }
+    state.try_acquire_port(&config.port);
+
+    start_session(&app, &state, &config)?;
+    Ok(serial_monitor::MonitorStatus::connected(&config))
+}
+
+/// 停止序列監視器。
+#[tauri::command]
+pub fn serial_monitor_stop(state: State<AppState>) -> bool {
+    stop_monitor(&state, false)
+}
+
+/// 送出開發者輸入行。
+#[tauri::command]
+pub fn serial_monitor_send(state: State<AppState>, text: String) -> Result<usize, String> {
+    let result = state
+        .serial_monitor
+        .lock()
+        .ok()
+        .and_then(|monitor| monitor.as_ref().map(|session| session.send_line(&text)));
+    match result {
+        Some(result) => result,
+        None => Err("SERIAL_MONITOR_NOT_RUNNING|序列監視器尚未開啟".to_string()),
+    }
+}
+
+/// 查詢序列監視器狀態。
+#[tauri::command]
+pub fn serial_monitor_status(state: State<AppState>) -> serial_monitor::MonitorStatus {
+    let running = state
+        .serial_monitor
+        .lock()
+        .ok()
+        .and_then(|monitor| monitor.as_ref().map(|s| (s.port.clone(), s.baud)));
+    if let Some((port, baud)) = running {
+        return serial_monitor::MonitorStatus::connected(&serial_monitor::MonitorConfig::new(
+            &port, baud,
+        ));
+    }
+    // 未連線但有 wants：代表「上傳暫停中」，前端據此顯示「等待重連」。
+    match state.monitor_wants.lock().ok().and_then(|w| w.clone()) {
+        Some(config) => serial_monitor::MonitorStatus {
+            connected: false,
+            port: config.port,
+            baud: config.baud,
+            hex: config.hex,
+            reset_on_open: config.reset_on_open,
+            error: None,
+        },
+        None => serial_monitor::MonitorStatus::idle(),
+    }
+}
+/// 開一條讀取 thread 並把 session 存入狀態。
+fn start_session(
+    app: &AppHandle,
+    state: &State<AppState>,
+    config: &serial_monitor::MonitorConfig,
+) -> Result<serial_monitor::Session, String> {
+    let mut builder = serialport::new(&config.port, config.baud).timeout(
+        std::time::Duration::from_millis(serial_monitor::READ_TIMEOUT_MS),
+    );
+    // DTR 拉低可觸發 UNO／Nano 的 reset 電路，讓板子重啟並重播開機訊息。
+    //
+    // **實務限制（實機驗證 2026-09-28）**：第三方 clone 板的 reset 電容線
+    // 常被省略，`dtr_on_open` 在這些板子上**不會有任何效果**。這不是程式問題，
+    // 而是硬體差異。因此「開啟時重啟板」預設關閉，使用者可以自行試試。
+    //
+    // 真正保險的做法仍是**手按板子上的 RESET 鍵** —— 硬體線路保證有效。
+    if config.reset_on_open {
+        builder = builder.dtr_on_open(false);
+    }
+    let port = builder
+        .open()
+        .map_err(|err| format!("SERIAL_ERROR_OPEN|{err}"))?;
+
+    // 讀取端與寫入端共用同一個 handle：Windows 上序列埠是全 duplex 的，
+    // 開兩次反而會撞到「埠已被佔用」。
+    let writer: Box<dyn std::io::Write + Send> = port
+        .try_clone()
+        .map_err(|err| format!("SERIAL_ERROR_OPEN|{err}"))?;
+
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let session = serial_monitor::Session {
+        port: config.port.clone(),
+        baud: config.baud,
+        stop: stop.clone(),
+        writer: std::sync::Arc::new(std::sync::Mutex::new(writer)),
+    };
+
+    if let Ok(mut slot) = state.serial_monitor.lock() {
+        *slot = Some(clone_session(&session));
+    }
+    if let Ok(mut wants) = state.monitor_wants.lock() {
+        *wants = Some(config.clone());
+    }
+
+    let app_for_task = app.clone();
+    let port_for_task = config.port.clone();
+    let baud_for_task = config.baud;
+    let hex_for_task = config.hex;
+    let handle = std::thread::spawn(move || {
+        // 追蹤已收到的位元組數，讓前端能區分「板子沒印」與「解碼成空」。
+        // 與 pump 同執行緒，用 `Cell` 即可。
+        let received = std::cell::Cell::new(0u64);
+        serial_monitor::pump(
+            port,
+            &stop,
+            hex_for_task,
+            serial_monitor::LineFramer::new(),
+            serial_monitor::serial_flush_policy(),
+            |lines, bytes| {
+                let _ = app_for_task.emit_to(
+                    MAIN_WINDOW_LABEL,
+                    event_names::SERIAL_DATA,
+                    crate::events::SerialData {
+                        port: port_for_task.clone(),
+                        lines,
+                        bytes,
+                    },
+                );
+            },
+            &received,
+        );
+        // thread 結束（拔線或停止）都要通知前端，否則 UI 會永遠顯示「已連線」。
+        let _ = app_for_task.emit_to(
+            MAIN_WINDOW_LABEL,
+            event_names::SERIAL_STATE,
+            serial_monitor::MonitorStatus {
+                connected: false,
+                port: port_for_task.clone(),
+                baud: baud_for_task,
+                hex: hex_for_task,
+                reset_on_open: false,
+                error: None,
+            },
+        );
+    });
+
+    // 保留 handle 供 `stop_monitor` join —— 沒有它就無法確保 `SerialPort`
+    // 真的被釋放（見 `AppState::monitor_thread` 的說明）。
+    if let Ok(mut slot) = state.monitor_thread.lock() {
+        *slot = Some(handle);
+    }
+
+    // **必須送出「已連線」狀態**。上傳後自動重連走的是這條路徑，若不送，
+    // 前端的狀態燈會永遠停在「上傳暫停中」而按鈕也停在失效的
+    // 「開啟監視器」—— 使用者回報「上傳成功後沒有自動切回連線狀態」。
+    let _ = app.emit_to(
+        MAIN_WINDOW_LABEL,
+        event_names::SERIAL_STATE,
+        serial_monitor::MonitorStatus::connected(config),
+    );
+
+    Ok(session)
+}
+
+/// Windows 釋放序列埠 handle 的冷卻時間（毫秒）。
+///
+/// thread join 只保證 Rust 側的 `SerialPort` 被 drop；Windows 驅動釋放
+/// handle 還需要時間。少了這段冷卻，重新 `open()` 仍可能得到
+/// `AccessDenied`（症狀：關閉後立刻重開會「無法開啟序列埠」）。
+const PORT_RELEASE_COOLDOWN_MS: u64 = 120;
+
+/// 停止讀取 thread，**並等待它真的結束**。
+///
+/// **為什麼必須 join**：只設 stop 旗標時，thread 仍活著、
+/// `SerialPort` 仍持有 Windows 的 COM handle。使用者「關閉監視器」後
+/// 立刻重開或改 baud，都會撞上 `AccessDenied`。這是實機驗證才暴露的
+/// 缺陷 —— 單元測試用假 reader，`pump` 幾乎立即返回，看不到時序問題。
+fn stop_monitor(state: &State<AppState>, keep_wants: bool) -> bool {
+    let session = state
+        .serial_monitor
+        .lock()
+        .ok()
+        .and_then(|mut monitor| monitor.take());
+    let Some(session) = session else {
+        return false;
+    };
+    session.request_stop();
+
+    // 等 thread 結束 —— 這一步才真正釋放序列埠 handle。
+    let handle = state
+        .monitor_thread
+        .lock()
+        .ok()
+        .and_then(|mut slot| slot.take());
+    if let Some(handle) = handle {
+        let _ = handle.join();
+    }
+    // Windows 驅動釋放 handle 需要時間，立刻重開會 AccessDenied。
+    std::thread::sleep(std::time::Duration::from_millis(PORT_RELEASE_COOLDOWN_MS));
+
+    if !keep_wants {
+        if let Ok(mut wants) = state.monitor_wants.lock() {
+            *wants = None;
+        }
+    }
+    if let Ok(mut lease) = state.port_lease.lock() {
+        if lease.as_deref() == Some(session.port.as_str()) {
+            *lease = None;
+        }
+    }
+    true
+}
+
+/// 複製 session 的可共享欄位（`Session` 本身不可 Clone，因為含有 writer）。
+fn clone_session(session: &serial_monitor::Session) -> serial_monitor::Session {
+    serial_monitor::Session {
+        port: session.port.clone(),
+        baud: session.baud,
+        stop: session.stop.clone(),
+        writer: session.writer.clone(),
+    }
+}
+
+/// 供 `upload_start` 使用：為上傳騰出序列埠。
+///
+/// 回傳原本正在監看的設定（若有），讓上傳結束後可以重連。
+/// 只在 wants 的埠**就是**要上傳的埠時才中斷 —— 監看別的埠不影響燒錄。
+///
+/// **必須等待 thread 結束**：只設 stop 旗標時 `SerialPort` 仍持有 COM handle，
+/// avrdude 隨後的 `open()` 會得到 `AccessDenied`。這是使用者回報
+/// 「上傳前沒自動關閉」的根因。
+pub fn release_port_for_upload(
+    state: &AppState,
+    port: &str,
+) -> Option<serial_monitor::MonitorConfig> {
+    let wants = state.monitor_wants.lock().ok().and_then(|w| w.clone())?;
+    if wants.port != port {
+        return None;
+    }
+    let session = state
+        .serial_monitor
+        .lock()
+        .ok()
+        .and_then(|mut monitor| monitor.take());
+    if let Some(session) = session {
+        session.request_stop();
+    }
+    // 等 thread 結束，確保 handle 真的釋放。
+    let handle = state
+        .monitor_thread
+        .lock()
+        .ok()
+        .and_then(|mut slot| slot.take());
+    if let Some(handle) = handle {
+        let _ = handle.join();
+    }
+    // Windows 驅動釋放 handle 需要時間；少了這段，avrdude 會撞上 AccessDenied。
+    std::thread::sleep(std::time::Duration::from_millis(PORT_RELEASE_COOLDOWN_MS));
+    if let Ok(mut lease) = state.port_lease.lock() {
+        if lease.as_deref() == Some(port) {
+            *lease = None;
+        }
+    }
+    Some(wants)
+}
+
 /// 將 `CliError` 轉為前端可顯示的字串。
 ///
 /// 格式為 `KEY|詳細訊息`，前端以 `KEY` 查 i18n，`詳細訊息` 作為補充說明。
@@ -778,6 +1204,23 @@ fn describe(err: CliError) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn display_name_strips_numeric_prefix_for_ordering() {
+        // 檔名帶數字前綴是為了排序（對齊 #WaveCode），但「01_」對使用者
+        // 毫無意義，不該出現在 UI 上。
+        assert_eq!(display_name("01_blink"), "blink");
+        assert_eq!(display_name("10-serial-hello"), "serial-hello");
+        assert_eq!(display_name("02  spaced"), "spaced");
+    }
+
+    #[test]
+    fn display_name_keeps_original_when_nothing_to_strip() {
+        assert_eq!(display_name("blink"), "blink");
+        // 純數字檔名：前綴會吃光，退回原名而非回傳空字串。
+        assert_eq!(display_name("01"), "01");
+        assert_eq!(display_name(""), "");
+    }
 
     #[test]
     fn describe_prefixes_message_key() {

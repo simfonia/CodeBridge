@@ -308,11 +308,11 @@ Blockly.Blocks['arduino_serial_begin'] = {
                     type: 'field_dropdown',
                     name: 'BAUD',
                     options: [
-                        ['%{BKY_ARDUINO_SERIAL_BAUD_9600}', '9600'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_300}', '300'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_1200}', '1200'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_2400}', '2400'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_4800}', '4800'],
+                        ['%{BKY_ARDUINO_SERIAL_BAUD_9600}', '9600'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_14400}', '14400'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_19200}', '19200'],
                         ['%{BKY_ARDUINO_SERIAL_BAUD_28800}', '28800'],

@@ -147,6 +147,26 @@ var CodeBridgeTerminalPanel = (function() {
         applyHeight();
     }
 
+    /// 工作區尺寸變更的監聽者（由 main.js 註冊為 `Blockly.svgResize`）。
+    ///
+    /// **為什麼需要**：終端機面板位於 `#blocklyArea` 內部，開闔會改變
+    /// Blockly 工作區的可用高度。Blockly 的 SVG 只在 `inject()` 時量一次
+    /// 尺寸也不會自己偵察容器變化 —— 沒呼叫 `svgResize` 的症狀是
+    /// 「面板收合了，但工作區沒有變大，原本被蓋住的區域也沒有重繪回來」
+    /// （使用者 2026-09-28 回報）。
+    var resizeListeners = [];
+
+    function onWorkspaceResize(listener) {
+        if (typeof listener !== 'function') return;
+        resizeListeners.push(listener);
+    }
+
+    function emitResize() {
+        resizeListeners.forEach(function(listener) {
+            try { listener(); } catch (error) { /* 監聽器錯誤不得影響面板開闔 */ }
+        });
+    }
+
     function setOpen(next) {
         var host = panel();
         if (!host) return;
@@ -155,6 +175,12 @@ var CodeBridgeTerminalPanel = (function() {
         applyHeight();
         if (open) scrollToEnd();
         syncToggle();
+        // 高度變化後通知外部重算 Blockly 工作區尺寸（延遲一幀等 CSS 生效）。
+        if (typeof setTimeout === 'function') {
+            setTimeout(emitResize, 0);
+        } else {
+            emitResize();
+        }
         emit();
     }
 
@@ -244,8 +270,9 @@ var CodeBridgeTerminalPanel = (function() {
         scrollToEnd: scrollToEnd,
         getState: getState,
         onChange: onChange,
+        onWorkspaceResize: onWorkspaceResize,
         /// 僅供單元測試重置模組狀態（不影響 DOM）。
-        _reset: function() { totalLines = 0; paused = false; open = false; userHeight = null; listeners = []; }
+        _reset: function() { totalLines = 0; paused = false; open = false; userHeight = null; listeners = []; resizeListeners = []; }
     };
 })();
 

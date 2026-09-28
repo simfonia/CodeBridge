@@ -22,8 +22,10 @@ use serde::Serialize;
 use std::fmt;
 
 /// UTF-8 BOM 位元組前綴。
-const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
-
+///
+/// `pub` 因為序列監視器（`serial_monitor.rs`）也用它剝除 BOM —— 序列資料
+/// 也可能帶 BOM（部分 USB-UART 轉接器會插入）。
+pub const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
 /// 實際採用的解碼來源。
 ///
 /// 供終端機面板顯示編碼（除錯用：中文亂碼時第一眼看出是 CLI 或工具鏈在講

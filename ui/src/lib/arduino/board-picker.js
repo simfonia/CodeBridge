@@ -1,11 +1,12 @@
 /// CodeBridge 開發板選擇面板
-/// 職責：列出可用開發板、提供搜尋過濾，並把使用者選定的 FQBN 寫回專案 metadata。
+/// 職責：列出可用開發板、提供搜尋過濾，並把使用者選定的 FQBN 交給
+///       `board-detector`（裝置狀態的唯一持有者）。
 /// 位置：ui/src/lib/arduino/board-picker.js
 ///
 /// 設計要點：
-/// - **手動選板可以覆寫，自動切板不行**（兩者方向相反）：
-///   `board-detector.js` 的自動切板只在 `meta.fqbn` 為空時填入；面板的選取
-///   是使用者的明確意圖，必須能改掉既有值。
+/// - **面板只是編輯介面**：它不自己保存選板結果。2026-09-28 前 FQBN 寫在
+///   專案 metadata、上傳卻讀 detector，導致「選了 UNO 卻報尚未選擇開發板」。
+///   現在兩邊讀同一個來源。
 /// - **名稱與 FQBN 並列顯示**：只顯示 FQBN（`arduino:avr:uno`）對高中生
 ///   沒有判斷依據，兩者一起看才確認得了是不是同一顆晶片。
 /// - **搜尋同時比對名稱與 FQBN**：使用者可能輸入「uno」，也可能直接貼文件
@@ -41,22 +42,18 @@ var CodeBridgeBoardPicker = (function() {
         return fallback || key;
     }
 
-    /// 取得可寫入的專案 store。
+    /// 目前使用者選擇的 fqbn（手動選擇優先，其次為自動偵測）。
     ///
-    /// `window.CodeBridgeProject` 是**工廠**（提供 `createStore`），並非 store
-    /// 實例 —— 它沒有 `setMeta`。真正的 store 由 main.js 建立並掛在
-    /// `window.CodeBridgeProjectStore`，因此必須優先取用後者。
-    /// 取不到時回 null：寧可無法寫入，也不要靜默寫到錯誤的目標。
-    function store() {
-        if (context && context.store) return context.store;
-        return window.CodeBridgeProjectStore || null;
-    }
-
-    function currentMeta() {
-        var target = store();
-        if (!target || typeof target.getState !== 'function') return {};
-        var state = target.getState();
-        return (state && state.meta) || {};
+    /// 讀 `board-detector` 而非專案 metadata：裝置狀態的唯一持有者是它，
+    /// 面板只是它的編輯介面。
+    function currentFqbn() {
+        var detector = window.CodeBridgeBoardDetector;
+        if (detector && typeof detector.getState === 'function') {
+            return detector.getState().fqbn || '';
+        }
+        // detector 缺席（例如單元測試的最小環境）→ 沒有其他來源，
+        // 誠實回報「未選擇」而不是猜。
+        return '';
     }
 
     function panel() { return document.getElementById('cb-board-panel'); }
@@ -294,7 +291,7 @@ var CodeBridgeBoardPicker = (function() {
             element.appendChild(createPresetRow());
         }
 
-        var selected = currentMeta().fqbn || '';
+        var selected = currentFqbn();
         visible.forEach(function(board) {
             var item = document.createElement('li');
             item.className = 'cb-board-item' + (board.fqbn === selected ? ' is-active' : '');
@@ -308,13 +305,17 @@ var CodeBridgeBoardPicker = (function() {
 
     /// 套用使用者選定的開發板並關閉面板。
     ///
-    /// 與自動切板相反：這裡**一定覆寫** `meta.fqbn`。使用者從清單點選
-    /// 就是明確意圖，若因為「先前已有值」而不寫入，使用者將永遠無法改板子。
+    /// 與自動偵測相反：這裡**一定覆寫**。使用者從清單點選就是明確意圖，
+    /// 若因為「先前已有值」而不寫入，使用者將永遠無法改板子。
+    ///
+    /// 寫入 `board-detector` 而非專案 metadata（2026-09-28）：裝置狀態的
+    /// 唯一持有者是 detector，上傳讀的也是它。寫在別處等於回到「選了板
+    /// 卻報尚未選擇開發板」的兩邊不一致。
     function selectBoard(fqbn) {
-        var target = store();
         if (!fqbn) return false;
-        if (target && typeof target.setMeta === 'function') {
-            target.setMeta({ fqbn: fqbn });
+        var detector = window.CodeBridgeBoardDetector;
+        if (detector && typeof detector.setManualFqbn === 'function') {
+            detector.setManualFqbn(fqbn);
         }
         renderLabel(fqbn);
         close();
@@ -346,9 +347,9 @@ var CodeBridgeBoardPicker = (function() {
         return hit ? hit.name : '';
     }
 
-    /// 面板關閉時依當前設定同步標籤（涵蓋「開檔載入既有 FQBN」的情境）。
+    /// 面板關閉時依當前設定同步標籤（涵蓋「自動偵測到板子」的情境）。
     function syncLabel() {
-        renderLabel(currentMeta().fqbn || '');
+        renderLabel(currentFqbn());
     }
 
     function setFilter(next) {

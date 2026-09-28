@@ -128,9 +128,13 @@
                         <option value="">%{BKY_TLB_NO_PORT}</option>
                     </select>
                     <div class="toolbar-separator"></div>
-                    <div class="toolbar-btn" id="btn-run" data-action="run-program" title="%{BKY_TLB_RUN}">
+                    <!-- 刻意用 <button> 而非 <div>：HTML 的 `disabled` 只對表單元素
+                         有效，<div> 上設 `.disabled` 不會產生 [disabled] attribute，
+                         CSS 的 `.toolbar-btn[disabled] { opacity: .35 }` 也就永遠匹配不到
+                         —— 使用者回報「上傳鈕不會變灰」正是此因。 -->
+                    <button type="button" class="toolbar-btn" id="btn-run" data-action="run-program" title="%{BKY_TLB_RUN}">
                         <img src="src/icons/run_blocks_24dp_75FB4C.png" alt="">
-                    </div>
+                    </button>
                 </div>
             </div>
     <!-- Toolbox XML (隱藏) - 對齊 piBlockly 結構，使用 %{BKY_...} 佔位符 -->
@@ -397,6 +401,8 @@
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <img src="src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
                         <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
+                        <span id="serial-status" class="serial-status" data-connected="false">%{BKY_SERIAL_DISCONNECTED}</span>
+                        <span id="serial-byte-count" class="serial-byte-count" data-visible="false"></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <button class="terminal-tool-btn" id="btn-pause-terminal" data-action="terminal-pause" title="%{BKY_TLB_PAUSE_SCROLL}">
@@ -410,7 +416,39 @@
                         </button>
                     </div>
                 </div>
+                <!-- 序列監視器控制列：與編譯輸出共用面板，但控制項獨立 -->
+                <div id="serialControlBar">
+                    <label class="serial-field" for="serial-baud-select">
+                        <span>%{BKY_SERIAL_BAUD}</span>
+                        <select id="serial-baud-select" title="%{BKY_SERIAL_BAUD}"></select>
+                    </label>
+                    <label class="serial-check" for="serial-timestamp-toggle">
+                        <input type="checkbox" id="serial-timestamp-toggle">
+                        <span>%{BKY_SERIAL_TIMESTAMP}</span>
+                    </label>
+                    <label class="serial-check" for="serial-hex-toggle">
+                        <input type="checkbox" id="serial-hex-toggle">
+                        <span>%{BKY_SERIAL_HEX}</span>
+                    </label>
+                    <label class="serial-check" for="serial-reset-toggle"
+                           title="%{BKY_SERIAL_RESET_ON_OPEN_HINT}">
+                        <input type="checkbox" id="serial-reset-toggle">
+                        <span>%{BKY_SERIAL_RESET_ON_OPEN}</span>
+                    </label>
+                    <!-- 刻意不帶 disabled：未連線時的停用由 serial-monitor.js
+                         於執行期設定（syncControls）。HTML 的靜態 disabled 會與
+                         registry 的 implemented:true 契約衝突，且使用者看到
+                         一個「天生灰掉」的按鈕會誤以為尚未實作。 -->
+                    <button class="terminal-tool-btn serial-toggle-btn" id="btn-serial-reset" data-action="serial-reset-board" title="%{BKY_SERIAL_RESET_BOARD}">%{BKY_SERIAL_RESET_BOARD}</button>
+                    <button class="terminal-tool-btn serial-toggle-btn" id="btn-serial-monitor" data-action="toggle-serial-monitor" title="%{BKY_SERIAL_START}">%{BKY_SERIAL_START}</button>
+                </div>
                 <div id="terminalContent"></div>
+                <div id="serialInputBar">
+                    <input type="text" id="serial-input" autocomplete="off"
+                           placeholder="%{BKY_SERIAL_INPUT_PLACEHOLDER}"
+                           aria-label="%{BKY_SERIAL_INPUT_LABEL}">
+                    <button class="terminal-tool-btn" id="btn-serial-send" data-action="serial-send" title="%{BKY_SERIAL_SEND}">%{BKY_SERIAL_SEND}</button>
+                </div>
                 </div>
             </div>
         </div>
@@ -626,6 +664,9 @@
             </div>
         </div>
     </div>
+
+    <!-- ====== 序列監視器（T3） ====== -->
+    <script src="src/lib/arduino/serial-monitor.js"></script>
 
     <!-- ====== 板子／序列埠自動偵測（T2-D） ====== -->
     <script src="src/lib/arduino/board-detector.js"></script>

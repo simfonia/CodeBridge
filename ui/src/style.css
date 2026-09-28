@@ -108,6 +108,15 @@ body {
     border-radius: 4px;
     transition: background 0.2s;
     position: relative;
+    /* 清除 <button> 的瀏覽器預設樣式：工具列按鈕是圖示按鈕，
+       留下預設邊框／背景／字型會讓它們看起來像一般表單按鈕。
+       這是為了讓部分按鈕（`#btn-run`）能用真正的 `<button>` 元素 ——
+       只有表單元素的 `disabled` 才會生效並被 `[disabled]` CSS 匹配到。 */
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
 }
 
 .toolbar-btn img {
@@ -341,6 +350,134 @@ body.resizing-terminal #terminalArea {
 
 .terminal-tool-btn:hover {
     background: #3c3c3c;
+}
+
+/* ===== 序列監視器控制列（T3） ===== */
+/*
+ * 與編譯輸出共用 `#terminalContent`，但控制項與輸入行各自獨立。
+ * 顏色刻意沿用終端機既有的深色系，不引入新色碼 —— 兩套 preset 的
+ * 終端機本來就各自可讀，序列控制列跟著走就不會打架。
+ */
+#serialControlBar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 4px 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+}
+
+.serial-field,
+.serial-check {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #b8b8b8;
+    cursor: pointer;
+}
+
+#serial-baud-select {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    font-size: 11px;
+    padding: 1px 4px;
+}
+
+/* 開關鈕：與終端機工具列同語言，但寬度自適應文字。 */
+.serial-toggle-btn {
+    width: auto;
+    padding: 0 10px;
+    font-size: 11px;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.serial-toggle-btn[data-active="true"] {
+    background: #2d6a2d;
+    border-color: #4a9a4a;
+}
+
+.serial-toggle-btn[data-active="true"]:hover {
+    background: #357a35;
+}
+
+/* 連線狀態燈：文字 + 顏色雙重編碼，不單靠顏色辨識（可讀性與色盲友善）。 */
+.serial-status {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #9a9a9a;
+}
+
+.serial-status[data-connected="true"] {
+    color: #7ddc7d;
+    border-color: #4a9a4a;
+}
+
+/* 上傳暫停中：即將自動重連，不等於「未連線」。 */
+.serial-status[data-connected="paused"] {
+    color: #f0d98c;
+    border-color: #a8944a;
+}
+
+/* 位元組計數：診斷「板子沒印」vs「我們收錯」的唯一依據。 */
+.serial-byte-count {
+    font-size: 11px;
+    color: #8a8a8a;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.serial-byte-count[data-visible="false"] {
+    display: none;
+}
+
+.serial-status[data-connected="error"] {
+    color: #ff8a8a;
+    border-color: #a04040;
+}
+
+#serialInputBar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#serial-input {
+    flex: 1;
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    padding: 3px 6px;
+}
+
+#serial-input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#btn-serial-send {
+    width: auto;
+    padding: 0 10px;
+    font-size: 11px;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* 序列資料行：與編譯輸出行同為等寬字，但用左側色條區分來源。 */
+.terminal-line--data {
+    border-left: 2px solid #4a9a4a;
+    padding-left: 6px;
+    color: #d8f0d8;
 }
 
 /* Toolbox 上方積木搜尋框（對齊 Cocoya） */

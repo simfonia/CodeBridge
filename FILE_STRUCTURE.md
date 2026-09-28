@@ -15,9 +15,10 @@ CodeBridge/
 │   ├── icons/           # 應用圖示
 │   └── src/
 │       ├── main.rs      # 主入口
-│       ├── lib.rs       # 應用程式邏輯、AppState、工具鏈 facade、啟動 watcher
-│       ├── commands.rs  # Tauri 指令 (serial, toolchain, board, library, operation) + 序列埠掃描與熱插拔 watcher
-│       ├── events.rs    # 事件名稱、FlushPolicy 節流、LineBuffer 行緩衝、PortInfo 簽章 diff
+│       ├── lib.rs       # 應用程式邏輯、AppState、工具鏈 facade、啟動 watcher、內建範例資源定位（select_examples_dir）
+│       ├── commands.rs  # Tauri 指令 (serial, toolchain, board, library, operation) + 序列埠掃描與熱插拔 watcher + 序列監視器命令 + list_examples／read_example（掃描 resources/examples，不需 manifest.json）
+│       ├── events.rs    # 事件名稱、FlushPolicy 節流、LineBuffer 行緩衝、PortInfo 簽章 diff、SerialData 批次事件
+│       ├── serial_monitor.rs  # 序列監視器（LineFramer 位元組切行、HEX 編碼、pump 讀取迴圈、Session）
 │       ├── project.rs     # .cbg 專案檔讀寫（副檔名白名單、UTF-8 無 BOM、BOM 容忍）
 │       ├── capabilities/  # Tauri 2 權限宣告（core / dialog 最小權限）
 │       ├── tests/         # 整合測試（arduino_cli_smoke.rs：對真實 arduino-cli 端對端驗證）
@@ -117,7 +118,8 @@ CodeBridge/
 │   │       ├── arduino/          # Arduino CLI 工具鏈（T2）
 │   │       │   ├── compile-controller.js # 編譯／上傳狀態機、單飛、取消、診斷標記
 │   │       │   ├── board-detector.js    # 板子／序列埠自動偵測（熱插拔、偏好埠、自動切板、上傳前比對）
-│   │       │   └── board-picker.js      # 開發板選擇面板（搜尋過濾、手動選板、錯誤降級）
+│   │       │   ├── board-picker.js      # 開發板選擇面板（搜尋過濾、手動選板、錯誤降級）
+│   │       │   └── serial-monitor.js    # 序列監視器（開關、baud、HEX、時間戳、開發者輸入行、多埠過濾）
 │   │       ├── ui/              # 工具列 UI 元件
 │   │       │   ├── toolbar-registry.js # 按鈕 registry（id / implemented / handledBy）
 │   │       │   ├── toolbar.js         # data-action 派發、dirty 指示、最近清單與範例
@@ -136,10 +138,10 @@ CodeBridge/
 │   │           └── core_manifest.json # 模組載入清單
 │   └── public/
 │       ├── favicon.ico      # 網站圖示（複製自 src-tauri/icons/icon.ico）
-│       ├── examples/       # 內建範例 .cbg 與 manifest.json（manifest 僅供顯示，命名以 .cbg 內 cbp:name 為準）
 │       └── blockly/         # Blockly v13.3.0 靜態資源（core、msg、plugins、media 離線備份）
 │
-├── resources/           # 應用資源
+│   ├── resources/           # Tauri bundle 資源（打包時匣內的檔案）
+│   │   └── examples/        # 內建範例 .cbg，由 Rust read_dir() 掃描（檔名數字前綴＝排序，不需 manifest.json）
 ├── libraries/           # Arduino 函式庫快取
 ├── modules/             # 積木模組快取
 ├── log/

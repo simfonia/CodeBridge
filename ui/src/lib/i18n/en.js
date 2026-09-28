@@ -104,7 +104,6 @@ var UI_EN = {
     CLI_BOARD_DETECTED: 'Detected %1',
     CLI_BOARD_UNKNOWN_PORT: 'Cannot identify a board for %1. Please choose one manually.',
     CLI_ERROR_NO_BOARD_SELECTED: 'No board selected',
-    MSG_BOARD_MISMATCH: 'Detected board (%1) differs from the current setting (%2). Upload anyway?',
     MSG_CONTINUE: 'Continue',
 
     // Compile diagnostics
@@ -126,8 +125,34 @@ var UI_EN = {
     CLI_OPERATION_TIMED_OUT: 'Timed out',
     
     // Not yet implemented stages
-    SERIAL_MONITOR_NOT_IMPLEMENTED: 'Serial monitor will be available in a later stage',
     COMPILE_NOT_IMPLEMENTED: 'Compilation will be available in a later stage',
+
+    // Serial Monitor
+    SERIAL_BAUD: 'Baud rate',
+    SERIAL_TIMESTAMP: 'Timestamp',
+    SERIAL_HEX: 'HEX',
+    SERIAL_START: 'Open monitor',
+    SERIAL_STOP: 'Close monitor',
+    SERIAL_CONNECTED: 'Connected',
+    SERIAL_DISCONNECTED: 'Not connected',
+    SERIAL_PAUSED_FOR_UPLOAD: 'Paused for upload, reconnecting shortly',
+    SERIAL_INPUT_PLACEHOLDER: 'Send a message to the board…',
+    SERIAL_SEND: 'Send',
+    SERIAL_INPUT_LABEL: 'Serial input line',
+    SERIAL_EMPTY_HINT: 'Open the monitor to see the board output',
+    SERIAL_ERROR_NO_PORT: 'No serial port selected',
+    SERIAL_ERROR_OPEN: 'Could not open the port',
+    SERIAL_ERROR_READ: 'Connection lost',
+    SERIAL_MONITOR_SEND_FAILED: 'Could not send the message',
+    SERIAL_MONITOR_NOT_RUNNING: 'The serial monitor is not open',
+    SERIAL_MONITOR_DESKTOP_ONLY: 'The serial monitor is only available in the desktop app',
+    SERIAL_PORT_GONE: 'Port %1 was disconnected',
+    SERIAL_RESET_BOARD: 'Restart board',
+    SERIAL_RESET_ON_OPEN: 'Reset on open',
+    SERIAL_RESET_ON_OPEN_HINT: 'Try to restart the board when opening the monitor so the boot message plays again. Note: third-party clone boards often omit the reset circuit, so this may do nothing — press the board\'s physical RESET button instead.',
+    SERIAL_WAITING_DATA: 'Waiting for data…',
+    SERIAL_RECEIVED_BYTES: '%1 bytes this session',
+    SERIAL_BYTES_HINT: 'The counter resets when you reopen the monitor, press "Restart board", or change the baud rate. Pressing the board\'s physical RESET button does NOT reset it — that only reboots the board; the serial connection stays open. To see the boot message clearly, use the terminal panel\'s Clear button first.',
     
     // Practice Mode
     PRACTICE_ENTER: '✍️ Practice',

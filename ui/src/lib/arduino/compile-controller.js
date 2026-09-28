@@ -153,6 +153,26 @@ var CodeBridgeCompile = (function() {
         return (state && state.meta) || {};
     }
 
+    /// 目前使用者選擇的裝置（序列埠 + 開發板）。
+    ///
+    /// **一律取自 `board-detector`，不讀專案 metadata**（2026-09-28 決策）：
+    /// 序列埠與開發板描述的是「使用者身邊的硬體」，不是專案內容。
+    /// metadata 可能過期（啟動快照、下拉已換埠），曾造成
+    /// 「UI 顯示 COM4 但上傳報尚未選擇序列埠」的實際 bug。
+    /// 下拉是使用者眼前的真相 —— 燒到他看到的埠。
+    ///
+    /// `board-detector` 缺席時（例如純單元測試）退回 metadata，
+    /// 避免一次重構讓所有既有測試失效。
+    function currentDevice() {
+        var detector = boardDetector();
+        if (detector && typeof detector.getState === 'function') {
+            var state = detector.getState() || {};
+            return { port: state.port || '', fqbn: state.fqbn || '' };
+        }
+        var meta = currentMeta();
+        return { port: meta.port || '', fqbn: meta.fqbn || '' };
+    }
+
     function projectName(state) {
         if (state && state.name) return state.name;
         var meta = currentMeta();
@@ -341,9 +361,10 @@ var CodeBridgeCompile = (function() {
 
         var stateStore = store();
         var state = stateStore && stateStore.getState ? stateStore.getState() : {};
-        var meta = currentMeta();
-        var fqbn = meta.fqbn || '';
-        var port = meta.port || '';
+        // Device state comes from the dropdown the user is looking at, not metadata.
+        var device = currentDevice();
+        var fqbn = device.fqbn;
+        var port = device.port;
 
         if (!fqbn) {
             reportError('CLI_ERROR_NO_FQBN', '請先選擇開發板');
@@ -433,27 +454,14 @@ var CodeBridgeCompile = (function() {
 
     function boardDetector() { return window.CodeBridgeBoardDetector; }
 
-    /// 上傳前確認板子無誤。
-    ///
-    /// 偵測到的硬體與專案設定不一致時請使用者確認 —— 直接上傳會把程式寫進
-    /// 錯誤的晶片，事後難以察覺。偵測端不可用（純瀏覽器、無對應 core）時
-    /// 照常放行，後端的 `verify_build` 仍會擋下 FQBN 不符的 build。
-    function confirmBoard() {
-        var detector = boardDetector();
-        if (!detector || typeof detector.verifyBoardForUpload !== 'function') {
-            return Promise.resolve(true);
-        }
-        return Promise.resolve(detector.verifyBoardForUpload())
-            .catch(function() { return true; });
-    }
-
     /// 上傳最近一次編譯結果。
     function upload() {
         var stateStore = store();
         var state = stateStore && stateStore.getState ? stateStore.getState() : {};
-        var meta = currentMeta();
-        var fqbn = meta.fqbn || '';
-        var port = meta.port || '';
+        // 裝置狀態取自使用者眼前的下拉，不讀 metadata（見 currentDevice）。
+        var device = currentDevice();
+        var fqbn = device.fqbn;
+        var port = device.port;
 
         if (!fqbn) {
             reportError('CLI_ERROR_NO_FQBN', '請先選擇開發板');
@@ -463,30 +471,27 @@ var CodeBridgeCompile = (function() {
             reportError('CLI_ERROR_NO_PORT', '請先選擇序列埠');
             return Promise.resolve(false);
         }
-        return confirmBoard().then(function(allowed) {
-            if (!allowed) return false;
-            if (terminal()) {
-                terminal().appendMessage(
-                    'CLI_UPLOAD_STARTING',
-                    '開始上傳到 %1，請勿斷開連線',
-                    [port],
-                    'command'
-                );
-            }
-            // 燒錄期間心跳：avrdude 可能長時間沒有輸出，
-            // 畫面停在同一行會讓用戶分不清「還在燒」還是「卡住」。
-            startUploadHeartbeat();
-            return doUpload(state, fqbn, port).then(function(result) {
-                // 不在這裡停心跳：`doUpload` 只等到 `upload_start` 回傳作業 id
-                //（燒錄在背景進行），實際燒錄還要數秒。
-                // 真正的收尾在 `handleOperationStatus` 收到上傳終態事件時。
-                // 只有命令本身失敗才立即停止。
-                if (!result) stopUploadHeartbeat();
-                return result;
-            }, function(error) {
-                stopUploadHeartbeat();
-                throw error;
-            });
+        if (terminal()) {
+            terminal().appendMessage(
+                'CLI_UPLOAD_STARTING',
+                '開始上傳到 %1，請勿斷開連線',
+                [port],
+                'command'
+            );
+        }
+        // 燒錄期間心跳：avrdude 可能長時間沒有輸出，
+        // 畫面停在同一行會讓用戶分不清「還在燒」還是「卡住」。
+        startUploadHeartbeat();
+        return doUpload(state, fqbn, port).then(function(result) {
+            // 不在這裡停心跳：`doUpload` 只等到 `upload_start` 回傳作業 id
+            //（燒錄在背景進行），實際燒錄還要數秒。
+            // 真正的收尾在 `handleOperationStatus` 收到上傳終態事件時。
+            // 只有命令本身失敗才立即停止。
+            if (!result) stopUploadHeartbeat();
+            return result;
+        }, function(error) {
+            stopUploadHeartbeat();
+            throw error;
         });
     }
 

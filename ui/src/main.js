@@ -684,20 +684,65 @@ document.addEventListener('DOMContentLoaded', function() {
             getWorkspace: function() { return workspace; },
             getCode: function() { return currentMarkedCode; }
         });
+        // 作業進行中鎖住執行鈕：單飛保護在 `run()` 內（`if (busy) return`），
+        // 但沒有視覺回饋時，使用者會以為按鈕壞掉而反覆點擊。
+        // 使用者回報「連按 2 次上傳鈕有保護嗎？」—— 保護是有的，但看不出來。
+        window.CodeBridgeCompile.onChange(function(state) {
+            var runButton = document.getElementById('btn-run');
+            if (!runButton) return;
+            runButton.disabled = Boolean(state.busy);
+            runButton.setAttribute('aria-busy', state.busy ? 'true' : 'false');
+        });
     }
 
     // 6. 板子／序列埠自動偵測（T2-D）
-    //    訂閱 Rust watcher 的熱插拔事件，維護工具列的序列埠下拉，
-    //    並在偵測到板子時填入專案的 fqbn（僅在使用者尚未選過板子時）。
+    //    訂閱 Rust watcher 的熱插拔事件，維護工具列的序列埠下拉。
+    //    **裝置狀態的唯一持有者**：上傳的 port 與 fqbn 都從這裡讀取。
     if (window.CodeBridgeBoardDetector) {
         window.CodeBridgeBoardDetector.init({ store: projectStore });
     }
 
     // 7. 開發板選擇面板（T2-E）
     //    允許使用者手動指定 FQBN：自動偵測無法識別的板子（缺少 core）
-    //    只能通過這個入口定下 FQBN。與自動切板相反，這裡的選取端不接收旧值。
+    //    只能通過這個入口定下 FQBN。面板只是編輯介面，選取結果交給
+    //    `board-detector`（見 board-picker.selectBoard）。
     if (window.CodeBridgeBoardPicker) {
         window.CodeBridgeBoardPicker.init({ store: projectStore });
+    }
+
+    // 7a. 工具列的開發板名稱標籤要跟著裝置狀態走。
+    //     插上板子自動偵測、或手動選板後，標籤都該即時更新 ——
+    //     選了板卻看不到名字，使用者無從確認上傳會燒到哪一顆。
+    if (window.CodeBridgeBoardDetector && window.CodeBridgeBoardPicker) {
+        window.CodeBridgeBoardDetector.onChange(function() {
+            window.CodeBridgeBoardPicker.syncLabel();
+        });
+    }
+
+    // 7b. 序列監視器（T3）
+    //     與編譯輸出共用終端機面板，但控制項與讀取程序獨立。
+    //     埠被拔除時自動關閉，所以要訂閱 board detector 的變化。
+    if (window.CodeBridgeSerialMonitor) {
+        window.CodeBridgeSerialMonitor.init({ store: projectStore });
+        if (window.CodeBridgeBoardDetector) {
+            window.CodeBridgeBoardDetector.onChange(function(state) {
+                window.CodeBridgeSerialMonitor.handlePortsChanged({
+                    ports: state.ports,
+                    change: 'changed'
+                });
+            });
+        }
+    }
+
+    // 7c. 終端機面板的開闔會改變 Blockly 工作區的可用高度。
+    //     Blockly 的 SVG 只在 inject() 時量一次尺寸，不會自己察覺容器變化 ——
+    //     沒有這裡的 svgResize，收合面板後工作區不會變大、被蓋住的區域
+    //     也不會重繪回來（使用者 2026-09-28 回報）。
+    if (window.CodeBridgeTerminalPanel) {
+        window.CodeBridgeTerminalPanel.onWorkspaceResize(function() {
+            if (typeof Blockly === 'undefined') return;
+            Blockly.svgResize(Blockly.getMainWorkspace());
+        });
     }
 
     var initialState = projectStore.getState();

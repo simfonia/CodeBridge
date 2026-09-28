@@ -167,19 +167,6 @@ var CodeBridgeProjectIO = (function() {
     ///
     /// 板子與序列埠描述的是**使用者身邊的硬體**，不是專案內容，因此換專案
     /// 時必須保留。專案自帶的值（例如從磁碟開啟的舊 `.cbg`）仍可覆寫。
-    function keepDeviceMeta(incoming) {
-        var state = store().getState();
-        var current = (state && state.meta) || {};
-        var next = Object.assign({}, incoming || {});
-        ['fqbn', 'port', 'baud'].forEach(function(key) {
-            var value = next[key];
-            if (value === null || value === undefined || value === '') {
-                next[key] = current[key] === undefined ? null : current[key];
-            }
-        });
-        return next;
-    }
-
     function newProject() {
         return confirmDiscardIfDirty().then(function(allowed) {
             if (!allowed) return false;
@@ -199,11 +186,8 @@ var CodeBridgeProjectIO = (function() {
     function openExample(example) {
         return confirmDiscardIfDirty().then(function(allowed) {
             if (!allowed) return false;
-            return fetch(example.file)
-                .then(function(response) {
-                    if (!response.ok) throw new Error('PROJECT_ERROR_READ_FAILED|' + example.file);
-                    return response.text();
-                })
+            // 讀取走 Rust 端：範例在 Tauri 資源目錄，dev 伺服器沒有它。
+            return bridge().invoke('read_example', { path: example.path })
                 .then(function(contents) {
                     var parsed = project().parse(contents);
                     loadWorkspaceXml(parsed.body);
@@ -211,9 +195,11 @@ var CodeBridgeProjectIO = (function() {
                     // 範例是隨程式打包的資源，沒有可在本機檔案總管顯示的路徑，只提供說明標籤。
                     store().markUntitled(
                         serializeWorkspace(),
-                        // 範例不帶設備資訊 → 保留使用者當前選擇（見 keepDeviceMeta）。
-                        keepDeviceMeta(parsed.meta),
-                        parsed.meta.name || project().nameFromPath(example.file),
+                        // 裝置狀態（埠／板型）不屬於範例，也不再存進 metadata ——
+                        // 保持在 board-detector 與下拉選單，由使用者當下的選擇決定。
+                        { format: parsed.meta.format, app: parsed.meta.app },
+                        // 顯示名稱由 Rust 從檔名剝掉排序前綴而得（見 display_name）。
+                        example.name || project().nameFromPath(example.file),
                         { label: example.file }
                     );
                     store().setDraft(null);
@@ -227,9 +213,12 @@ var CodeBridgeProjectIO = (function() {
     }
 
     /// 讀取內建範例清單；失敗時回傳空陣列，讓 UI 顯示「尚無內建範例」。
+    ///
+    /// 範例改由 Rust 端掃描資源目錄（對齊 #WaveCode），因此新增範例只要
+    /// 放檔案即可，不必維護 `manifest.json` 索引檔。
     function loadExamples() {
-        return fetch('examples/manifest.json')
-            .then(function(response) { return response.ok ? response.json() : []; })
+        if (!requireDesktop()) return Promise.resolve([]);
+        return bridge().invoke('list_examples')
             .then(function(list) { return Array.isArray(list) ? list : []; })
             .catch(function() { return []; });
     }

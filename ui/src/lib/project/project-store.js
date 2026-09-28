@@ -18,6 +18,8 @@ var CodeBridgeProject = (function() {
     /// .cbg 格式版本；高於此版本時拒絕開啟，避免靜默降級。
     var FORMAT_VERSION = 1;
     var NAMESPACE = 'https://codebridge.app/xml';
+    /// 寫檔時記錄的 CodeBridge 版本（純診斷用，不參與相容性判斷）。
+    var APP_VERSION = '0.2.0';
     var RECENTS_LIMIT = 10;
 
     var STORAGE_KEYS = {
@@ -26,10 +28,22 @@ var CodeBridgeProject = (function() {
         recents: 'codebridgeRecentProjects'
     };
 
-    var META_FIELDS = ['name', 'fqbn', 'port', 'baud', 'libraries'];
+    /// 會被序列化進 .cbg 的 metadata 欄位。
+    ///
+    /// **2026-09-28 設計決策（與使用者討論後定案）**：
+    /// 只保留 `app`（寫檔的 CodeBridge 版本，純診斷用），其餘全部移除：
+    /// - `name`：**檔名才是權威**。存進檔案只會在使用者於檔案總管改名後
+    ///   產生「檔名是 A、內部記錄是 B」的矛盾。
+    /// - `fqbn`：第三方 clone 板的 reset/VID/PID 常不標準，**偵測不到 fqbn**。
+    ///   記錄下來也無法驗證，只會在開檔時自動選中一個錯的預設值。
+    /// - `port` / `baud`：**本機環境狀態**，不是專案特性。別台機器沒有 COM3；
+    ///   同一台拔插 USB 後埠號就變。這兩個欄位曾造成「UI 顯示 COM4 但上傳
+    ///   報尚未選擇序列埠」的實際 bug。
+    /// - `libraries`：`#include` 已承載依賴資訊，且此欄位從無程式碼讀寫。
+    var META_FIELDS = ['app'];
 
     function emptyMeta() {
-        return { format: null, name: null, fqbn: null, port: null, baud: null, libraries: null };
+        return { format: null, app: null };
     }
 
     function escapeAttribute(value) {
@@ -54,18 +68,27 @@ var CodeBridgeProject = (function() {
         return match ? match[0] : null;
     }
 
-    function stripCbpAttributes(tag) {
+    /// 移除根元素上的 metadata 屬性。
+    ///
+    /// **同時處理 `cbp:`（舊）與 `cbg:`（新）**：CodeBridge 尚未發佈、沒有既有
+    /// 使用者，但仍可能有開發中的舊檔案。舊命名空間必須在重新序列化時被清乾淨，
+    /// 否則會同時出現兩套 metadata。
+    function stripMetadataAttributes(tag) {
         return tag
-            .replace(/\s+xmlns:cbp="[^"]*"/g, '')
-            .replace(/\s+cbp:[A-Za-z0-9_-]+="[^"]*"/g, '');
+            .replace(/\s+xmlns:cb[gp]="[^"]*"/g, '')
+            .replace(/\s+cb[gp]:[A-Za-z0-9_-]+="[^"]*"/g, '');
     }
 
     function buildAttributeText(meta) {
-        var parts = ['cbp:format="' + FORMAT_VERSION + '"'];
+        var parts = ['cbg:format="' + FORMAT_VERSION + '"'];
+        // 寫檔的 CodeBridge 版本：純診斷用，不參與相容性判斷。
+        // 沒有它，除錯時無法得知「這個 .cbg 是哪一版 CodeBridge 產生的」。
+        var app = (meta && meta.app) || APP_VERSION;
+        if (app) parts.push('cbg:app="' + escapeAttribute(app) + '"');
         META_FIELDS.forEach(function(field) {
             var value = meta ? meta[field] : null;
             if (value === null || value === undefined || value === '') return;
-            parts.push('cbp:' + field + '="' + escapeAttribute(value) + '"');
+            parts.push('cbg:' + field + '="' + escapeAttribute(value) + '"');
         });
         return parts.join(' ');
     }
@@ -76,20 +99,21 @@ var CodeBridgeProject = (function() {
         var tag = findRootTag(text);
         if (!tag) return text;
 
-        var cleaned = stripCbpAttributes(tag);
-        var namespace = ' xmlns:cbp="' + NAMESPACE + '"';
+        var cleaned = stripMetadataAttributes(tag);
+        var namespace = ' xmlns:cbg="' + NAMESPACE + '"';
         var injected = cleaned.replace(/^<xml\b/, '<xml' + namespace + ' ' + buildAttributeText(meta));
         return text.replace(tag, injected);
     }
 
-    /// 解析 .cbg 內容；回傳 metadata 與移除 cbp 屬性後的乾淨 XML。
+    /// 解析 .cbg 內容；回傳 metadata 與移除 metadata 屬性後的乾淨 XML。
     function parse(xmlText) {
         var text = String(xmlText);
         var tag = findRootTag(text);
         var meta = emptyMeta();
         if (!tag) return { meta: meta, body: text };
 
-        var pattern = /\scbp:([A-Za-z0-9_-]+)="([^"]*)"/g;
+        // 同時接受 `cbg:`（新）與 `cbp:`（舊），讓舊檔案仍可開啟。
+        var pattern = /\scb[gp]:([A-Za-z0-9_-]+)="([^"]*)"/g;
         var match;
         while ((match = pattern.exec(tag)) !== null) {
             var key = match[1];

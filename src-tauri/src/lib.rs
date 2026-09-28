@@ -2,8 +2,9 @@ pub mod arduino;
 pub mod commands;
 pub mod events;
 pub mod project;
+pub mod serial_monitor;
 
-use tauri::{Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -40,9 +41,25 @@ pub struct AppState {
     pub last_builds: Arc<Mutex<HashMap<String, BuildRecord>>>,
     /// 序列埠佔用鎖；None 代表空閒。
     ///
-    /// compile／upload 期間佔用，T3 的 Serial Monitor 需沿用同一把鎖，
-    /// 實現「上傳前暫停 Monitor、結束後依設定重連」。
+    /// compile／upload 期間佔用，序列監視器需沿用同一把鎖 ——
+    /// 序列埠在 Windows 上是獨佔資源，Monitor 與 avrdude 同時開啟會直接失敗。
     pub port_lease: Arc<Mutex<Option<String>>>,
+    /// 進行中的序列監視器 session（最多一個）。
+    pub serial_monitor: Arc<Mutex<Option<serial_monitor::Session>>>,
+    /// 使用者「想」監看的設定（與是否正在監看分離）。
+    ///
+    /// **為什麼需要 wants**：upload 會暫時關閉 Monitor，但使用者並沒有
+    /// 關閉它的意圖。若只有「是否連線」一個狀態，上傳結束後就分不清
+    /// 「使用者要重連」與「使用者已手動關閉」。沿用 #cocoya 的
+    /// `SerialMonitorWant` 概念（參見計畫文件）。
+    pub monitor_wants: Arc<Mutex<Option<serial_monitor::MonitorConfig>>>,
+    /// 讀取 thread 的控制代碼。
+    ///
+    /// **為什麼必須有**：`stop` 只設旗標並不等於埠已釋放 —— thread 還活著，
+    /// `SerialPort` 就還持有 Windows 的 COM handle。沒有 join 的話，
+    /// 使用者「關閉監視器」後立刻重新開啟（或改 baud）會得到
+    /// `AccessDenied`（症狀：無法開啟序列埠）。實機驗證才抓得到這個問題。
+    pub monitor_thread: Arc<Mutex<Option<std::thread::JoinHandle<()>>>>,
 }
 
 impl AppState {
@@ -70,6 +87,9 @@ impl AppState {
             isolated_toolchain: Arc::new(Mutex::new(isolated)),
             last_builds: Arc::new(Mutex::new(HashMap::new())),
             port_lease: Arc::new(Mutex::new(None)),
+            serial_monitor: Arc::new(Mutex::new(None)),
+            monitor_wants: Arc::new(Mutex::new(None)),
+            monitor_thread: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -151,6 +171,12 @@ pub fn run() {
             commands::lib_list,
             commands::operation_status,
             commands::operation_cancel,
+            commands::list_examples,
+            commands::read_example,
+            commands::serial_monitor_start,
+            commands::serial_monitor_stop,
+            commands::serial_monitor_send,
+            commands::serial_monitor_status,
             commands::compile_start,
             commands::upload_start,
             commands::upload_ready,
@@ -169,8 +195,57 @@ pub fn toolchain(state: &AppState) -> CodeBridgeToolchain<StdProcessRunner> {
     CodeBridgeToolchain::new(StdProcessRunner::new(), state.toolchain_dirs.clone())
 }
 
-/// 解析目前應使用的 CLI 執行檔。
+/// 內建範例所在的資源目錄。
 ///
+/// **為什麼放 resources 而非 public**（對齊 #WaveCode）：
+/// 靜態檔案伺服器沒有「列出目錄」的 API，前端 `fetch('examples/')` 拿不到檔案清單。
+/// 放在 Tauri 資源目錄後，Rust 端可以用 `fs::read_dir()` 真的列出檔案，
+/// 新增範例只要放檔案，不必維護任何索引檔。
+pub fn examples_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
+    let resource = app.path().resource_dir().ok()?;
+    select_examples_dir(&[
+        // 打包後：resources/examples
+        resource.join("examples"),
+        // 開發模式：target/debug/resources/examples
+        resource.join("resources").join("examples"),
+    ])
+}
+
+/// 從候選目錄中挑出真正含有 `.cbg` 的那一個。
+///
+/// **為什麼不能只看 `is_dir()`**：Cargo 在開發模式會留下
+/// `target/debug/examples/` 這種空殼目錄，而真正複製檔案的是
+/// `target/debug/resources/examples/`。只判斷「目錄存在」會命中空殼，
+/// 症狀是 UI 顯示「目前沒有內建範例」—— 明明檔案就在隔壁。
+/// 這正是 2026-09-28 使用者回報的缺陷。
+fn select_examples_dir(candidates: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
+    candidates
+        .iter()
+        .find(|dir| has_examples(dir))
+        .cloned()
+        // 一個都沒有時回傳第一個存在的目錄，讓錯誤訊息指出真正該修哪裡，
+        // 而不是「找不到範例目錄」這種誤導。
+        .or_else(|| candidates.iter().find(|dir| dir.is_dir()).cloned())
+}
+
+/// 目錄內是否至少有一個 `.cbg` 檔。
+fn has_examples(dir: &std::path::Path) -> bool {
+    std::fs::read_dir(dir)
+        .map(|entries| {
+            entries.filter_map(|entry| entry.ok()).any(|entry| {
+                let path = entry.path();
+                path.is_file()
+                    && path
+                        .extension()
+                        .and_then(|ext| ext.to_str())
+                        .map(|ext| ext.eq_ignore_ascii_case("cbg"))
+                        .unwrap_or(false)
+            })
+        })
+        .unwrap_or(false)
+}
+
+/// 解析目前應使用的 CLI 執行檔。///
 /// 使用者設定的路徑優先；設定存在但失效時直接回報錯誤，不靜默 fallback，
 /// 讓使用者知道自己的設定需要修正。
 pub fn resolve_cli_for(state: &AppState) -> Result<arduino::CliHandle, arduino::CliError> {
@@ -188,6 +263,64 @@ mod tests {
         let root = std::env::temp_dir().join(format!("codebridge-state-{tag}"));
         let _ = std::fs::remove_dir_all(&root);
         AppState::new(root)
+    }
+
+    /// 建立一個只含指定檔名的暫存目錄，回傳其路徑。
+    fn temp_dir_with(tag: &str, files: &[&str]) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("codebridge-examples-{tag}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("建立暫存目錄");
+        for name in files {
+            std::fs::write(dir.join(name), b"<xml/>").expect("寫入暫存檔");
+        }
+        dir
+    }
+
+    #[test]
+    fn select_examples_dir_skips_empty_shell_and_picks_the_one_with_files() {
+        // 回歸（2026-09-28 使用者回報「目前沒有內建範例」）：
+        // Cargo 在開發模式留下 target/debug/examples/ 空殼，
+        // 真正複製檔案的是 target/debug/resources/examples/。
+        // 只用 is_dir() 判斷會命中空殼，UI 就永遠是空的。
+        let shell = temp_dir_with("shell", &[]);
+        let real = temp_dir_with("real", &["01_blink.cbg"]);
+        let shell_path = shell.clone();
+        let real_path = real.clone();
+
+        let picked = select_examples_dir(&[shell.clone(), real.clone()]);
+
+        assert_eq!(picked, Some(real_path));
+        let _ = std::fs::remove_dir_all(&shell);
+    }
+
+    #[test]
+    fn select_examples_dir_ignores_non_cbg_files() {
+        // 只有 README 沒有範例 → 不算有效目錄。
+        let doc_only = temp_dir_with("doc-only", &["README.md"]);
+        let real = temp_dir_with("real2", &["02_serial-hello.cbg"]);
+        let real_path = real.clone();
+
+        let picked = select_examples_dir(&[doc_only.clone(), real.clone()]);
+
+        assert_eq!(picked, Some(real_path));
+        let _ = std::fs::remove_dir_all(&doc_only);
+    }
+
+    #[test]
+    fn select_examples_dir_falls_back_to_existing_dir_when_empty() {
+        // 全都沒有範例時回傳存在的目錄，讓錯誤訊息指出真正該修哪裡。
+        let empty = temp_dir_with("empty", &[]);
+        let empty_path = empty.clone();
+
+        assert_eq!(select_examples_dir(&[empty.clone()]), Some(empty_path));
+        let _ = std::fs::remove_dir_all(&empty);
+    }
+
+    #[test]
+    fn select_examples_dir_returns_none_when_nothing_exists() {
+        let missing = std::env::temp_dir().join("codebridge-examples-does-not-exist");
+        let _ = std::fs::remove_dir_all(&missing);
+        assert_eq!(select_examples_dir(&[missing]), None);
     }
 
     #[test]

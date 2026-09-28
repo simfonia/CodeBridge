@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { installTauriMock, setUiLocale } from '../support/tauri-mock.js';
+import { emitMockEvent, installTauriMock, readCliCalls, setUiLocale } from '../support/tauri-mock.js';
 
 /**
  * T2-E 開發板選擇面板的端對端驗證。
@@ -14,19 +14,24 @@ function readBoardLabels(page) {
   return page.locator('#cb-board-list .cb-board-item').allTextContents();
 }
 
-/** 讀取專案目前的 fqbn。 */
+/**
+ * 讀取目前使用者選擇的 fqbn。
+ *
+ * 2026-09-28 起裝置狀態的唯一持有者是 `board-detector`（不再存進專案
+ * metadata）。這裡讀 detector 才是使用者真正會用到的那個值 —— 也才對得上
+ * 原始症狀「選了 UNO，上傳卻報尚未選擇開發板」。
+ */
 function readProjectFqbn(page) {
   return page.evaluate(() => {
-    const store = window.CodeBridgeProjectStore;
-    const state = store && store.getState ? store.getState() : {};
-    return (state.meta && state.meta.fqbn) || '';
+    const detector = window.CodeBridgeBoardDetector;
+    return detector && detector.getState ? detector.getState().fqbn : '';
   });
 }
 
-/** 預先寫入 fqbn，模擬「專案已選過板子」的狀態。 */
+/** 預先選定 fqbn，模擬「使用者已選過板子」的狀態。 */
 function setProjectFqbn(page, fqbn) {
   return page.evaluate((value) => {
-    window.CodeBridgeProjectStore.setMeta({ fqbn: value });
+    window.CodeBridgeBoardDetector.setManualFqbn(value);
   }, fqbn);
 }
 
@@ -115,8 +120,31 @@ test.describe('開發板選擇面板', () => {
     expect(notice).toContain('手動選擇');
   });
 
-  test('選取開發板後寫入專案並關閉面板', async ({ page }) => {
+  test('選取開發板後上傳會用到選定的板型', async ({ page }) => {
+    // 端對端鎖定 2026-09-28 的原始症狀：
+    // 使用者從面板選了 Mega，按上傳卻報「尚未選擇開發板」。
+    //
+    // 這裡走完整路徑：面板選板 → compile-controller 讀 detector → 送 compile_start。
+    // 只驗「選完 meta 有值」不夠 —— 那正是上一版失效的原因：
+    // 值存在了，但上傳讀的是別處。
+    await emitMockEvent(page, 'codebridge://board-detected', {
+      // 後端**認不出**這顆板子（clone 板常見），自動偵測會是空的 ——
+      // 正是使用者遇到的情境。
+      boards: [],
+      unknown: ['COM3']
+    });
     await page.click('#btn-select-board');
+    await page.locator('#cb-board-list .cb-board-item', { hasText: 'Arduino Mega' }).click();
+    await expect(page.locator('#cb-board-panel')).toBeHidden();
+
+    // 使用者選了板，上傳就必須帶著它。
+    await page.locator('#btn-run').click();
+    const calls = await readCliCalls(page);
+    const compile = calls.find((call) => call.command === 'compile_start');
+    expect(compile.args.payload.fqbn).toBe('arduino:avr:mega');
+  });
+
+  test('選取開發板後寫入專案並關閉面板', async ({ page }) => {    await page.click('#btn-select-board');
     await page.locator('#cb-board-list .cb-board-item', { hasText: 'Arduino Mega' }).click();
 
     expect(await readProjectFqbn(page)).toBe('arduino:avr:mega');

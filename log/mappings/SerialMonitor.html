@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><title>CodeBridge 序列監視器（Serial Monitor）</title></head>
+<body>
+<h1>CodeBridge 序列監視器（Serial Monitor）</h1>
+<p>計畫文件：<code>log/plan/SerialMonitor.md</code>（2026-09-28 實作）</p>
+
+<h2>設計約束（動工前必讀）</h2>
+<ul>
+<li><strong>序列埠是獨佔資源</strong>：Windows 上同一個 COM 埠只能被一個程序開啟。
+    Monitor 與 avrdude <strong>共用 <code>AppState::port_lease</code></strong>。
+    新增任何會持有埠的功能都必須走這把鎖，不可各自 opens。</li>
+<li><strong>共用面板</strong>：序列輸出與編譯輸出都進 <code>#terminalContent</code>，
+    以 <code>kind: 'data'</code> vs <code>'command'</code> 視覺區隔。
+    <code>terminal-panel.js</code> 是純面板，<strong>不可</strong> 塞入 Monitor 邏輯。</li>
+<li><strong>baud 變更必須重啟</strong>：序列埠 baud 在 <code>open()</code> 時綁定，
+    沒有熱改 API。</li>
+<li><strong>上傳後自動重連預設開啟</strong>（2026-09-28 決策）。</li>
+</ul>
+
+<h2>前端公開 API</h2>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>API</th><th>用途</th></tr>
+<tr><td><code>CodeBridgeSerialMonitor.init({ store })</code></td><td>綁定控制列、訂閱兩個事件、同步面板外觀。</td></tr>
+<tr><td><code>start({ port, baud, hex })</code></td><td>啟動；未給 port 時取工具列下拉。<strong>無埠時不發動後端</strong>，直接回 false。</td></tr>
+<tr><td><code>stop() / toggle()</code></td><td>停止／切換。</td></tr>
+<tr><td><code>setBaud(n)</code></td><td>已連線時<strong>重啟</strong>；未連線時只記住設定不發動後端。</td></tr>
+<tr><td><code>setHex(b) / setTimestamp(b)</code></td><td>純前端顯示切換，不重啟、不呼叫後端。</td></tr>
+<tr><td><code>send(text) / submitInput()</code></td><td>送出開發者輸入行（後端自動補 <code>\n</code>）。</td></tr>
+<tr><td><code>handlePortsChanged({ ports })</code></td><td>由 <code>board-detector.onChange</code> 轉呼叫；監看的埠消失時自動關閉。</td></tr>
+<tr><td><code>SUPPORTED_BAUDS</code></td><td>與 arduino 模組積木 <code>BAUD</code> dropdown 一致（刻意不建 i18n key）。</td></tr>
+</table>
+
+<h2>Tauri command</h2>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>Command</th><th>說明</th></tr>
+<tr><td><code>serial_monitor_start(port, baud?, hex?)</code></td><td>開啟序列埠並啟動讀取 thread。會先停止既有 session（重複點等同重啟）。埠被作業佔用時回 <code>CLI_ERROR_PORT_BUSY|</code>。</td></tr>
+<tr><td><code>serial_monitor_stop()</code></td><td>停止讀取並清除 wants。回傳是否真的有 session 在跑。</td></tr>
+<tr><td><code>serial_monitor_send(text)</code></td><td>寫入一行；未開啟時回 <code>SERIAL_MONITOR_NOT_RUNNING|</code>。</td></tr>
+<tr><td><code>serial_monitor_status()</code></td><td>回傳 <code>{ connected, port, baud, error }</code>；有 wants 但未連線 = 上傳暫停中。</td></tr>
+</table>
+
+<h2>事件</h2>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>事件</th><th>Payload</th></tr>
+<tr><td><code>codebridge://serial-data</code></td><td><code>{ port, lines[] }</code> —— <strong>批次</strong>而非逐行，避免高流量塞爆 IPC。</td></tr>
+<tr><td><code>codebridge://serial-state</code></td><td><code>{ connected, port, baud, error }</code>；thread 結束（拔線／停止）也會送。</td></tr>
+</table>
+
+<h2>Rust 純邏輯（可獨立單元測試，不需硬體）</h2>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>型別／函式</th><th>說明</th></tr>
+<tr><td><code>LineFramer::push(&amp;[u8]) -&gt; Vec&lt;Vec&lt;u8&gt;&gt;</code></td><td>位元組緩衝切行。<strong>回傳原始位元組</strong>：HEX 模式需要未解碼的內容，先解碼再重編碼會失真。剝除行尾 <code>\r</code>，超過 <code>MAX_LINE_BYTES</code> 強制切斷。</td></tr>
+<tr><td><code>hex_encode(&amp;[u8]) / format_line(&amp;[u8], hex)</code></td><td>空格分隔大寫 HEX（保留前導零）；文字模式走 <code>encoding::decode_output</code> 的 fallback 鏈。</td></tr>
+<tr><td><code>pump&lt;R: Read, F: FnMut(Vec&lt;String&gt;)&gt;(...)</code></td><td>讀取迴圈。<strong>泛型化 Read</strong> 是為了讓測試用 <code>Cursor</code> 完整驗證切行、停止旗標、讀取錯誤，不需真實硬體。收尾會 flush 殘餘行與未送出的行。</td></tr>
+<tr><td><code>serial_flush_policy()</code></td><td>60ms / 32 行（比編譯的 200ms / 64 行快 —— 序列資料對延遲敏感）。</td></tr>
+<tr><td><code>MonitorConfig::new(port, baud)</code></td><td>不支援的 baud 退回 <code>DEFAULT_BAUD</code>；<code>is_valid()</code> 檢查埠名非空。</td></tr>
+</table>
+
+<h2>常見錯誤對照（實機驗證抓到的）</h2>
+<table border="1" cellspacing="0" cellpadding="6">
+<tr><th>症狀</th><th>根因</th><th>處置</th></tr>
+<tr><td><code>SERIAL_ERROR_READ|Operation timed out</code>，<br>Monitor 一開啟就死</td>
+    <td><code>SerialPort::timeout()</code> 到期回的是 <code>Err(TimedOut)</code>，語意是「沒資料」不是「失敗」。把它當斷線 <code>break</code>，板子安靜 50ms 就死。</td>
+    <td>用 <code>is_no_data()</code> 區分 <code>TimedOut</code>／<code>WouldBlock</code> 與真斷線。</td></tr>
+<tr><td>關閉後立即重開 →「無法開啟序列埠」<br>切 baud 也失敗、上傳前沒自動關閉</td>
+    <td><code>stop</code> 只設旗標就返回，讀取 thread 仍活著、<code>SerialPort</code> 仍持有 Windows COM handle → <code>AccessDenied</code>。</td>
+    <td>停止路徑必須 <code>JoinHandle::join()</code>，再加 120ms 冷卻讓驅動釋放。</td></tr>
+<tr><td>baud 設錯時「完全沒反應」，<br>切回來才看到累積亂碼</td>
+    <td><code>LineFramer</code> 只在遇 <code>\n</code> 才吐行；錯 baud 下位元組邊界錯位，換行符極少出現，資料全卡在緩衝。</td>
+    <td><code>IDLE_FLUSH_MS = 250</code>：閒置逾時強制切出殘餘位元組（對齊 Arduino IDE）。</td></tr>
+<tr><td>狀態列「已接收 N bytes」<br>但<strong>文字全部空白</strong></td>
+    <td>baud 不符 → CH340 取樣時脈錯誤 → 垃圾位元組 →
+        <code>decode_output</code> 的 <strong>Big5 分支是總函式</strong>（任何位元組序列都能「成功」解碼），
+        垃圾被解成<strong>控制字元</strong>（0x00–0x1F），終端機裡完全不可見。</td>
+    <td><code>make_control_chars_visible()</code>：把不可列印字元轉成 <code>&lt;0xNN&gt;</code>，
+        讓「波特率不符」從不可診斷變成一眼可辨。</td></tr>
+<tr><td>收合終端機面板後<br>Blockly 工作區沒有變大</td>
+    <td>Blockly 的 SVG 只在 <code>inject()</code> 時量一次尺寸，不會自己察覺容器變化。程式預覽面板有呼叫 <code>svgResize</code>，終端機面板漏了。</td>
+    <td><code>terminal-panel.onWorkspaceResize(listener)</code>，<code>main.js</code> 註冊為 <code>Blockly.svgResize</code>。</td></tr>
+<tr><td>上傳後狀態燈停在「上傳暫停中」</td>
+    <td><code>start_session()</code> 從未送出「已連線」狀態；重連失敗時又是 <code>let _ =</code> 完全靜默。</td>
+    <td>成功時 emit <code>SERIAL_STATE(connected)</code>；失敗時 emit <code>failed</code>。</td></tr>
+<tr><td>上傳鈕不會變灰</td>
+    <td><code>#btn-run</code> 是 <code>&lt;div&gt;</code>，而 HTML <code>disabled</code> <strong>只對表單元素有效</strong>：
+        <code>div.disabled = true</code> 不會產生 <code>[disabled]</code> attribute，CSS 永遠匹配不到。</td>
+    <td>改為 <code>&lt;button type="button"&gt;</code> + <code>.toolbar-btn</code> 補瀏覽器預設樣式 reset。</td></tr>
+</table>
+
+<h2>AppState 新增欄位</h2>
+<ul>
+<li><code>serial_monitor: Arc&lt;Mutex&lt;Option&lt;Session&gt;&gt;&gt;</code>：進行中的 session（最多一個）。</li>
+<li><code>monitor_wants: Arc&lt;Mutex&lt;Option&lt;MonitorConfig&gt;&gt;&gt;</code>：使用者「想」監看的設定。
+    <strong>與「是否連線」分離</strong>：upload 會暫時關閉 Monitor，但使用者沒有關閉它的意圖；
+    若只有一個狀態，上傳結束後就分不清「要重連」與「已手動關閉」。</li>
+<li><code>monitor_thread: Arc&lt;Mutex&lt;Option&lt;JoinHandle&lt;()&gt;&gt;&gt;&gt;</code>：讀取 thread 控制代碼。
+    <strong>沒有它就無法確保序列埠真的被釋放</strong>（見上方「常見錯誤對照」）。</li>
+</ul>
+
+<h2>埠租約協調流程</h2>
+<pre>
+upload_start
+  → release_port_for_upload(port)   // 只在 wants.port == port 時中斷
+  → try_acquire_port(port)
+  → ...avrdude...
+
+上傳終態
+  → release_port(port)              // 必須先釋放
+  → sleep(150ms)                    // Windows 驅動釋放 handle 需要時間
+  → 若 lease 空閒 → start_session()
+</pre>
+<p><strong>常見錯誤</strong>：在 <code>release_port</code> <em>之前</em>重連，
+會撞到自己剛拿到的鎖；或省略 150ms 冷卻，得到 <code>AccessDenied</code>。</p>
+
+<h2>i18n key（中英對齊）</h2>
+<p><code>SERIAL_BAUD / SERIAL_TIMESTAMP / SERIAL_HEX / SERIAL_START / SERIAL_STOP /
+SERIAL_CONNECTED / SERIAL_DISCONNECTED / SERIAL_PAUSED_FOR_UPLOAD /
+SERIAL_INPUT_PLACEHOLDER / SERIAL_SEND / SERIAL_INPUT_LABEL / SERIAL_EMPTY_HINT /
+SERIAL_ERROR_NO_PORT / SERIAL_ERROR_OPEN / SERIAL_ERROR_READ /
+SERIAL_MONITOR_SEND_FAILED / SERIAL_MONITOR_NOT_RUNNING /
+SERIAL_MONITOR_DESKTOP_ONLY / SERIAL_PORT_GONE</code></p>
+</body></html>

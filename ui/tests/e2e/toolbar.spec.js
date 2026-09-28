@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { emitMockEvent, installTauriMock, readMockFiles, setOpenPath, setSavePath, setUiLocale } from '../support/tauri-mock.js';
 
@@ -5,7 +6,7 @@ const BLINK_PATH = 'C:/projects/Blink.cbg';
 
 const BLINK_PROJECT = [
   '<?xml version="1.0" encoding="UTF-8"?>',
-  '<xml xmlns="https://developers.google.com/blockly/xml" xmlns:cbp="https://codebridge.app/xml" cbp:format="1" cbp:name="Blink" cbp:fqbn="arduino:avr:uno">',
+  '<xml xmlns="https://developers.google.com/blockly/xml" xmlns:cbg="https://codebridge.app/xml" cbg:format="1" cbg:app="0.2.0">',
   '  <block type="initializes_setup" id="setup-from-file" x="20" y="20">',
   '    <statement name="CONTENT">',
   '      <block type="arduino_delay" id="delay-from-file" x="20" y="20">',
@@ -36,6 +37,27 @@ async function mutateWorkspace(page) {
   });
   await page.waitForTimeout(400);
 }
+
+/**
+ * 內建範例的記憶體檔案。
+ *
+ * 2026-09-28 起範例改由 Rust 掃描 `resources/examples/`（對齊 #WaveCode），
+ * 檔名帶數字前綴以固定排序，顯示名稱則由 Rust 端剝掉前綴後提供。
+ * `__examples__` 是 mock 用的資源目錄前綴，讓 `list_examples` 能辨認。
+ *
+ * **直接讀磁碟上的真實範例**，而不是在測試裡重抄一份 XML：
+ * 手抄的 fixture 會與真正打包給使用者的範例分歧（積木欄位名一改就
+ * 靜默失效，症狀是「範例開不起來」而非測試紅燈）。
+ */
+const BLINK_EXAMPLE_PATH = 'app://__examples__/01_blink.cbg';
+const SERIAL_EXAMPLE_PATH = 'app://__examples__/02_serial-hello.cbg';
+
+const RESOURCE_EXAMPLES = new URL('../../../src-tauri/resources/examples/', import.meta.url);
+
+const EXAMPLE_FILES = {
+  [BLINK_EXAMPLE_PATH]: readFileSync(new URL('01_blink.cbg', RESOURCE_EXAMPLES), 'utf8'),
+  [SERIAL_EXAMPLE_PATH]: readFileSync(new URL('02_serial-hello.cbg', RESOURCE_EXAMPLES), 'utf8')
+};
 
 async function dirtyState(page) {
   return page.evaluate(() => ({
@@ -68,8 +90,42 @@ test.describe('工具列與 .cbg 專案流程', () => {
     ).map((element) => element.id).sort());
 
     // 編譯／上傳與終端機按鈕於 T2-C 上線；序列埠重新整理與開發板自動偵測
-    // 於 T2-D 上線。工具列已無未實作按鈕 —— 留下無反應的按鈕比沒有更糟。
-    expect(disabled).toEqual([]);
+    // 於 T2-D 上線；序列監視器於 T3 上線。工具列已無未實作按鈕 ——
+    // 留下無反應的按鈕比沒有更糟。
+    //
+    // **例外**：`btn-serial-send` 與 `btn-serial-reset` 在序列監視器
+    // **未連線**時停用。這是「依狀態停用」而非「尚未實作」——
+    // 語意與 registry 的 `implemented` 完全不同。若把它們算進未實作，
+    // 就會逼出一個永遠能按、但送不出東西的按鈕，那才是真正的無反應。
+    // 靜態 `disabled` 已從 HTML 移除（初始值刻意留空），
+    // 此處捕捉的是執行期 `syncControls()` 依狀態設定的停用。
+    expect(disabled.filter((id) => id !== 'btn-serial-send' && id !== 'btn-serial-reset'))
+      .toEqual([]);
+  });
+
+  test('序列監視器的按鈕在未連線時停用、連線後可用', async ({ page }) => {
+    await installTauriMock(page);
+    await setUiLocale(page, 'zh-hant');
+    await page.goto('/');
+
+    // **必須先展開終端機面板**：它預設收合，收合時位於 Blockly 之下，
+    // Playwright 的點擊會被 `blocklyScrollbarHorizontal` 攔截。
+    await page.locator('#terminal-toggle').click();
+    // 序列埠下拉要等啟動快照（async）回來；未就緒時開啟會被擋下，
+    // 輸入框就一直 disabled。
+    await expect(page.locator('#serial-selector option[value="COM3"]')).toHaveCount(1,
+      { timeout: 10000 });
+
+    // 未連線：輸入框、送出鈕與「重新啟動開發板」都不可用，
+    // 否則使用者會送出「石沉大海」的訊息或對空埠送指令。
+    await expect(page.locator('#serial-input')).toBeDisabled();
+    await expect(page.locator('#btn-serial-send')).toBeDisabled();
+    await expect(page.locator('#btn-serial-reset')).toBeDisabled();
+
+    await page.locator('#btn-serial-monitor').click();
+    await expect(page.locator('#btn-serial-send')).toBeEnabled();
+    await expect(page.locator('#serial-input')).toBeEnabled();
+    await expect(page.locator('#btn-serial-reset')).toBeEnabled();
   });
 
   test('終端機按鈕可展開、暫停、清除與關閉面板', async ({ page }) => {
@@ -149,9 +205,15 @@ test.describe('工具列與 .cbg 專案流程', () => {
     expect(state.icon).toBe('src/icons/load_project_24dp_1F1F1F.png');
 
     const files = await readMockFiles(page);
-    expect(files[BLINK_PATH]).toContain('cbp:format="1"');
-    expect(files[BLINK_PATH]).toContain('cbp:name="Blink"');
+    // 2026-09-28：命名空間改為 cbg:，且只序列化 format 與 app。
+    // 專案名稱由**檔名**權威，因此不該出現在 XML metadata 裡。
+    expect(files[BLINK_PATH]).toContain('cbg:format="1"');
+    expect(files[BLINK_PATH]).toContain('cbg:app=');
     expect(files[BLINK_PATH]).toContain('initializes_setup');
+    // 裝置狀態不得寫進檔案 —— 它描述的是使用者身邊的硬體。
+    expect(files[BLINK_PATH]).not.toContain('cbg:port');
+    expect(files[BLINK_PATH]).not.toContain('cbg:fqbn');
+    expect(files[BLINK_PATH]).not.toContain('cbg:name');
 
     const recents = await page.evaluate(() => JSON.parse(localStorage.getItem('codebridgeRecentProjects')));
     expect(recents.map((item) => item.path)).toEqual([BLINK_PATH]);
@@ -208,51 +270,50 @@ test.describe('工具列與 .cbg 專案流程', () => {
     expect(clipboard).not.toContain('__BLOCKLY_ID');
   });
 
-  test('開斷範例不會清掉已選的開發板與串列埠', async ({ page }) => {
-    // 範例 .cbg 只庫 cbp:format 與 cbp:name，不庫 fqbn / port。
-    // 若直接用解析結果覆盶 metadata，使用者每換一個範例就要重選一次設備。
-    await installTauriMock(page);
+  test('開啟範例不會動到使用者已選的序列埠下拉', async ({ page }) => {
+    // 2026-09-28：序列埠／板型不再存進專案 metadata（那是使用者身邊的
+    // 硬體狀態），而是住在下拉與 localStorage 偏好埠。開範例不該動它 ——
+    // 使用者每換一個範例就要重選一次設備是很差的體驗。
+    await installTauriMock(page, {
+      files: EXAMPLE_FILES,
+      cli: { ports: ['COM3', 'COM4'] }
+    });
     await page.goto('/');
     await page.waitForFunction(() => Boolean(window.CodeBridgeProjectStore));
-
-    await page.evaluate(() => {
-      window.CodeBridgeProjectStore.setMeta({ fqbn: 'arduino:avr:uno', port: 'COM4' });
-    });
+    await expect(page.locator('#serial-selector option[value="COM4"]')).toHaveCount(1);
+    await page.locator('#serial-selector').selectOption('COM4');
 
     await page.click('#btn-examples');
     await page.locator('#examples-list .dropdown-item').first().click();
-    await expect.poll(async () => (await dirtyState(page)).filename).toBe('Blink');
+    await expect.poll(async () => (await dirtyState(page)).filename).toBe('blink');
 
-    const meta = await page.evaluate(() => window.CodeBridgeProjectStore.getState().meta);
-    expect(meta.fqbn).toBe('arduino:avr:uno');
-    expect(meta.port).toBe('COM4');
+    // 下拉維持使用者選的埠。
+    await expect(page.locator('#serial-selector')).toHaveValue('COM4');
   });
 
   test('開空白專案也保留已選的設備', async ({ page }) => {
-    await installTauriMock(page);
+    await installTauriMock(page, { cli: { ports: ['COM3', 'COM4'] } });
     await page.goto('/');
     await page.waitForFunction(() => Boolean(window.CodeBridgeProjectStore));
-
-    await page.evaluate(() => {
-      window.CodeBridgeProjectStore.setMeta({ fqbn: 'arduino:avr:uno', port: 'COM4' });
-    });
+    await expect(page.locator('#serial-selector option[value="COM4"]')).toHaveCount(1);
+    await page.locator('#serial-selector').selectOption('COM4');
 
     await page.click('#btn-new');
 
-    const meta = await page.evaluate(() => window.CodeBridgeProjectStore.getState().meta);
-    expect(meta.fqbn).toBe('arduino:avr:uno');
-    expect(meta.port).toBe('COM4');
+    // 裝置狀態不在專案 metadata 裡，因此開新檔自然不會動到下拉。
+    await expect(page.locator('#serial-selector')).toHaveValue('COM4');
   });
 
   test('內建範例可載入並成為未命名專案（檔名顯示範例名稱）', async ({ page }) => {
-    await installTauriMock(page);
+    await installTauriMock(page, { files: EXAMPLE_FILES });
     await page.goto('/');
 
     await page.click('#btn-examples');
     await expect(page.locator('#examples-list .dropdown-item')).toHaveCount(2);
     await page.locator('#examples-list .dropdown-item').first().click();
 
-    await expect.poll(async () => (await dirtyState(page)).filename).toBe('Blink');
+    // 顯示名稱由 Rust 端剝掉排序前綴（`01_`）而得，UI 不該出現 `01_blink`。
+    await expect.poll(async () => (await dirtyState(page)).filename).toBe('blink');
     // 未命名（沒有路徑）→ 存檔時仍走 Save As
     const isUntitled = await page.evaluate(() => !localStorage.getItem('codebridgeProject').includes('path":"'));
     expect(isUntitled).toBe(true);
@@ -321,7 +382,8 @@ test.describe('工具列與 .cbg 專案流程', () => {
 
     await expect.poll(async () => page.evaluate(() => window.__MOCK_CLOSED__)).toBe(true);
     const files = await readMockFiles(page);
-    expect(files[BLINK_PATH]).toContain('cbp:name="Blink"');
+    expect(files[BLINK_PATH]).toContain('cbg:format="1"');
+    expect(files[BLINK_PATH]).not.toContain('cbg:name');
   });
 
   test('按下視窗 X：專案乾淨時直接關閉，不詢問', async ({ page }) => {
@@ -337,7 +399,9 @@ test.describe('工具列與 .cbg 專案流程', () => {
 test.describe('開啟後的 dirty 與保存提示', () => {
   test.beforeEach(async ({ page }) => {
     // 預先載入 BLINK 檔案，讓各測試能用 setOpenPath 走「開啟既有專案」流程。
-    await installTauriMock(page, { files: { [BLINK_PATH]: BLINK_PROJECT } });
+    await installTauriMock(page, {
+      files: Object.assign({ [BLINK_PATH]: BLINK_PROJECT }, EXAMPLE_FILES)
+    });
     await setUiLocale(page, 'zh-hant');
     await page.goto('/');
     await page.waitForFunction(() => Boolean(window.Blockly && Blockly.getMainWorkspace()));

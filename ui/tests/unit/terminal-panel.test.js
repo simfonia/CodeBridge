@@ -319,6 +319,52 @@ describe('終端機面板', () => {  test('appendToLast 把文字追加到最後
     expect(seen).toEqual([1, 0]);
   });
 
+  test('`#btn-run` 必須是 button，disabled 才能真正生效', async () => {
+    // 使用者回報：「上傳鈕不會變灰，可重複按」。
+    //
+    // 根因：`#btn-run` 是 `<div class="toolbar-btn">`，而 HTML 的 `disabled`
+    // **只對表單元素有效**。JS 寫 `div.disabled = true` 只是設了一個
+    // expando property，不會產生 `[disabled]` attribute ——
+    // 因此 CSS 的 `.toolbar-btn[disabled] { opacity: .35 }` 永遠匹配不到。
+    //
+    // 單飛保護（`if (busy) return`）一直在，所以不會重複上傳；
+    // 但沒有視覺回饋，使用者只會以為按鈕壞掉而一直點。
+    const html = await readFile(join(uiDirectory, 'index.html'), 'utf8');
+    const tag = html.match(/<(\w+)[^>]*id="btn-run"/);
+    expect(tag, '#btn-run 必須存在').not.toBeNull();
+    expect(
+      tag[1].toLowerCase(),
+      '`#btn-run` 必須是 button（div 的 disabled 無效，CSS 也匹配不到）'
+    ).toBe('button');
+  });
+
+  test('開闔面板會通知 Blockly 重算工作區尺寸', async () => {
+    // 使用者回報：監看時收合終端機面板，Blockly 工作區沒有變大，
+    // 原本被面板蓋住的區域也沒有重繪回來。
+    //
+    // 根因：面板位於 `#blocklyArea` 內部，收合改變了工作區的可用高度，
+    // 但 Blockly 的 SVG 只在初始化時量一次 —— 必須呼叫 `svgResize`。
+    // 程式預覽面板（`initCodeToggle`）一直有這麼做，終端機面板漏了。
+    const resizeCalls = [];
+    expect(typeof panel.onWorkspaceResize).toBe('function');
+    panel.onWorkspaceResize(() => resizeCalls.push(1));
+
+    panel.open();
+    panel.close();
+    panel.toggle();
+
+    // 通知刻意延遲一幀（等 CSS 高度生效後再量），因此要讓計時器跑完。
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(resizeCalls.length).toBe(3);
+  });
+
+  test('resize 通知在無 Blockly 的環境下不丟例外', async () => {
+    const bare = await loadClassicScript('src/lib/ui/terminal-panel.js', {
+      document: { getElementById: () => null, createElement: () => createElement('div') }
+    });
+    expect(() => bare.CodeBridgeTerminalPanel.open()).not.toThrow();
+  });
+
   test('appendMessage 以 %1 代入取代字元', () => {
     panel.appendMessage('CLI_COMPILE_STARTING', '開始編譯 %1…', ['Blink']);
 

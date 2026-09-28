@@ -148,17 +148,26 @@ async function loadPicker(overrides = {}) {
     }
   };
   const buttons = { selectBoard: createButton(), search: createInput() };
+  // 假 `board-detector`：面板的選板結果交給它，上傳也從它讀取。
+  // 這裡刻意做成「可見的單一來源」，讓測試能驗證面板有沒有真的交出去。
+  const detector = overrides.detector || {
+    fqbn: '',
+    setManualFqbn(fqbn) { this.fqbn = fqbn || ''; },
+    getState() { return { fqbn: this.fqbn, port: 'COM3' }; }
+  };
   const sandbox = await loadClassicScript('src/lib/arduino/board-picker.js', {
     CodeBridgeTauri: bridge,
+    CodeBridgeBoardDetector: detector,
     getI18n: (key, fallback) => fallback || key
   });
   const doc = createDocument(buttons);
   sandbox.document = doc;
   sandbox.CodeBridgeProjectStore = overrides.store || createStore(overrides.meta);
+  sandbox.CodeBridgeBoardDetector = detector;
   // 真實應用程式啟動時會呼叫 init() 綁定搜尋框與按鈕；測試也照做，
   // 否則輸入框的監聽器不存在，搜尋過濾不可能生效。
   sandbox.CodeBridgeBoardPicker.init();
-  return { sandbox, bridge, doc, buttons };
+  return { sandbox, bridge, doc, buttons, detector };
 }
 
 /** 依 fqbn 找出面板清單中的對應項目（preset 列的按鈕也在容器內，故以屬性定位）。 */
@@ -281,30 +290,41 @@ describe('board-picker 搜尋過濾', () => {
 });
 
 describe('board-picker 選取開發板', () => {
-  test('點擊清單項會寫入 metadata 並關閉面板', async () => {
-    const store = createStore();
-    const { sandbox, doc } = await loadPicker({ store });
+  test('點擊清單項會把 fqbn 交給 board-detector 並關閉面板', async () => {
+    // 2026-09-28 回歸：使用者選了 UNO 卻報「尚未選擇開發板」。
+    // 根因是面板把 fqbn 寫進專案 meta，而上傳讀的是 board-detector ——
+    // 兩個地方各記一份，選板結果到不了上傳。面板現在只交給 detector。
+    const { sandbox, doc, detector } = await loadPicker();
     await sandbox.CodeBridgeBoardPicker.open();
 
     boardItem(doc, 'arduino:avr:mega').click();
 
-    expect(store.meta.fqbn).toBe('arduino:avr:mega');
+    expect(detector.getState().fqbn).toBe('arduino:avr:mega');
     expect(sandbox.CodeBridgeBoardPicker.isOpen()).toBe(false);
   });
 
   test('選取後重新選到其他板子時會覆寫舊值', async () => {
-    // 手動選板是使用者的明確意圖，必須能改 —— 這與自動切板的規則相反。
-    const store = createStore({ fqbn: 'arduino:avr:uno' });
-    const { sandbox, doc } = await loadPicker({ store });
+    // 手動選板是使用者的明確意圖，必須能改 —— 這與自動偵測的規則相反。
+    const detector = {
+      fqbn: 'arduino:avr:uno',
+      setManualFqbn(fqbn) { this.fqbn = fqbn || ''; },
+      getState() { return { fqbn: this.fqbn, port: 'COM3' }; }
+    };
+    const { sandbox, doc } = await loadPicker({ detector });
     await sandbox.CodeBridgeBoardPicker.open();
 
     boardItem(doc, 'arduino:avr:nano').click();
 
-    expect(store.meta.fqbn).toBe('arduino:avr:nano');
+    expect(detector.getState().fqbn).toBe('arduino:avr:nano');
   });
 
   test('目前選取的板子會標示為 active', async () => {
-    const { sandbox, doc } = await loadPicker({ meta: { fqbn: 'arduino:avr:nano' } });
+    const detector = {
+      fqbn: 'arduino:avr:nano',
+      setManualFqbn(fqbn) { this.fqbn = fqbn || ''; },
+      getState() { return { fqbn: this.fqbn, port: 'COM3' }; }
+    };
+    const { sandbox, doc } = await loadPicker({ detector });
     await sandbox.CodeBridgeBoardPicker.open();
 
     const active = activeItems(doc);

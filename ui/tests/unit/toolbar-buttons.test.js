@@ -30,11 +30,18 @@ const IMPLEMENTED_ACTIONS = [
   'save-project',
   'save-project-as',
   'select-board',
+  // 序列監視器（T3）
+  'serial-reset-board',
+  'serial-send',
   'settings-menu',
 
   'terminal-clear',
   'terminal-close',
   'terminal-pause',
+  // 注意：排序比較的是破折號後面的第一個字母，'s' < 't'，
+  // 因此 'toggle-serial-monitor' 排在 'toggle-terminal' **之前**。
+  // 此清單是 sort() 後的快照，不可依「感覺上的先後」手動重排。
+  'toggle-serial-monitor',
   'toggle-terminal'
 ];
 

@@ -104,7 +104,6 @@ var UI_ZH_HANT = {
     CLI_BOARD_DETECTED: '已偵測到 %1',
     CLI_BOARD_UNKNOWN_PORT: '%1 無法辨識對應的開發板，請手動選擇',
     CLI_ERROR_NO_BOARD_SELECTED: '尚未選擇開發板',
-    MSG_BOARD_MISMATCH: '偵測到的開發板（%1）與目前的設定（%2）不同，確定要上傳嗎？',
     MSG_CONTINUE: '繼續',
 
     // 編譯診斷
@@ -126,8 +125,34 @@ var UI_ZH_HANT = {
     CLI_OPERATION_TIMED_OUT: '逾時',
     
     // 尚未實作的階段
-    SERIAL_MONITOR_NOT_IMPLEMENTED: '序列監視器將於後續階段提供',
     COMPILE_NOT_IMPLEMENTED: '編譯功能將於後續階段提供',
+
+    // 序列監視器
+    SERIAL_BAUD: '波特率',
+    SERIAL_TIMESTAMP: '時間戳',
+    SERIAL_HEX: 'HEX',
+    SERIAL_START: '開啟監視器',
+    SERIAL_STOP: '關閉監視器',
+    SERIAL_CONNECTED: '已連線',
+    SERIAL_DISCONNECTED: '未連線',
+    SERIAL_PAUSED_FOR_UPLOAD: '上傳中暫停，稍後自動重連',
+    SERIAL_INPUT_PLACEHOLDER: '傳送訊息給開發板…',
+    SERIAL_SEND: '傳送',
+    SERIAL_INPUT_LABEL: '序列輸入行',
+    SERIAL_EMPTY_HINT: '開啟監視器即可看到開發板的輸出',
+    SERIAL_ERROR_NO_PORT: '尚未選擇序列埠',
+    SERIAL_ERROR_OPEN: '無法開啟序列埠',
+    SERIAL_ERROR_READ: '連線已中斷',
+    SERIAL_MONITOR_SEND_FAILED: '訊息傳送失敗',
+    SERIAL_MONITOR_NOT_RUNNING: '序列監視器尚未開啟',
+    SERIAL_MONITOR_DESKTOP_ONLY: '序列監視器僅桌面版可用',
+    SERIAL_PORT_GONE: '序列埠 %1 已移除',
+    SERIAL_RESET_BOARD: '重新啟動開發板',
+    SERIAL_RESET_ON_OPEN: '開啟時重啟板',
+    SERIAL_RESET_ON_OPEN_HINT: '開啟監視器時嘗試重新啟動開發板，讓開機訊息重播。注意：第三方 clone 板的 reset 線路常被省略，此開關可能無效 —— 此時請手按板子上的 RESET 鍵。',
+    SERIAL_WAITING_DATA: '等待資料…',
+    SERIAL_RECEIVED_BYTES: '本次連線已接收 %1 bytes',
+    SERIAL_BYTES_HINT: '數字在「重新開啟監視器」、「重新啟動開發板」或「切換波特率」時歸零。按開發板上的實體 RESET 鍵不會歸零 —— 那只是讓板子重新開機，序列連線並未中斷。要看開機訊息，請用終端機面板的「清除」按鈕先清空畫面。',
     
     // 練習模式
     PRACTICE_ENTER: '✍️ 練習',

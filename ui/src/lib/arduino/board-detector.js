@@ -34,6 +34,13 @@ var CodeBridgeBoardDetector = (function() {
     var unknownPorts = [];
     /// 使用者最後手動選擇的埠；自動選取不覆寫。
     var preferredPort = '';
+    /// 使用者從開發板面板手動選定的 fqbn（`board-picker.selectBoard` 呼叫）。
+    ///
+    /// 這是**自動偵測之上的覆寫層**：沒有它，使用者明確選了 UNO，
+    /// `getState().fqbn` 卻仍只反映後端偵測結果 —— 選了板卻報
+    /// 「尚未選擇開發板」。後端偵測需要對應 core 才認得出板子，
+    /// 但使用者知道自己在用什麼板。
+    var manualFqbn = '';
     var listeners = [];
 
     function bridge() { return window.CodeBridgeTauri; }
@@ -47,15 +54,6 @@ var CodeBridgeBoardDetector = (function() {
         if (context && context.select) return context.select;
         if (typeof document === 'undefined') return null;
         return document.getElementById('serial-selector');
-    }
-
-    /// 取得可寫入的專案 store。
-    ///
-    /// `window.CodeBridgeProject` 是**工廠**（提供 `createStore`），沒有
-    /// `setMeta`；真正的 store 實例由 main.js 掛在 `window.CodeBridgeProjectStore`。
-    function store() {
-        if (context && context.store) return context.store;
-        return window.CodeBridgeProjectStore || null;
     }
 
     function readPreferred() {
@@ -76,13 +74,6 @@ var CodeBridgeBoardDetector = (function() {
         } catch (error) { /* 隱私模式不可寫入時略過 */ }
     }
 
-    function currentMeta() {
-        var target = store();
-        if (!target || typeof target.getState !== 'function') return {};
-        var state = target.getState();
-        return (state && state.meta) || {};
-    }
-
     function fqbnForPort(port) {
         if (!port) return '';
         return boardMap[port] || '';
@@ -94,8 +85,9 @@ var CodeBridgeBoardDetector = (function() {
         return {
             ports: ports.slice(),
             port: port,
-            fqbn: fqbnForPort(port),
-            metaFqbn: currentMeta().fqbn || '',
+            // 手動選擇優先於自動偵測：使用者從面板點選是明確意圖。
+            fqbn: manualFqbn || fqbnForPort(port),
+            manualFqbn: manualFqbn,
             unknownPorts: unknownPorts.slice(),
             preferredPort: readPreferred()
         };
@@ -111,24 +103,6 @@ var CodeBridgeBoardDetector = (function() {
     function onChange(listener) {
         if (typeof listener !== 'function') return;
         listeners.push(listener);
-    }
-
-    /// 把序列埠寫回專案 metadata（存進 .cbg，下次開檔仍在）。
-    ///
-    /// **不覆寫已存在的 FQBN**：偵測到的板子是「現在插著的硬體」，而 meta.fqbn
-    /// 是「專案原本要燒進哪顆晶片」。自動切板只在使用者從未選過板子時填入；
-    /// 否則會把上傳前比對的基準抹掉 —— 每次都變成「相同」，等於沒有比對。
-    /// 使用者想改板子時應由板子選擇面板明確操作。
-    function applyToMeta(port) {
-        var target = store();
-        if (!target || typeof target.setMeta !== 'function') return;
-        var meta = currentMeta();
-        var patch = { port: port || (meta.port || null) };
-        if (!meta.fqbn) {
-            var detected = fqbnForPort(port);
-            if (detected) patch.fqbn = detected;
-        }
-        target.setMeta(patch);
     }
 
     /// 決定選取哪個埠（純函式，便於測試與推理）。
@@ -191,10 +165,9 @@ var CodeBridgeBoardDetector = (function() {
             });
         }
 
-        // 選取依序考慮：專案既有的 port → 偏好埠 → 目前選擇 → 第一個埠。
-        // 專案 metadata 優先，因為開啟 .cbg 時裡頭已記錄了該用哪個埠，
-        // 自動選取不該在使用者開檔後就覆寫它。
-        var target = choosePort(available, previous || currentMeta().port || '', readPreferred());
+        // 選取依序考慮：目前選擇 → 偏好埠（localStorage）→ 第一個埠。
+        // 偏好埠不是專案 metadata —— 開啟 .cbg 不該改變使用者眼前的下拉。
+        var target = choosePort(available, previous, readPreferred());
         if (target) {
             element.value = target;
         } else if (previous) {
@@ -206,13 +179,6 @@ var CodeBridgeBoardDetector = (function() {
         element.disabled = false;
     }
 
-    /// 套用目前選取埠對應的板子。
-    function applyBoardForCurrentPort() {
-        var element = select();
-        if (!element) return;
-        applyToMeta(element.value);
-    }
-
     /// 處理 `codebridge://serial-ports-changed`。
     function handlePortsChanged(payload) {
         if (!payload) return;
@@ -220,11 +186,23 @@ var CodeBridgeBoardDetector = (function() {
         var previous = element ? element.value : '';
         ports = Array.isArray(payload.ports) ? payload.ports.slice() : [];
         renderOptions(ports);
-        if (element && element.value !== previous) {
-            // 自動切換到不同埠 → 套用新埠的板子。
-            applyBoardForCurrentPort();
-        }
         emit();
+    }
+
+    /// 使用者從開發板面板手動選定開發板。
+    ///
+    /// **為什麼需要這一層**：後端 `board-detected` 只在對應 core 已安裝時
+    /// 才認得出板子。使用者手動選了 UNO 卻仍報「尚未選擇開發板」，
+    /// 是因為選板結果寫在別處（`board-picker` 過去寫 meta），而上傳讀的是
+    /// 這裡。裝置狀態必須只有一個持有者，否則兩邊又不一致了。
+    ///
+    /// 傳入空字串可清除手動選擇，回到自動偵測。
+    function setManualFqbn(fqbn) {
+        var next = fqbn || '';
+        if (next === manualFqbn) return getState();
+        manualFqbn = next;
+        emit();
+        return getState();
     }
 
     /// 處理 `codebridge://board-detected`。
@@ -243,60 +221,15 @@ var CodeBridgeBoardDetector = (function() {
 
         // 板名已知 → 重繪讓選項顯示板名。
         renderOptions(ports);
-        applyBoardForCurrentPort();
         emit();
     }
 
-    /// 使用者手動選擇序列埠：記為偏好並套用該埠的板子。
+    /// 使用者手動選擇序列埠：記為偏好，供下次開啟時自動選取。
     function handleUserSelection() {
         var element = select();
         if (!element) return;
         writePreferred(element.value);
-        applyToMeta(element.value);
         emit();
-    }
-
-    /// 上傳前比對板子：偵測到的 FQBN 與專案記錄的不一致時詢問使用者。
-    ///
-    /// 為什麼需要確認：使用者可能插上 A 板、卻仍留著 B 板的專案設定。
-    /// 直接上傳會把程式寫進錯誤的晶片，且事後難以察覺。
-    /// 後端 `verify_build` 也會擋下 FQBN 不符的 build，但那是在 avrdude
-    /// 階段才回報錯誤；此處提早確認可給使用者改選板子的機會。
-    ///
-    /// 以下情況一律放行（不詢問）：
-    /// - 沒有選取序列埠 → 由 `CLI_ERROR_NO_PORT` 負責回報。
-    /// - 偵測不到 FQBN（沒安裝對應 core）→ 無從比對，應讓使用者自行決定。
-    function verifyBoardForUpload() {
-        var element = select();
-        var port = element ? element.value : '';
-        var detected = fqbnForPort(port);
-        var expected = currentMeta().fqbn || '';
-
-        if (!port || !detected || !expected) return Promise.resolve(true);
-        // 兩者一致 → 沒有風險，直接放行，不打扰使用者。
-        if (detected === expected) return Promise.resolve(true);
-
-        var confirm = window.CodeBridgeConfirm;
-        if (!confirm || typeof confirm.ask !== 'function') return Promise.resolve(true);
-
-        // 顯示板名比顯示 FQBN 更容易讓高中生判斷「是不是同一顆晶片」。
-        var detectedName = boardNames[port] || detected;
-        var message = text('MSG_BOARD_MISMATCH', '偵測到的開發板（%1）與目前的設定（%2）不同，確定要上傳嗎？')
-            .replace('%1', detectedName)
-            .replace('%2', expected);
-
-        return confirm.ask({
-            message: message,
-            options: [
-                { value: true, labelKey: 'MSG_CONTINUE', variant: 'primary' },
-                { value: false, labelKey: 'MSG_CANCEL' }
-            ]
-        }).then(function(answer) {
-            return answer === true;
-        }).catch(function() {
-            // 對話框不可用時不阻擋上傳（後端仍有 build 驗證把關）。
-            return true;
-        });
     }
 
     /// 拉取一次當前序列埠清單（初始快照）。
@@ -311,17 +244,7 @@ var CodeBridgeBoardDetector = (function() {
         if (!bridge() || !bridge().isAvailable()) return Promise.resolve([]);
         return bridge().invoke('get_serial_ports').then(function(result) {
             var list = Array.isArray(result) ? result : [];
-            if (list.length) {
-                handlePortsChanged({ ports: list, change: 'initial' });
-                // `handlePortsChanged` 只在下拉值**變化**時才寫 meta。若使用者
-                // 已先手動選過同一個埠，快照不會改變 value → meta 不會被寫入，
-                // 導致上傳時報「尚未選擇序列埠」（畫面上卻看得到 COM4）。
-                // 因此快照路徑必須自己保證 meta 與當前選擇一致。
-                var element = select();
-                if (element && element.value) {
-                    applyToMeta(element.value);
-                }
-            }
+            if (list.length) handlePortsChanged({ ports: list, change: 'initial' });
             return list;
         }).catch(function() { return []; });
     }
@@ -374,10 +297,10 @@ var CodeBridgeBoardDetector = (function() {
         PREFERRED_PORT_KEY: PREFERRED_PORT_KEY,
         init: init,
         refresh: refresh,
-        verifyBoardForUpload: verifyBoardForUpload,
         getState: getState,
         onChange: onChange,
         fqbnForPort: fqbnForPort,
+        setManualFqbn: setManualFqbn,
         handlePortsChanged: handlePortsChanged,
         handleBoardsDetected: handleBoardsDetected,
         handleUserSelection: handleUserSelection,
@@ -390,6 +313,7 @@ var CodeBridgeBoardDetector = (function() {
             boardNames = {};
             unknownPorts = [];
             preferredPort = '';
+            manualFqbn = '';
             listeners = [];
         }
     };

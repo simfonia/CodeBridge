@@ -41,6 +41,17 @@ export async function installTauriMock(page, options = {}) {
         { id: 'arduino:avr', name: 'Arduino AVR Boards', version: '1.8.8' }
       ],
       installedPlatforms: [],
+      // 序列埠：預設給一個 COM 口，讓序列監視器 E2E 不需真實硬體。
+      // `get_serial_ports` 是啟動快照（`board-detector` 的 `pullInitialPorts`），
+      // 缺了它序列埠下拉永遠是空的 —— 「按了開啟卻說沒有埠」。
+      ports: ['COM3'],
+
+      // 序列監視器（T3）：預設未連線，連線後的狀態由 mock 自行維護，
+      // 讓 E2E 可以驗證「開啟 → 資料 → 關閉」的完整流程。
+      serialConnected: false,
+      serialPort: 'COM3',
+      serialBaud: 9600,
+      serialSent: [],
       errors: {}
     }, config.cli || {});
 
@@ -48,6 +59,7 @@ export async function installTauriMock(page, options = {}) {
       core: {
         invoke(command, args) {
           const payload = args || {};
+          const cli = window.__MOCK_CLI__;
           if (command === 'project_save') {
             files[payload.path] = payload.contents;
             return respond(null);
@@ -69,13 +81,37 @@ export async function installTauriMock(page, options = {}) {
             window.__MOCK_CLOSED__ = true;
             return respond(null);
           }
+          // 序列埠啟動快照（`board-detector` 的 `pullInitialPorts`）。
+          // **必須放在白名單判斷之前** —— 它不屬於 CLI 工具鏈，
+          // 放進白名單會讓 `compile-flow` 等既有測試記錄到多餘的呼叫。
+          if (command === 'get_serial_ports') return respond(cli.ports || []);
+          // 內建範例（2026-09-28）：改由 Rust 掃描 `resources/examples/`
+          // （對齊 #WaveCode），前端不再 fetch `examples/manifest.json`。
+          // 這裡以記憶體檔案模擬掃描結果。
+          if (command === 'list_examples') {
+            const examples = Object.keys(files)
+              .filter((name) => name.endsWith('.cbg') && name.includes('__examples__'))
+              .sort();
+            return respond(examples.map((name) => ({
+              name: name.split('__examples__/').pop().replace(/^\d+[-_]/, '').replace(/\.cbg$/, ''),
+              file: name,
+              path: name
+            })));
+          }
+          if (command === 'read_example') {
+            if (!Object.prototype.hasOwnProperty.call(files, payload.path)) {
+              return fail('PROJECT_ERROR_NOT_FOUND', payload.path);
+            }
+            return respond(files[payload.path]);
+          }
           if (command === 'compile_start' || command === 'upload_start' ||
               command === 'upload_ready' || command === 'operation_cancel' ||
               command === 'board_list_all' || command === 'refresh_serial_ports' ||
               command === 'core_list' || command === 'core_search' ||
-              command === 'core_install') {
+              command === 'core_install' ||
+              command === 'serial_monitor_start' || command === 'serial_monitor_stop' ||
+              command === 'serial_monitor_send') {
             window.__MOCK_CLI_CALLS__.push({ command, args: payload });
-            const cli = window.__MOCK_CLI__;
             const forced = cli.errors[command];
             if (forced) return fail(forced, '');
             if (command === 'compile_start') return respond(cli.compileStart);
@@ -91,6 +127,31 @@ export async function installTauriMock(page, options = {}) {
               // 允許測試在安裝後提供板子清單（模擬「安裝 avr 後 Uno／Nano 可用」）。
               if (typeof cli.onCoreInstalled === 'function') cli.onCoreInstalled(id);
               return respond({ package: id, stdout: 'done' });
+            }
+            // 序列監視器（T3）：mock 自行維護連線狀態，
+            // 讓 E2E 能驗證「開啟 → 收到資料 → 關閉」的完整流程。
+            if (command === 'serial_monitor_start') {
+              cli.serialConnected = true;
+              cli.serialPort = payload.port;
+              cli.serialBaud = payload.baud;
+              return respond({ connected: true, port: cli.serialPort, baud: cli.serialBaud, error: null });
+            }
+            if (command === 'serial_monitor_stop') {
+              cli.serialConnected = false;
+              return respond(true);
+            }
+            if (command === 'serial_monitor_send') {
+              if (!cli.serialConnected) return fail('SERIAL_MONITOR_NOT_RUNNING', '');
+              cli.serialSent.push(payload.text);
+              return respond(payload.text.length + 1);
+            }
+            if (command === 'serial_monitor_status') {
+              return respond({
+                connected: cli.serialConnected,
+                port: cli.serialPort,
+                baud: cli.serialBaud,
+                error: null
+              });
             }
             return respond(cli.cancelResult);
           }
@@ -114,7 +175,10 @@ export async function installTauriMock(page, options = {}) {
         }
       }
     };
-  }, { files: options.files || {} });
+    // **必須一併傳入 `cli`**：`installTauriMock(page, { cli })` 是既有公開
+    // 參數，若這裡不傳，`config.cli` 在頁面內恆為 undefined，
+    // 呼叫端設定的 `ports`／`boards` 等覆寫全部靜默失效。
+  }, { files: options.files || {}, cli: options.cli || {} });
 }
 
 /** 送出假的 Tauri 事件（例如 Rust 攔截視窗關閉後送出的 request-close）。 */
