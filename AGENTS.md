@@ -246,6 +246,7 @@ CI（`.github/workflows/frontend-blockly.yml`）已於 2026-09-30 拆為**兩個
 > 2026-09-30 CB-T1 更正：舊版文件宣稱「CI 會自動執行 `npm test`」與實作不符——`vitest run tests/unit` 當時不在 workflow 任何一步。已補上並修正本段敘述。
 > 2026-09-30 CB-T5 已知警告（GitHub 註解）：`actions/checkout@v4`、`actions/setup-node@v4`、`actions/upload-artifact@v4` 仍以 Node.js 20 為目標，runner 強制改用 Node.js 24 執行。功能無礙但有 deprecation 警告，後續可升 v5。
 > 2026-09-30 run #12 紅燈已修（`npm ci` EUSAGE）：根因是 `node-version: 24` 浮動版本帶來的 npm 版本漂移，導致 lock 驗證失敗。**規則：改動依賴後，必須用 CI 實際會跑到的 npm 版本重建並提交 `ui/package-lock.json`**，本機驗證用 `npx -y npm@<版本> ci --dry-run`（在含 `package.json` 與 lock 的目錄執行）。
+> 2026-09-30 run #13 紅燈已修（unit job 秒紅）：`ui/public/blockly/**` 的官方資產被 `core.autocrlf=true` 的環境（GitHub Actions windows-latest）轉成 CRLF，導致 `VERSIONS.md` 的 bytes／SHA-256 對不上（14 個資產 12 個不符）。已在 `.gitattributes` **最末端**加 `ui/public/blockly/** -text`。**規則：任何以位元組／雜湊鎖定的資產，必須用 `-text` 關閉行尾轉換，且該規則要放在 `.gitattributes` 最後（git 屬性後者勝出）。**
 
 ### 測試執行分層守門 (Test Gating, 2026-09-30)
 

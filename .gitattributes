@@ -13,3 +13,20 @@
 *.json text
 *.html text
 *.css text
+
+# ── Blockly 官方資產必須維持「逐位元組相同」 ──
+#
+# ⚠️ 本區塊必須放在 .gitattributes 的「最後」。git 的屬性規則是「後者勝出」，
+#    若把 -text 寫在 *.js text 之前，會被後者覆蓋而失效（本次即踩過這個坑）。
+#
+# ui/public/blockly/ 是 Blockly 13.3.0 官方 UMD 產物，VERSIONS.md 以 bytes 與
+# SHA-256 鎖定每個檔案（ui/tests/unit/blockly-assets.test.js 會逐一驗證）。
+# 一旦被行尾轉換（LF → CRLF），bytes 與 SHA-256 必然不符：
+#   - GitHub Actions 的 windows-latest（core.autocrlf=true）checkout 時，
+#     14 個受測資產有 12 個 hash 不符 → unit job 秒紅；
+#   - Windows 開發者在本機跑測試同樣會看到假紅燈。
+# -text = 關閉行尾正規化，任何平台 checkout 都得到相同位元組。
+# 連 .svg 也要涵蓋：未列規則的 .svg 會被 git 視為文字檔而遭轉換
+# （實測 media/sprites.svg 1775 → 1849 bytes）。
+ui/public/blockly/** -text
+
