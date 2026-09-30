@@ -61,8 +61,9 @@
 - [x] **CI 拆分 unit／e2e（決策點 1，2026-09-30 完成）**：`unit`（4 steps，Vitest 261 例／約 0.7s）與 `blockly-contract`（`needs: unit`，7 steps，Blockly assets → Playwright 全量 → build → 失敗上傳 report）。代價：兩 job 各跑一次 `npm ci`（由 setup-node 的 npm cache 抵銷）。兩者皆阻塞式，任一紅燈即整體失敗
 - [x] **CI 失敗 run #12 根因已確認並修復**（2026-09-30）：使用者提供日誌 → `npm error code EUSAGE`、`Missing: @emnapi/core@1.11.3 from lock file`／`@emnapi/runtime@1.11.3`。根因為 **`node-version: 24` 浮動版本 → npm 版本漂移**：舊 lock 只有 `@rolldown/binding-wasm32-wasi`（`cpu:["wasm32"]` 選用套件）底下的巢狀 `@emnapi/core@1.11.1`，npm 11.6.2 驗證通過、npm ≥11.19 要求頂層 `1.11.3` → EUSAGE。已用新版 npm 重建 lock（+28/−3：補頂層 1.11.3×2、修正 lock 內 `version: 0.1.0 → 0.2.0`），**npm 11.6.2 與 11.19.1 雙版 `ci --dry-run` 皆通過**，真實 `npm ci` exit 0、單元 261/261、build 產出完整
 - [x] **CI run #13 紅燈已修**（2026-09-30）：lock 修復生效（`npm ci` 已 success），但新上線的 `unit` job 秒紅。根因：`ui/public/blockly/**` 官方資產在 `core.autocrlf=true` 環境（Actions 的 windows-latest）被轉成 CRLF，`VERSIONS.md` 的 bytes／SHA-256 對不上 —— 14 個資產 12 個不符。`.gitattributes` 加 `ui/public/blockly/** -text`，且必須放在檔案**最後**（git 屬性後者勝出，寫在 `*.js text` 之前會失效，本次踩過）。驗證：模擬 CI checkout（`git -c core.autocrlf=true clone`）後 14/14 PASS，且在該 clone 內 `npm ci` + 261/261 全綠
-- [ ] 決策：Playwright 全量是否改 nightly（CI 仍保留阻塞式 smoke），以抵銷兩 job 各自 `npm ci` 的額外時間
-- [ ] 決策：是否將 `actions/*@v4` 升級至 v5（GitHub 註解警告：仍以 Node.js 20 為目標，runner 強制改用 Node.js 24）
+- [x] **CI run #14 全綠（2026-09-30）**：首次完全通過。`Frontend unit tests` ✅ 30 秒；`Frontend Blockly contract` ✅ 3 分 53 秒（`npm ci` 5s → Blockly assets 2s → **Playwright 全量 14 支 spec 3 分 21 秒** → build 1s）。證實 Playwright 在 Actions 的 system Edge 上可跑通
+- [x] **夜間全量（nightly）決策：暫不採用**（2026-09-30）：E2E 實測 3 分 21 秒，本專案規模下每次 push 多等約 4 分鐘尚可接受；且 E2E 才剛在 CI 上線跑通，先讓它當幾次哨兵確認穩定，再評估是否把全量改到 `schedule` 排程（push/PR 只跑 unit ＋ `test:e2e:smoke`）
+- [ ] 決策：是否將 `actions/*@v4` 升級　⚠️ **更正紀錄**：先前誤記為「升 v5」，實際查證（GitHub API，2026-09-30）最新為 **`actions/checkout` v7.0.1、`actions/setup-node` v7.0.0、`actions/upload-artifact` v7.0.1**，是**跨 3 個 major**。好處是消除 Node.js 20 deprecation 警告（v5+ 以 Node 24 為目標）；風險是跨 major 可能有破壞性變更（本專案只用單一 artifact 名稱 `playwright-report`，應相容）。**建議在 CI 連續綠燈一段時間後再一次升級並實測**，避免與其他變更同時發生而難以歸因
 
 ### 工具列後續（2026-09-26 本輪凍結，需另開一輪）
 - [x] Phase 3 Serial Monitor：**已於 2026-09-28 完成**（port/baud/重連/HEX/時間戳/開發者輸入行），詳見 [序列監視器章節](#2026-09-28序列監視器serial-monitor)
