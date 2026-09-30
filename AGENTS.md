@@ -237,7 +237,42 @@ note: previous declaration 'double square(double)'
 - 至少一個公開行為斷言；statement/value block 需有 generator golden 產碼。
 - Toolbox reference、block type、generator type 必須一致。
 
-CI 會自動執行 `npm test` 與 build，但**不會自動替開發者產生 TDD 測試**。新增測試是模組開發的必要工作，不是選用步驟。
+CI（`.github/workflows/frontend-blockly.yml`）已於 2026-09-30 拆為**兩個阻塞式 job**：
+- **`unit`（Frontend unit tests）**：`npm ci` → `npm run test:unit`（Vitest 單元，261 例，約 0.7 秒）
+- **`blockly-contract`（needs: unit）**：`npm ci` → `npm run test:blockly:assets` → `npm run test:e2e`（Playwright 契約）→ `npm run build`
+
+任一 job 紅燈即整體失敗。CI **不會自動替開發者產生 TDD 測試**；新增測試是模組開發的必要工作，不是選用步驟。
+
+> 2026-09-30 CB-T1 更正：舊版文件宣稱「CI 會自動執行 `npm test`」與實作不符——`vitest run tests/unit` 當時不在 workflow 任何一步。已補上並修正本段敘述。
+> 2026-09-30 CB-T5 已知警告（GitHub 註解）：`actions/checkout@v4`、`actions/setup-node@v4`、`actions/upload-artifact@v4` 仍以 Node.js 20 為目標，runner 強制改用 Node.js 24 執行。功能無礙但有 deprecation 警告，後續可升 v5。
+> 2026-09-30 run #12 紅燈已修（`npm ci` EUSAGE）：根因是 `node-version: 24` 浮動版本帶來的 npm 版本漂移，導致 lock 驗證失敗。**規則：改動依賴後，必須用 CI 實際會跑到的 npm 版本重建並提交 `ui/package-lock.json`**，本機驗證用 `npx -y npm@<版本> ci --dry-run`（在含 `package.json` 與 lock 的目錄執行）。
+
+### 測試執行分層守門 (Test Gating, 2026-09-30)
+
+**不同階段只跑該跑的層級。** 每次改完一行程式碼就 `npm test`（含 Playwright 全 14 支 spec、需 Edge + vite server、`workers:1`）是不可負擔的成本。
+
+| 層級 | 指令 | 何時跑 | 內容／耗時 |
+|---|---|---|---|
+| **L0** | `npm run test:fast` | **每次改完碼** | 依 `git diff` 自動挑必要測試並只輸出摘要；約 1.5s |
+| **L0 手動** | `node scripts/test-related.mjs <檔案…>` / `--dry` / `--unit-only` | 明確知道改到哪 | 指定變更檔；`--dry` 只列不跑 |
+| **L1** | `npm run test:unit` | 一個功能切片完成 | Vitest 單元全量 261 例；約 0.7s |
+| **L1 精簡** | `npm run test:unit:fast` | 想看更少輸出 | 同上但 `--silent` |
+| **L2** | `npm run test:e2e:smoke` | 動到 Blockly 模組／樣式主題 | 兩支 Blockly 契約 spec ＋（樣式時）`theme-runtime` |
+| **L3** | `npm test` | 階段收尾、提交前、發布前 | 單元 ＋ Playwright 全量 |
+| **其他** | `npm run cargo:check` | Rust 異動 | 不併入 `npm test` |
+
+- **L0 挑選規則**（`scripts/test-related.mjs`）：
+  - `ui/src/**` 的檔案 → `ui/tests/unit/` 下的**同名** `<name>.test.js`（產品檔與測試檔分屬不同樹，比對的是**檔名**不是目錄）
+  - Blockly 模組（`src/lib/blockly/**`、`*_blocks.js`、`*_generator.js`、`toolbox.xml`）→ 額外納入 `blockly-assets.test.js` ＋ 升級 `blockly-runtime`／`blockly-migration` E2E
+  - `.css`／theme 相關 → 升級 `theme-runtime` E2E
+  - `src-tauri/**.rs`、`.py`、`.ts` → 不跑 Node 測試，提示 `cargo:check`／`py_compile`
+  - 找不到對應測試時**明確提示補測試**，不猜測
+- **計時器紅線**：測試**不得真的睡**。產品碼若用 `setInterval`／`setTimeout`：
+  - 本專案前端是 classic script，`tests/support/classic-script.js` 於載入時把計時器**依值**複製進 vm sandbox，
+    因此 **`vi.useFakeTimers()` 對已載入的 sandbox 無效**，必須在 `loadClassicScript(path, globals)` 注入可控計時器。
+  - 參考實作：`tests/unit/compile-controller.test.js` 的「上傳期間心跳確實會跳（每秒一個點）」（CB-T2，2227ms → 10ms）。
+  - 改寫計時器相關測試後，必須做**紅→綠→再紅**三段驗證（暫時停用產品端計時器，確認測試真的會紅）以防假綠。
+- **AI 協作紀律**：迭代中一律用 `npm run test:fast`，不得把子行程完整輸出灌入對話（`test-related.mjs` 已於輸出落地前過濾為摘要）。
 
 ## 開發慣例
 

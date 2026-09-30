@@ -128,7 +128,11 @@ async function loadController(setup) {
   const store = createStore(setup.state || { path: '', name: 'Blink', meta: {} });
   const sandbox = await loadClassicScript('src/lib/arduino/compile-controller.js', {
     document: setup.document || EMPTY_DOCUMENT,
-    console
+    console,
+    // 2026-09-30 CB-T2：可注入可控計時器。
+    // classic-script.js 會把 setInterval/clearInterval「依值」複製進 vm sandbox，
+    // 因此 vi.useFakeTimers() 對已載入的 sandbox 無效，必須在載入時就替換。
+    ...(setup.timerGlobals || {})
   });
   const controller = sandbox.CodeBridgeCompile;
   controller._reset();
@@ -506,26 +510,57 @@ describe('編譯控制器', () => {
     // 回歸：心跳從未啟動。兩個原因：
     // 1) sandbox 缺 setInterval -> 守占說未動
     // 2) doUpload 只等到 upload_start 回傳 id 就停止 -> 只跑數毫秒
-    await controller.run();
-    bridge.listeners['codebridge://operation-status']({
+    //
+    // 2026-09-30 CB-T2：本測試原本真的 `setTimeout(resolve, 1100)` 等兩輪，
+    // 單獨佔掉 2227ms（整個單元套件 2.86s 的 78%）。
+    // 改為注入可控的 setInterval／clearInterval：不真的睡，改由測試手動觸發心跳。
+    // （vi.useFakeTimers() 在此無效：sandbox 於載入時已把計時器依值複製走。）
+    const ticks = { fn: null, delay: null, cleared: 0 };
+    const loaded = await loadController({
+      state: READY_STATE,
+      code: 'void setup() {}\nvoid loop() {}',
+      plainCode: { strip: (c) => c },
+      bridge: { responses: { compile_start: 'op-compile', upload_ready: true, upload_start: 'op-upload' } },
+      timerGlobals: {
+        setInterval(fn, delay) { ticks.fn = fn; ticks.delay = delay; return 1; },
+        clearInterval() { ticks.cleared += 1; ticks.fn = null; }
+      }
+    });
+    const ctl = loaded.controller;
+    const br = loaded.bridge;
+    const term = loaded.terminal;
+    // 數「實際點數」而非「含點的記錄數」：
+    // 終端機的 appendToLast 會把點併進最後一筆連續輸出，兩次心跳可能落在同一筆記錄。
+    const countDots = () => term.records
+      .reduce((sum, entry) => sum + (String(entry.line || '').split('.').length - 1), 0);
+
+    await ctl.run();
+    br.listeners['codebridge://operation-status']({
       operationId: 'op-compile', kind: 'compile', state: 'succeeded', lines: []
     });
     await flush();
     await flush();
 
-    // 等實際 1.1 秒，心跳應跳至少一次。
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-    const dots = terminal.records.filter((entry) => String(entry.line || '').indexOf('.') !== -1).length;
-    expect(dots).toBeGreaterThanOrEqual(1);
+    // 心跳必須已啟動，且間隔為每秒（UPLOAD_HEARTBEAT_MS = 1000）。
+    expect(ticks.fn).toBeTypeOf('function');
+    expect(ticks.delay).toBe(1000);
 
-    // 收到上傳終態事件後心跳停止，不得続續加點。
-    const before = terminal.records.filter((entry) => String(entry.line || '').indexOf('.') !== -1).length;
-    bridge.listeners['codebridge://operation-status']({
+    // 每跳一次就補一個點，讓使用者知道還活著。
+    const beforeTick = countDots();
+    ticks.fn();
+    ticks.fn();
+    expect(countDots()).toBe(beforeTick + 2);
+
+    // 收到上傳終態事件後心跳必須停止（不得續續加點）。
+    br.listeners['codebridge://operation-status']({
       id: 'op-upload', kind: 'upload', state: 'succeeded', lines: []
     });
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-    const after = terminal.records.filter((entry) => String(entry.line || '').indexOf('.') !== -1).length;
-    expect(after).toBe(before);
+    await flush();
+    expect(ticks.cleared).toBeGreaterThanOrEqual(1);
+    expect(ticks.fn).toBe(null);
+
+    const afterStop = countDots();
+    expect(afterStop).toBe(beforeTick + 2);
   });
 
   test('上傳作業結束後解除 busy，可再次執行', async () => {

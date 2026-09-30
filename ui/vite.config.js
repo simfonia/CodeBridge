@@ -9,6 +9,11 @@ import fs from 'fs';
 function copyCodeBridgeAssets() {
   return {
     name: 'copy-codebridge-assets',
+    // 2026-09-30 CB-T5：只在「真的在建置」時才複製。
+    // 過去此 plugin 沒有 apply 限制，vitest 每次結束（server closeBundle）也會觸發，
+    // 導致跑測試時把整個 src/ 與 blockly/ 遞迴複製進 dist/ —— 既有雜訊輸出，
+    // 也是不必要的磁碟 I/O。apply: 'build' 讓它只在 `vite build` 生效。
+    apply: 'build',
     closeBundle: () => {
       const folders = ['src', 'blockly'];
       const distPath = resolve(__dirname, 'dist');

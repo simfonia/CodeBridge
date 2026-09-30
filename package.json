@@ -12,6 +12,12 @@
     "dev": "npm run dev --prefix ui",
     "build": "npm run build --prefix ui",
     "test": "npm run test --prefix ui",
+    "test:unit": "npm run test:unit --prefix ui",
+    "test:unit:fast": "npm run test:unit:fast --prefix ui",
+    "test:e2e": "npm run test:e2e --prefix ui",
+    "test:e2e:smoke": "npm run test:e2e:smoke --prefix ui",
+    "test:fast": "node scripts/test-related.mjs",
+    "cargo:check": "cargo check --manifest-path src-tauri/Cargo.toml",
     "tauri": "tauri"
   }
 }

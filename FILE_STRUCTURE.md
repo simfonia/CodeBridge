@@ -193,5 +193,7 @@ CodeBridge/
 - `ui/tests/unit/`：資源 manifest、bytes 與 SHA-256 測試、plain code 去除 marker、.cbg 專案狀態與 dirty、工具列按鈕契約、編譯控制器（`compile-controller.test.js`）、終端機面板（`terminal-panel.test.js`）、序列監視器（`serial-monitor.test.js`）與序列繪圖四個模組（`plot-parse` / `plot-store` / `plot-render` / `plot-panel`）。
 - `src-tauri/tests/arduino_cli_smoke.rs`：對**真實** `arduino-cli` 的端對端整合測試（找不到 CLI 時自動跳過；只呼叫不需網路的子命令）。
 - `cargo test`：Arduino CLI 模組單元測試（command builder、parser、diagnostics、encoding 寬容解碼、draft 落地、串流 runner、compile/upload pipeline）。
-- `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI。
+- `scripts/test-related.mjs`：L0 開發守門（2026-09-30 CB-T4）。依 `git diff` 自動挑測試並只輸出摘要：產品檔比對 `tests/unit/` **同名**測試；Blockly 模組升級 `blockly-assets` ＋ `blockly-runtime`／`blockly-migration` E2E；`.css`／theme 升級 `theme-runtime`；Rust／Python 提示 `cargo:check`／`py_compile`。支援 `--dry`、`--unit-only`。
+- `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI，**兩階段**（2026-09-30 拆分）：`unit`（4 steps，Vitest 單元 261 例）→ `blockly-contract`（`needs: unit`，7 steps，Blockly assets → Playwright 全量 → build → 失敗上傳 report）。
+- 分層守門指令（L0 `npm run test:fast`／L1 `npm run test:unit`／L2 `npm run test:e2e:smoke`／L3 `npm test`）與計時器紅線見 `AGENTS.md`〈測試執行分層守門〉。
 - `log/plan/BlocklyTesting.md`：測試 seam、命令與維護規則。

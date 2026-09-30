@@ -1,5 +1,12 @@
 name: Frontend Blockly contract
 
+# 2026-09-30 事故記錄（run #12 紅燈，根因已修）：
+#   CI 原本寫 node-version: 24（浮動）。隨著 Node 24 內附 npm 升版，npm ci 的
+#   lock 驗證邏輯變嚴，判定 @emnapi/core@1.11.3 / @emnapi/runtime@1.11.3「不在 lock 中」
+#   （舊 lock 只有 @rolldown/binding-wasm32-wasi 底下的巢狀 1.11.1）→ EUSAGE 直接 exit 1。
+#   已用新版 npm 重建 lock（補上頂層 1.11.3），npm 11.6.2 與 11.19.1 皆驗證通過。
+#   ⚠️ 往後改動依賴後，務必用「將會在 CI 執行的 npm 版本」重建並提交 lock。
+#      本機驗證指令：npx -y npm@<版本> ci --dry-run（在含 package.json + lock 的目錄）。
 "on":
   push:
     branches: [master]
@@ -10,7 +17,34 @@ permissions:
   contents: read
 
 jobs:
+  # 2026-09-30：由單一 job 拆為兩階段（決策點 1）。
+  # unit 先跑（約 4 秒／261 例），失敗時立刻知道是邏輯層問題，不必等 E2E 跑完。
+  # blockly-contract 以 needs: unit 串接，兩者皆為阻塞式：任一紅燈即整體失敗。
+  unit:
+    name: Frontend unit tests
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix ui
+
+      # 2026-09-30 CB-T1：261 個 Vitest 單元測試原本不在 CI 任何一步，形同不存在。
+      - name: Run frontend unit tests
+        run: npm run test:unit --prefix ui
+
   blockly-contract:
+    name: Frontend Blockly contract
+    needs: unit
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
@@ -31,7 +65,7 @@ jobs:
         run: npm run test:blockly:assets --prefix ui
 
       - name: Run Blockly runtime and migration contracts
-        run: npm run test:blockly --prefix ui
+        run: npm run test:e2e --prefix ui
 
       - name: Build frontend
         run: npm run build --prefix ui

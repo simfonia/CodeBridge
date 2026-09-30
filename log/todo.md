@@ -33,6 +33,7 @@
 
 | 計畫 | 檔案 | 狀態 |
 |---|---|---|
+| **TDD 守門精簡化（Test Gating）** | [`log/plan/TestGating_2026-09-30.md`](plan/TestGating_2026-09-30.md) | **CB-T1 完成（2026-09-30）** —— CI 已補跑 261 單元測試；CB-T2~T5 待實作 |
 | **序列監視器（T3 Phase 1）** | [`log/plan/SerialMonitor.md`](plan/SerialMonitor.md) | **實作完成（2026-09-28）** —— 單元測試通過，待實機驗證 |
 | **序列繪圖（T3 Phase 2）** | [`log/plan/SerialPlotter.md`](plan/SerialPlotter.md) | **實作完成（2026-09-28）** —— 左右分欄，單元與 E2E 全過，待實機驗證 |
 | **T3 設定中心與核心目錄共用化** | [`log/plan/SettingsCenterAndCoreSharing.md`](plan/SettingsCenterAndCoreSharing.md) | **階段 1 已完成（2026-09-29）** —— 路徑共用 + settings.json 持久化 + 設定頁全數上線 |
@@ -48,6 +49,19 @@
 
 > 本節為**彙整視圖**，集結各日期章節中所有未完成項目。
 > 各章節內仍保留原始清單以維持歷史紀錄，兩者若有差異以本章節為準。
+
+### TDD 守門精簡化（2026-09-30 計畫，詳見 [`log/plan/TestGating_2026-09-30.md`](plan/TestGating_2026-09-30.md)）
+> 背景：對齊 cocoya 的 TDD 守門檢查。問題不是測試不夠，而是「快的測試沒被 CI 驗、慢的測試被塞進日常守門」。
+- [x] **CB-T1（P1）CI 補跑單元測試**（2026-09-30 完成）：`frontend-blockly.yml` 原本只跑 Playwright 全 14 支 spec 與 build，**`vitest run tests/unit`（261 例）從未在 CI 執行**；已於 `npm ci` 後插入 `Run frontend unit tests`（`npm run test:unit --prefix ui`），並修正 `AGENTS.md` 與 workflow 不符的敘述。驗證：unit 261/261、assets exit 0、YAML 解析步驟順序正確
+- [x] **CB-T2（P1）心跳測試改可控計時器**（2026-09-30 完成）：原真的 `setTimeout(1100)` 等兩輪耗 **2227ms**（佔單元套件 78%）。`vi.useFakeTimers()` **無效**（`classic-script.js` 於載入時把計時器依值複製進 vm sandbox），改為在 `loadClassicScript(path, globals)` 注入可控 `setInterval/clearInterval`，測試手動觸發。單檔 2390ms → **210ms**；全量 261 例 2.86s → **0.756s**。已完成紅→綠→再紅三段驗證（暫時註解產品端 `startUploadHeartbeat()` 確認測試會紅，`expected null to be type of 'function'`，隨後 `git checkout` 復原）
+- [x] **CB-T3（P2）分層測試腳本**（2026-09-30 完成）：`ui/package.json` 新增 `test:unit:fast`／`test:e2e`／`test:e2e:smoke`／`test:fast`；根目錄補 `test:unit`／`test:unit:fast`／`test:e2e`／`test:e2e:smoke`／`test:fast`／`cargo:check`（皆以 `--prefix ui` 轉發）。根 `npm test` 語意維持 unit + Playwright 全量
+- [x] **CB-T4（P2）`scripts/test-related.mjs`**（2026-09-30 完成）：移植 cocoya 設計並改寫規則（產品檔與測試檔**分屬不同樹**，改以 `tests/unit/` 遞迴索引比對**檔名**；Blockly 模組升級 E2E；`.css` 升級 `theme-runtime`；Rust/Python 提示 `cargo:check`）。支援 `--dry`／`--unit-only`。實跑 L0：37/37、1.4s
+- [x] **AGENTS.md 守門規範**（2026-09-30 完成，依使用者提議）：新增〈測試執行分層守門 (Test Gating)〉——L0/L1/L2/L3 對照表（含實測耗時）、L0 挑選規則、**計時器紅線**（vm sandbox 陷阱＋紅→綠→再紅要求）、AI 協作紀律。刻意排在 CB-T3／T4 之後，確保規範引用的指令皆已存在
+- [x] **CB-T5（P3）清除測試輸出雜訊**（2026-09-30 完成）：根因不是「多餘 log」，而是 `ui/vite.config.js` 的 `copyCodeBridgeAssets` plugin **沒有 `apply` 限制**，vitest 每次結束（server `closeBundle`）都會觸發，把整個 `src/` 與 `blockly/` **遞迴複製進 `dist/`**（每次跑測試都發生）。加 `apply: 'build'` 後：測試不再輸出 `[Vite] Copying static folder` ×3，也不再產生無謂磁碟 I/O；`npm run build` 仍正常產出 `dist/src`、`dist/blockly`、`dist/index.html`（已實測）
+- [x] **CI 拆分 unit／e2e（決策點 1，2026-09-30 完成）**：`unit`（4 steps，Vitest 261 例／約 0.7s）與 `blockly-contract`（`needs: unit`，7 steps，Blockly assets → Playwright 全量 → build → 失敗上傳 report）。代價：兩 job 各跑一次 `npm ci`（由 setup-node 的 npm cache 抵銷）。兩者皆阻塞式，任一紅燈即整體失敗
+- [x] **CI 失敗 run #12 根因已確認並修復**（2026-09-30）：使用者提供日誌 → `npm error code EUSAGE`、`Missing: @emnapi/core@1.11.3 from lock file`／`@emnapi/runtime@1.11.3`。根因為 **`node-version: 24` 浮動版本 → npm 版本漂移**：舊 lock 只有 `@rolldown/binding-wasm32-wasi`（`cpu:["wasm32"]` 選用套件）底下的巢狀 `@emnapi/core@1.11.1`，npm 11.6.2 驗證通過、npm ≥11.19 要求頂層 `1.11.3` → EUSAGE。已用新版 npm 重建 lock（+28/−3：補頂層 1.11.3×2、修正 lock 內 `version: 0.1.0 → 0.2.0`），**npm 11.6.2 與 11.19.1 雙版 `ci --dry-run` 皆通過**，真實 `npm ci` exit 0、單元 261/261、build 產出完整
+- [ ] 決策：Playwright 全量是否改 nightly（CI 仍保留阻塞式 smoke），以抵銷兩 job 各自 `npm ci` 的額外時間
+- [ ] 決策：是否將 `actions/*@v4` 升級至 v5（GitHub 註解警告：仍以 Node.js 20 為目標，runner 強制改用 Node.js 24）
 
 ### 工具列後續（2026-09-26 本輪凍結，需另開一輪）
 - [x] Phase 3 Serial Monitor：**已於 2026-09-28 完成**（port/baud/重連/HEX/時間戳/開發者輸入行），詳見 [序列監視器章節](#2026-09-28序列監視器serial-monitor)
