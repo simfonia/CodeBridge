@@ -17,6 +17,9 @@
     "test:e2e": "npm run test:e2e --prefix ui",
     "test:e2e:smoke": "npm run test:e2e:smoke --prefix ui",
     "test:fast": "node scripts/test-related.mjs",
+    "eol:check": "node scripts/eol.mjs",
+    "eol:fix": "node scripts/eol.mjs --fix",
+    "eol:list": "node scripts/eol.mjs --list",
     "cargo:check": "cargo check --manifest-path src-tauri/Cargo.toml",
     "tauri": "tauri"
   }

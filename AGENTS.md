@@ -237,9 +237,10 @@ note: previous declaration 'double square(double)'
 - 至少一個公開行為斷言；statement/value block 需有 generator golden 產碼。
 - Toolbox reference、block type、generator type 必須一致。
 
-CI（`.github/workflows/frontend-blockly.yml`）已於 2026-09-30 拆為**兩個阻塞式 job**：
+CI（`.github/workflows/frontend-blockly.yml`）已於 2026-09-30 拆為**兩個阻塞式 job**，並於 2026-10-03 新增第三個：
 - **`unit`（Frontend unit tests）**：`npm ci` → `npm run test:unit`（Vitest 單元，261 例，約 0.7 秒）
 - **`blockly-contract`（needs: unit）**：`npm ci` → `npm run test:blockly:assets` → `npm run test:e2e`（Playwright 契約）→ `npm run build`
+- **`eol`（Line endings）**：2026-10-03 新增，`npm run eol:check`。**獨立成 job 而非併入 `unit`**，理由見「行尾一致性規範」章節（行尾問題與邏輯錯誤混在一起會讓紅燈原因難辨）。
 
 任一 job 紅燈即整體失敗。CI **不會自動替開發者產生 TDD 測試**；新增測試是模組開發的必要工作，不是選用步驟。
 
@@ -247,6 +248,119 @@ CI（`.github/workflows/frontend-blockly.yml`）已於 2026-09-30 拆為**兩個
 > 2026-09-30 CB-T5 已知警告（GitHub 註解）：`actions/checkout@v4`、`actions/setup-node@v4`、`actions/upload-artifact@v4` 仍以 Node.js 20 為目標，runner 強制改用 Node.js 24 執行。功能無礙但有 deprecation 警告，後續可升 v5。
 > 2026-09-30 run #12 紅燈已修（`npm ci` EUSAGE）：根因是 `node-version: 24` 浮動版本帶來的 npm 版本漂移，導致 lock 驗證失敗。**規則：改動依賴後，必須用 CI 實際會跑到的 npm 版本重建並提交 `ui/package-lock.json`**，本機驗證用 `npx -y npm@<版本> ci --dry-run`（在含 `package.json` 與 lock 的目錄執行）。
 > 2026-09-30 run #13 紅燈已修（unit job 秒紅）：`ui/public/blockly/**` 的官方資產被 `core.autocrlf=true` 的環境（GitHub Actions windows-latest）轉成 CRLF，導致 `VERSIONS.md` 的 bytes／SHA-256 對不上（14 個資產 12 個不符）。已在 `.gitattributes` **最末端**加 `ui/public/blockly/** -text`。**規則：任何以位元組／雜湊鎖定的資產，必須用 `-text` 關閉行尾轉換，且該規則要放在 `.gitattributes` 最後（git 屬性後者勝出）。**
+
+### 行尾一致性規範 (CRLF/LF, 2026-10-03 三層防護)
+
+> ### ⚠️ 先釐清：對「程式執行」幾乎沒有影響
+>
+> **實測結論**：Python / JS / Rust 的解析器會自動正規化行尾。
+> 同一段程式碼存成 LF 或 CRLF，**執行結果一模一樣**。真正必須的是**全專案一致**，
+> 而非「一定要 CRLF」。CRLF 只是本專案（Windows 專案：Tauri + Playwright E2E）選定的一致性基準。
+>
+> **真正的危害在「用工具改檔」，不在「執行程式」** —— 逐行處理的批次腳本會壞：
+> ```
+> naive split('\n') 讀 CRLF 檔 -> ['x\r', 'y\r', 'z\r', '']   # 每行尾巴殘留 \r
+> git：內容一字未改、只換行尾 -> status 仍顯示 'M a.txt'（假變更，污染 diff）
+> ```
+> 這些殘留的 `\r` 會導致 ① 寫回時產生**混合行尾**（最危險）② 正則／內容比對失配
+> ③ 統計 off-by-one、hash 不符。
+>
+> **危害排序：混合行尾 > 純 LF 或純 CRLF 不一致 > 統一使用哪一種。**
+> 混合行尾會讓同一檔案內不同行的行為不一致，才是我們要優先杜絕的。
+
+**為何需要三層**：`.gitattributes` 的 `text` 只在「經過 git 的路徑」生效
+（checkout / add / diff）。編輯器、Python 腳本、PowerShell **直接寫檔不經過 git**，
+工作區就會變成 LF；而 git 把「工作區 LF + 轉換後 LF」視為無差異 →
+**問題不會自己浮現，會靜態累積**（實測 2026-10-03：214 個受追蹤檔中 24 個工作區是 LF，
+其中 6 個是混合行尾）。
+
+| 層 | 機制 | 作用 |
+| :--- | :--- | :--- |
+| 1 預防 | `.editorconfig`（`end_of_line = crlf`） | 編輯器存檔當下就寫對，不需經過 git |
+| 2 保險 | `.gitattributes`（`text`／`-text`） | git 取出時轉換；位元組鎖定資產關閉轉換 |
+| 3 驗證 | `npm run eol:check`（`scripts/eol.mjs`） | 驗證；`npm run eol:fix` 修復；`eol:list` 診斷 |
+| 4 CI | workflow 的 `eol` job | 提交／PR 時擋下 |
+
+#### 本專案的三類例外（不可與 Cocoya 的「全部 CRLF」混淆）
+
+Cocoya 採「全專案統一 CRLF」；**本專案刻意不是**，因為有三類檔案不能動：
+
+| 例外 | 原因 | 規則 |
+| :--- | :--- | :--- |
+| `*.cbg` | **SPEC.md §3 格式規格明訂為 LF**，且 `project_save` **在程式碼裡強制正規化**（`project.rs` L67） | 統一 CRLF 會違反規格 → `.editorconfig` 與 `eol.mjs` 皆強制 LF；若被轉成 CRLF，`eol:check` 直接報錯。**詳見下方 `.cbg` 專章** |
+| `ui/public/blockly/**` | `VERSIONS.md` 以 **bytes／SHA-256** 鎖定，`blockly-assets.test.js` 逐一驗證 | 行尾一變 hash 必不符 → `.gitattributes` 標 `-text`、`.editorconfig` 標 `unset`、工具完全跳過 |
+| `src-tauri/icons/**` | **Tauri CLI 產生的資產**（`tauri icon` 會重新產生） | 不屬本專案維護，工具跳過 |
+
+> **規則：以位元組／雜湊鎖定的資產必須用 `-text` 關閉行尾轉換，且該規則放在 `.gitattributes` 最後（git 屬性後者勝出）。**（2026-09-30 run #13 事故）
+> **新增例外前必須有憑據** —— 實作時曾憑印象把 Android icon XML 加進「必須 LF」清單，
+> 查證後才發現那是 Tauri 產物、專案從未要求。無憑據的例外會讓真問題被永久忽略。
+
+#### `.cbg` 強制 LF 的真正理由，以及「CRLF 會不會壞掉」的實測結論
+
+2026-10-03 有兩次追問：「既然程式執行不受行尾影響，為何 `.cbg` 不能也用 CRLF？」
+以及「使用者用文字編輯器改 `.cbg` 變成 CRLF，會不會開不起來？」——兩題答案如下。
+
+##### 為何不能改成 CRLF：不是規格好聽，是程式在寫
+
+`src-tauri/src/project.rs` 的 `project_save`（Tauri command）**主動改寫行尾**：
+
+```rust
+// project.rs L67
+let normalized = contents.replace("\r\n", "\n").replace('\r', "\n");
+std::fs::write(target, normalized.as_bytes())
+```
+
+**任何呼叫端**（前端 Blockly、外部工具、使用者用記事本改完存檔）寫入的 CRLF，
+在存檔瞬間都會被轉成 LF。這是**硬編碼的行為**，不是文件約定。
+
+> **決定性後果**：若把 `.gitattributes`／`.editorconfig`／`eol.mjs` 都改成要求 CRLF，
+> `eol:check` 會在每次 CI 與提交時對 3 個範例檔報紅，而開發者**無論怎麼修都修不好**——
+> 因為儲存的那一刻又被程式轉回 LF。這比原本狀態更糟。
+>
+> **要改成 CRLF 必須連程式一起改**（`project.rs` L67、`save_then_read_round_trips_without_bom` 測試斷言、
+> `SPEC.md` L80／L182／L188、`AGENTS.md` L24），否則三層設定會互相矛盾。
+>
+> **另一個反對理由**：`*.cbg` 目前選 LF 應是**為跨平台一致性**（macOS／Linux 上產生的檔案
+> 與 Windows 一致）。改成 CRLF 會讓 `.cbg` 格式變成 Windows 專屬。**屬產品決策，勿擅自變更。**
+
+##### 「被外部工具改成 CRLF 會不會壞掉」：三層實測，答案是**不會**
+
+| 層 | 位置 | CRLF 輸入的實測結果 |
+| :--- | :--- | :--- |
+| 1 metadata 解析 | `project-store.js` `parse()`／`findRootTag()` | ✅ `format=1`、屬性 `[format=1, name=Blink]` 與 LF **完全相同**。根元素 `<xml ...>` 在同一行，正則 `/<xml\b[^>]*>/` 不受行尾影響 |
+| 2 Blockly XML 解析 | `DOMParser`（`textToDom`） | ✅ `parse error: none`，`block id` 正常取得。**XML 1.0 規範要求解析器把 CRLF 正規化為 LF**，故 `\r` 在解析時即消失（實測重新序列化不含 `\r`） |
+| 3 存檔 | `project.rs` `project_save` | ✅ 自動轉回 LF |
+
+**結論：完整往返安全。** CRLF 的 `.cbg` 能正常開啟；一旦在 CodeBridge 內存檔就「自我修正」回 LF。
+
+> **⚠️ 唯一的真實風險不是「開不起來」，而是 git 假變更**：
+> 若使用者用不支援 `.editorconfig` 的編輯器（Windows 記事本等）改了 `.cbg`，
+> 之後用 git 追蹤會看到 `.cbg` 被標記為 modified，**但內容一字未改**——純行尾雜訊。
+> 處理方式：`npm run eol:fix` 自動轉回 LF。
+>
+> **防範**：`.editorconfig` 的 `[*.cbg] end_of_line = lf` 讓**支援 EditorConfig 的編輯器（含 VS Code）
+> 在存檔當下就維持 LF**，多數情況不會發生。會發生的是不支援 EditorConfig 的舊工具。
+>
+> **給未來維護者**：不要因為看到「`*.cbg` 強制 LF」的守門就去手動放寬檢查，也不要因為
+> 擔心「CRLF 會讓檔案損毀」而 panic——上面三層已實測。**真正的問題只有 git 假變更一個。**
+
+#### 工具使用與守門紀律
+
+- **`scripts/eol.mjs` 有自我驗證機制**（`verifyAgainstGit`）：以 `git ls-files --eol` 交叉比對，
+  抓出「git 認定是 LF 但工具沒掃到」的檔案 —— **沒有這道就會自以為全綠**。
+  實作當天即靠它抓出 `src-tauri/Cargo.toml`、`Cargo.lock` 與 Android icon XML 三個漏網。
+- **`eol.mjs` 與 Cocoya 的差異**（移植時刻意調整，不可照抄）：
+  ① Cocoya 目標是「全 CRLF」；本專目標的是「一般檔案 CRLF + 例外不動」。
+  ② 本專案掃描排除 `src-tauri/icons`、`.cbg` 強制 LF，兩者方向相反。
+  ③ 本專案 `.gitattributes` 用 `text`（各平台慣例）而非 `eol=crlf`，故 CI 只在 `windows-latest` 跑 eol job
+     （macOS/Linux 跑會因平台慣例是 LF 而全數假紅燈）。
+- **AI／腳本寫檔鐵律**：改檔案後一律 `npm run eol:fix` 收尾。
+  **不要用會轉 LF 的寫法**（Python 的 `write_text()` 預設寫 `\n`，會造成全檔 diff），
+  應以位元組方式寫入並保留或指定 `\r\n`：
+  ```python
+  data = p.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
+  p.write_bytes(data)
+  ```
 
 ### 測試執行分層守門 (Test Gating, 2026-09-30)
 
@@ -256,6 +370,7 @@ CI（`.github/workflows/frontend-blockly.yml`）已於 2026-09-30 拆為**兩個
 |---|---|---|---|
 | **L0** | `npm run test:fast` | **每次改完碼** | 依 `git diff` 自動挑必要測試並只輸出摘要；約 1.5s |
 | **L0 手動** | `node scripts/test-related.mjs <檔案…>` / `--dry` / `--unit-only` | 明確知道改到哪 | 指定變更檔；`--dry` 只列不跑 |
+| **L0 行尾** | `npm run eol:check` | **改完檔案（含 AI 寫檔）** | 檢查 193 個受管文字檔行尾；不符則 exit 1。修復用 `eol:fix`，診斷用 `eol:list` |
 | **L1** | `npm run test:unit` | 一個功能切片完成 | Vitest 單元全量 261 例；約 0.7s |
 | **L1 精簡** | `npm run test:unit:fast` | 想看更少輸出 | 同上但 `--silent` |
 | **L2** | `npm run test:e2e:smoke` | 動到 Blockly 模組／樣式主題 | 兩支 Blockly 契約 spec ＋（樣式時）`theme-runtime` |
@@ -300,6 +415,8 @@ CI（`.github/workflows/frontend-blockly.yml`）已於 2026-09-30 拆為**兩個
 
 ## 重要路徑
 - **系統規格書**：`SPEC.md`（產品規格權威來源，含 `.cbg` 檔案格式規格）
+- **行尾檢查工具**：`scripts/eol.mjs`（`eol:check` / `eol:fix` / `eol:list`）
+- **行尾預防層**：`.editorconfig`（編輯器層權威）／`.gitattributes`（git 層）
 - **總體開發規格**：`log/plan/CodeBridgeV2.md`
 - **模組載入清單**：`ui/src/lib/modules/core_manifest.json`
 - **前端主程式**：`ui/src/main.js`（由 `ui/index.html` 以 UMD script 載入）

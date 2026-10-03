@@ -194,6 +194,7 @@ CodeBridge/
 - `src-tauri/tests/arduino_cli_smoke.rs`：對**真實** `arduino-cli` 的端對端整合測試（找不到 CLI 時自動跳過；只呼叫不需網路的子命令）。
 - `cargo test`：Arduino CLI 模組單元測試（command builder、parser、diagnostics、encoding 寬容解碼、draft 落地、串流 runner、compile/upload pipeline）。
 - `scripts/test-related.mjs`：L0 開發守門（2026-09-30 CB-T4）。依 `git diff` 自動挑測試並只輸出摘要：產品檔比對 `tests/unit/` **同名**測試；Blockly 模組升級 `blockly-assets` ＋ `blockly-runtime`／`blockly-migration` E2E；`.css`／theme 升級 `theme-runtime`；Rust／Python 提示 `cargo:check`／`py_compile`。支援 `--dry`、`--unit-only`。
+- `scripts/eol.mjs`：行尾一致性守門（2026-10-03）。`eol:check`／`eol:fix`／`eol:list`。掃描 193 個受管文字檔（一般檔案須為 CRLF；`*.cbg` 依 SPEC.md §3 強制 LF；`ui/public/blockly/**`、`src-tauri/icons/**`、vendored `.min.js` 跳過）。內建自我交叉驗證：以 `git ls-files --eol` 比對，漏掃檔案會一併報出。
 - `.github/workflows/frontend-blockly.yml`：Windows + Node.js 24 + system Edge CI，**兩階段**（2026-09-30 拆分）：`unit`（4 steps，Vitest 單元 261 例）→ `blockly-contract`（`needs: unit`，7 steps，Blockly assets → Playwright 全量 → build → 失敗上傳 report）。
 - 分層守門指令（L0 `npm run test:fast`／L1 `npm run test:unit`／L2 `npm run test:e2e:smoke`／L3 `npm test`）與計時器紅線見 `AGENTS.md`〈測試執行分層守門〉。
 - `log/plan/BlocklyTesting.md`：測試 seam、命令與維護規則。

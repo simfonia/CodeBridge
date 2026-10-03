@@ -17,6 +17,35 @@ permissions:
   contents: read
 
 jobs:
+  # 2026-10-03：行尾一致性守門。
+  # 為什麼獨立成一個 job（不併入 unit）：
+  #   行尾問題與邏輯錯誤無關，混在一起會讓「紅燈原因」難以辨識（unit 秒紅時
+  #   到底是邏輯壞掉還是有人存檔存成 LF？）。獨立 job 讓兩者一眼可分。
+  #
+  # 為什麼只在 windows-latest 跑：
+  #   本專案的行尾基準是 CRLF，而 windows-latest 的 core.autocrlf=true 會把
+  #   checkout 轉成 CRLF —— 與開發環境一致。在 macOS/Linux 跑會因平台慣例是 LF
+  #   而全數報紅（假紅燈），故不加入矩陣。
+  #
+  # 本 job 不需要安裝前端依賴（scripts/eol.mjs 只用 Node 內建模組）。
+  eol:
+    name: Line endings (CRLF)
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # 檢查工作區文字檔的行尾。工具內建自我交叉驗證：
+      # 會以 git ls-files --eol 比對，漏掃的檔案會一併報出（不會自以為全綠）。
+      - name: Check line endings
+        run: npm run eol:check
+
   # 2026-09-30：由單一 job 拆為兩階段（決策點 1）。
   # unit 先跑（約 4 秒／261 例），失敗時立刻知道是邏輯層問題，不必等 E2E 跑完。
   # blockly-contract 以 needs: unit 串接，兩者皆為阻塞式：任一紅燈即整體失敗。
